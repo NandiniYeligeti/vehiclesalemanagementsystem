@@ -1,0 +1,135 @@
+import { motion } from 'framer-motion';
+import {
+  Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp
+} from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { formatCurrency, monthlyData, modelSalesData, vehicleInventory, customers, saleOrders, payments, loans } from '@/data/mockData';
+
+const COLORS = ['hsl(239,70%,55%)', 'hsl(152,60%,40%)', 'hsl(38,92%,50%)', 'hsl(210,80%,55%)', 'hsl(280,60%,55%)'];
+
+const stats = [
+  { label: 'Vehicles in Stock', value: vehicleInventory.filter(v => v.status === 'Available').length, icon: Car, color: 'text-info' },
+  { label: 'Vehicles Sold', value: vehicleInventory.filter(v => v.status === 'Sold' || v.status === 'Delivered').length, icon: TrendingUp, color: 'text-success' },
+  { label: 'Total Customers', value: customers.length, icon: Users, color: 'text-primary' },
+  { label: 'Total Sales', value: formatCurrency(saleOrders.reduce((s, o) => s + o.totalAmount, 0)), icon: ShoppingCart, color: 'text-warning' },
+  { label: 'Pending Payments', value: formatCurrency(saleOrders.reduce((s, o) => s + o.balanceAmount, 0)), icon: CreditCard, color: 'text-destructive' },
+  { label: 'Pending Loans', value: loans.filter(l => l.status === 'Pending').length, icon: Landmark, color: 'text-muted-foreground' },
+];
+
+const DashboardPage = () => {
+  return (
+    <div className="space-y-6">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+        {stats.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+            className="erp-card p-4"
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <stat.icon className={`w-4 h-4 ${stat.color}`} />
+              <span className="text-xs text-muted-foreground font-medium">{stat.label}</span>
+            </div>
+            <p className="erp-stat-value">{stat.value}</p>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="erp-card p-6 lg:col-span-2"
+        >
+          <h3 className="erp-section-title">Monthly Sales Revenue</h3>
+          <ResponsiveContainer width="100%" height={280}>
+            <BarChart data={monthlyData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
+              <Tooltip formatter={(value: number) => formatCurrency(value)} />
+              <Bar dataKey="revenue" fill="hsl(239,70%,55%)" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="erp-card p-6"
+        >
+          <h3 className="erp-section-title">Sales by Model</h3>
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={modelSalesData} dataKey="sold" nameKey="model" cx="50%" cy="50%" outerRadius={80} strokeWidth={2}>
+                {modelSalesData.map((_, index) => (
+                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="space-y-1.5 mt-2">
+            {modelSalesData.map((item, i) => (
+              <div key={item.model} className="flex items-center gap-2 text-xs">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                <span className="text-muted-foreground">{item.model}</span>
+                <span className="ml-auto font-semibold tabular">{item.sold}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Recent Sales */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="erp-card"
+      >
+        <div className="p-4 border-b border-border">
+          <h3 className="erp-section-title mb-0">Recent Sales Orders</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border bg-muted/50">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Order</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">VIN</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Amount</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {saleOrders.map((order) => (
+                <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-semibold">{order.orderNumber}</td>
+                  <td className="px-4 py-3">{order.customer.name}</td>
+                  <td className="px-4 py-3">{order.vehicle.model.brand} {order.vehicle.model.model}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{order.vehicle.chassisNumber}</td>
+                  <td className="px-4 py-3 text-right tabular font-semibold">{formatCurrency(order.totalAmount)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`status-badge ${order.status === 'Confirmed' ? 'status-reserved' : order.status === 'Delivered' ? 'status-delivered' : 'status-available'}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+export default DashboardPage;
