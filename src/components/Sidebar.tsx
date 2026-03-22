@@ -2,20 +2,23 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
-  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu
+  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus
 } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/store/rootReducer';
 
-const menuItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'customers', label: 'Customers', icon: Users },
-  { id: 'salespersons', label: 'Salespersons', icon: UserCheck },
-  { id: 'vehicles', label: 'Vehicles', icon: Car },
-  { id: 'sales', label: 'Sales Orders', icon: ShoppingCart },
-  { id: 'payments', label: 'Payments', icon: CreditCard },
-  { id: 'loans', label: 'Loan Management', icon: Landmark },
-  { id: 'ledger', label: 'Customer Ledger', icon: BookOpen },
-  { id: 'reports', label: 'Reports', icon: BarChart3 },
-  { id: 'settings', label: 'Settings', icon: Settings },
+const allMenuItems = [
+  { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard, roles: ['admin', 'user'] },
+  { id: 'customers',   label: 'Customers',         icon: Users,           roles: ['admin', 'user'] },
+  { id: 'salespersons',label: 'Salespersons',      icon: UserCheck,       roles: ['admin', 'user'] },
+  { id: 'vehicles',    label: 'Vehicles',          icon: Car,             roles: ['admin', 'user'] },
+  { id: 'sales',       label: 'Sales Orders',      icon: ShoppingCart,    roles: ['admin', 'user'] },
+  { id: 'payments',    label: 'Payments',          icon: CreditCard,      roles: ['admin', 'user'] },
+  { id: 'loans',       label: 'Loan Management',   icon: Landmark,        roles: ['admin', 'user'] },
+  { id: 'ledger',      label: 'Customer Ledger',   icon: BookOpen,        roles: ['admin', 'user'] },
+  { id: 'reports',     label: 'Reports',           icon: BarChart3,       roles: ['admin', 'user'] },
+  { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] }, // admin-only
+  { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin', 'user'] },
 ];
 
 interface SidebarProps {
@@ -26,6 +29,12 @@ interface SidebarProps {
 const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const { user } = useSelector((state: RootState) => state.auth);
+  const role = user?.role || 'user';
+
+  // Filter items the current role is allowed to see
+  const menuItems = allMenuItems.filter((item) => item.roles.includes(role));
 
   return (
     <>

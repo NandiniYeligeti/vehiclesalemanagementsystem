@@ -10,6 +10,7 @@ import { SagaIterator } from "redux-saga";
 
 export interface User {
   id: string;
+  username: string;
   email: string;
   role: string;
   CompanyCode: string;
@@ -21,10 +22,11 @@ interface AuthState {
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
+  impersonating: boolean;
 }
 
 // Hydrate from persisted state if available
-let persisted: AuthState | null = null;
+let persisted: Partial<AuthState> | null = null;
 if (typeof window !== 'undefined') {
   try {
     const raw = sessionStorage.getItem('auth');
@@ -32,7 +34,7 @@ if (typeof window !== 'undefined') {
   } catch {}
 }
 
-const initialState: AuthState & { impersonating?: boolean } = {
+const initialState: AuthState = {
   user: persisted?.user || null,
   isAuthenticated: !!persisted?.user,
   loading: false,
@@ -59,6 +61,7 @@ const authSlice = createSlice({
       const incomingUser = action.payload.user as any;
       state.user = {
         id: incomingUser.id || incomingUser._id,
+        username: incomingUser.username || '',
         email: incomingUser.email,
         role: incomingUser.role,
         CompanyCode: incomingUser.company_code, // DashboardPage mapping dependency backwards compatibility
@@ -74,6 +77,7 @@ const authSlice = createSlice({
       state.impersonating = false;
       sessionStorage.removeItem("accessToken");
       sessionStorage.removeItem("companyCode");
+      sessionStorage.removeItem("auth");
     },
 
     impersonateCompany: (state, action: PayloadAction<{ company: any }>) => {
@@ -81,6 +85,7 @@ const authSlice = createSlice({
       const company = action.payload.company;
       state.user = {
         id: company.admin_id || company.id || '',
+        username: company.username || '',
         email: company.email,
         role: 'admin',
         CompanyCode: company.company_code,
@@ -90,9 +95,8 @@ const authSlice = createSlice({
       state.impersonating = true;
       sessionStorage.setItem("companyCode", company.company_code);
       // Save impersonation flag in persisted state
-      const persisted = sessionStorage.getItem('auth');
-      let obj = {};
-      try { obj = persisted ? JSON.parse(persisted) : {}; } catch {}
+      const persistedRaw = sessionStorage.getItem('auth');
+      const obj: Partial<AuthState> = persistedRaw ? JSON.parse(persistedRaw) : {};
       obj.user = state.user;
       obj.isAuthenticated = true;
       obj.impersonating = true;

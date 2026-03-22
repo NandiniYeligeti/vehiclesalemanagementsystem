@@ -14,3 +14,20 @@ export const getCompaniesApi = async () => {
   const response = await api.get("/super-admin/companies");
   return response.data;
 };
+
+// ================= USER MANAGEMENT =================
+
+export const createUserApi = async (companyCode: string, data: { username: string; email: string; password: string }) => {
+  const response = await api.post(`/users/${companyCode}`, data);
+  return response.data;
+};
+
+export const getUsersApi = async (companyCode: string) => {
+  const response = await api.get(`/users/${companyCode}`);
+  return response.data;
+};
+
+export const deleteUserApi = async (companyCode: string, userId: string) => {
+  const response = await api.delete(`/users/${companyCode}/${userId}`);
+  return response.data;
+};
