@@ -1,27 +1,83 @@
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp
+  Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp, Database
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { formatCurrency, monthlyData, modelSalesData, vehicleInventory, customers, saleOrders, payments, loans } from '@/data/mockData';
+import { useDispatch, useSelector } from 'react-redux';
+import { getDashboardStatsAction } from '@/store/ducks/dashboard.ducks';
+import { RootState } from '@/store/rootReducer';
+import { api } from '@/services/api';
 
 const COLORS = ['hsl(239,70%,55%)', 'hsl(152,60%,40%)', 'hsl(38,92%,50%)', 'hsl(210,80%,55%)', 'hsl(280,60%,55%)'];
 
-const stats = [
-  { label: 'Vehicles in Stock', value: vehicleInventory.filter(v => v.status === 'Available').length, icon: Car, color: 'text-info' },
-  { label: 'Vehicles Sold', value: vehicleInventory.filter(v => v.status === 'Sold' || v.status === 'Delivered').length, icon: TrendingUp, color: 'text-success' },
-  { label: 'Total Customers', value: customers.length, icon: Users, color: 'text-primary' },
-  { label: 'Total Sales', value: formatCurrency(saleOrders.reduce((s, o) => s + o.totalAmount, 0)), icon: ShoppingCart, color: 'text-warning' },
-  { label: 'Pending Payments', value: formatCurrency(saleOrders.reduce((s, o) => s + o.balanceAmount, 0)), icon: CreditCard, color: 'text-destructive' },
-  { label: 'Pending Loans', value: loans.filter(l => l.status === 'Pending').length, icon: Landmark, color: 'text-muted-foreground' },
-];
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+};
 
 const DashboardPage = () => {
+  const dispatch = useDispatch();
+  const user = useSelector((state: RootState) => state.auth.user);
+  const { stats, loading } = useSelector((state: RootState) => state.dashboard);
+  const [isSeeding, setIsSeeding] = useState(false);
+
+  const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+
+  useEffect(() => {
+    if (companyCode) {
+      dispatch(getDashboardStatsAction(companyCode));
+    }
+  }, [dispatch, companyCode]);
+
+  const handleSeedDatabase = async () => {
+    if (!companyCode) return;
+    setIsSeeding(true);
+    try {
+      await api.post(`/dashboard/seed/${companyCode}`);
+      dispatch(getDashboardStatsAction(companyCode));
+    } catch (e) {
+      console.error('Failed to seed DB', e);
+    } finally {
+      setIsSeeding(false);
+    }
+  };
+
+  const isDatabaseEmpty = !stats?.total_vehicles_in_stock && !stats?.total_customers && !stats?.total_sales_revenue;
+
+  const statsCards = [
+    { label: 'Vehicles in Stock', value: stats?.total_vehicles_in_stock || 0, icon: Car, color: 'text-info' },
+    { label: 'Vehicles Sold', value: stats?.total_vehicles_sold || 0, icon: TrendingUp, color: 'text-success' },
+    { label: 'Total Customers', value: stats?.total_customers || 0, icon: Users, color: 'text-primary' },
+    { label: 'Total Sales', value: formatCurrency(stats?.total_sales_revenue || 0), icon: ShoppingCart, color: 'text-warning' },
+    { label: 'Pending Payments', value: formatCurrency(stats?.total_pending_payments || 0), icon: CreditCard, color: 'text-destructive' },
+    { label: 'Pending Loans', value: stats?.total_pending_loans || 0, icon: Landmark, color: 'text-muted-foreground' },
+  ];
+
+  const monthlyData = stats?.monthly_revenue || [];
+  const modelSalesData = stats?.sales_by_model || [];
+  const saleOrders = stats?.recent_sales || [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {(loading || isSeeding) && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )}
+
+      {isDatabaseEmpty && !loading && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex justify-between items-center bg-primary/10 border border-primary/20 text-primary p-4 rounded-lg">
+          <p className="text-sm font-medium">The dashboard currently has no actual data. You can spawn a fully realistic database layout using the seed tool!</p>
+          <button onClick={handleSeedDatabase} className="erp-btn-primary flex items-center gap-2">
+            <Database className="w-4 h-4" />
+            Seed Database
+          </button>
+        </motion.div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {stats.map((stat, i) => (
+        {statsCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}
@@ -48,13 +104,17 @@ const DashboardPage = () => {
         >
           <h3 className="erp-section-title">Monthly Sales Revenue</h3>
           <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" />
-              <YAxis tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
-              <Tooltip formatter={(value: number) => formatCurrency(value)} />
-              <Bar dataKey="revenue" fill="hsl(239,70%,55%)" radius={[6, 6, 0, 0]} />
-            </BarChart>
+            {monthlyData.length > 0 ? (
+              <BarChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
+                <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Bar dataKey="revenue" fill="hsl(239,70%,55%)" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            ) : (
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data available</div>
+            )}
           </ResponsiveContainer>
         </motion.div>
 
@@ -66,21 +126,25 @@ const DashboardPage = () => {
         >
           <h3 className="erp-section-title">Sales by Model</h3>
           <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={modelSalesData} dataKey="sold" nameKey="model" cx="50%" cy="50%" outerRadius={80} strokeWidth={2}>
-                {modelSalesData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
+            {modelSalesData.length > 0 ? (
+              <PieChart>
+                <Pie data={modelSalesData} dataKey="count" nameKey="model" cx="50%" cy="50%" outerRadius={80} strokeWidth={2}>
+                  {modelSalesData.map((_, index) => (
+                    <Cell key={index} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            ) : (
+                <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data available</div>
+            )}
           </ResponsiveContainer>
           <div className="space-y-1.5 mt-2">
-            {modelSalesData.map((item, i) => (
+            {modelSalesData.map((item: any, i: number) => (
               <div key={item.model} className="flex items-center gap-2 text-xs">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                 <span className="text-muted-foreground">{item.model}</span>
-                <span className="ml-auto font-semibold tabular">{item.sold}</span>
+                <span className="ml-auto font-semibold tabular">{item.count}</span>
               </div>
             ))}
           </div>
@@ -110,16 +174,22 @@ const DashboardPage = () => {
               </tr>
             </thead>
             <tbody>
-              {saleOrders.map((order) => (
-                <tr key={order.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-semibold">{order.orderNumber}</td>
-                  <td className="px-4 py-3">{order.customer.name}</td>
-                  <td className="px-4 py-3">{order.vehicle.model.brand} {order.vehicle.model.model}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{order.vehicle.chassisNumber}</td>
-                  <td className="px-4 py-3 text-right tabular font-semibold">{formatCurrency(order.totalAmount)}</td>
+              {saleOrders.length === 0 ? (
+                 <tr>
+                   <td colSpan={6} className="px-4 py-6 text-center text-sm text-muted-foreground">
+                     No recent sales available
+                   </td>
+                 </tr>
+              ) : saleOrders.map((order: any) => (
+                <tr key={order.entity_id || order.id || order._id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
+                  <td className="px-4 py-3 font-semibold">{order.sales_order_code || '-'}</td>
+                  <td className="px-4 py-3">{order.customer_name}</td>
+                  <td className="px-4 py-3">{order.brand} {order.model}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{order.chassis_number || '-'}</td>
+                  <td className="px-4 py-3 text-right tabular font-semibold">{formatCurrency(order.total_amount)}</td>
                   <td className="px-4 py-3">
                     <span className={`status-badge ${order.status === 'Confirmed' ? 'status-reserved' : order.status === 'Delivered' ? 'status-delivered' : 'status-available'}`}>
-                      {order.status}
+                      {order.status || 'Pending'}
                     </span>
                   </td>
                 </tr>

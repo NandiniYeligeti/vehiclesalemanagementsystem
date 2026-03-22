@@ -9,6 +9,9 @@ export interface Customer {
   city: string;
   state: string;
   pincode: string;
+  photo: string;
+  aadhaarCardNo: string;
+  panCardNo: string;
   createdDate: string;
 }
 
@@ -109,11 +112,11 @@ export interface LedgerEntry {
 // --- Mock Data ---
 
 export const customers: Customer[] = [
-  { id: 'C001', name: 'Rajesh Kumar', mobile: '9876543210', email: 'rajesh@email.com', address: '45 MG Road', city: 'Mumbai', state: 'Maharashtra', pincode: '400001', createdDate: '2025-01-15' },
-  { id: 'C002', name: 'Priya Sharma', mobile: '9876543211', email: 'priya@email.com', address: '12 Park Street', city: 'Delhi', state: 'Delhi', pincode: '110001', createdDate: '2025-02-20' },
-  { id: 'C003', name: 'Amit Patel', mobile: '9876543212', email: 'amit@email.com', address: '78 Lake Road', city: 'Ahmedabad', state: 'Gujarat', pincode: '380001', createdDate: '2025-03-10' },
-  { id: 'C004', name: 'Sunita Reddy', mobile: '9876543213', email: 'sunita@email.com', address: '23 Jubilee Hills', city: 'Hyderabad', state: 'Telangana', pincode: '500033', createdDate: '2025-04-05' },
-  { id: 'C005', name: 'Vikram Singh', mobile: '9876543214', email: 'vikram@email.com', address: '56 Civil Lines', city: 'Jaipur', state: 'Rajasthan', pincode: '302001', createdDate: '2025-05-12' },
+  { id: 'C001', name: 'Rajesh Kumar', mobile: '9876543210', email: 'rajesh@email.com', address: '45 MG Road', city: 'Mumbai', state: 'Maharashtra', pincode: '400001', photo: '', aadhaarCardNo: '1234-5678-9012', panCardNo: 'ABCDE1234F', createdDate: '2025-01-15' },
+  { id: 'C002', name: 'Priya Sharma', mobile: '9876543211', email: 'priya@email.com', address: '12 Park Street', city: 'Delhi', state: 'Delhi', pincode: '110001', photo: '', aadhaarCardNo: '2345-6789-0123', panCardNo: 'FGHIJ5678K', createdDate: '2025-02-20' },
+  { id: 'C003', name: 'Amit Patel', mobile: '9876543212', email: 'amit@email.com', address: '78 Lake Road', city: 'Ahmedabad', state: 'Gujarat', pincode: '380001', photo: '', aadhaarCardNo: '3456-7890-1234', panCardNo: 'KLMNO9012P', createdDate: '2025-03-10' },
+  { id: 'C004', name: 'Sunita Reddy', mobile: '9876543213', email: 'sunita@email.com', address: '23 Jubilee Hills', city: 'Hyderabad', state: 'Telangana', pincode: '500033', photo: '', aadhaarCardNo: '4567-8901-2345', panCardNo: 'PQRST3456Q', createdDate: '2025-04-05' },
+  { id: 'C005', name: 'Vikram Singh', mobile: '9876543214', email: 'vikram@email.com', address: '56 Civil Lines', city: 'Jaipur', state: 'Rajasthan', pincode: '302001', photo: '', aadhaarCardNo: '5678-9012-3456', panCardNo: 'UVWXY7890R', createdDate: '2025-05-12' },
 ];
 
 export const salespersons: Salesperson[] = [

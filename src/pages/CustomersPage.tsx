@@ -1,189 +1,316 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Search, Edit2, Trash2, Eye, X } from 'lucide-react';
-import { customers as initialCustomers, Customer, formatCurrency, saleOrders, payments, loans, ledgerEntries } from '@/data/mockData';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Search, Edit2, Trash2, Eye, X, Upload } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/store/rootReducer';
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+import { 
+  getCustomersAction, 
+  addCustomerAction, 
+  deleteCustomerAction,
+  Customer 
+} from '@/store/ducks/customers.ducks';
+
+import { formatCurrency, saleOrders, payments, ledgerEntries } from '@/data/mockData';
+import CustomerProfile from '@/components/CustomerProfile';
+
+const validationSchema = Yup.object().shape({
+  customer_name: Yup.string()
+    .min(2, 'Name too short')
+    .max(50, 'Name too long')
+    .required('Customer name is required'),
+  mobile_number: Yup.string()
+    .matches(/^\d{10}$/, 'Mobile number must be exactly 10 digits')
+    .required('Mobile number is required'),
+  email: Yup.string()
+    .email('Invalid email address'),
+  address: Yup.string().required('Address is required'),
+  city: Yup.string().required('City is required'),
+  state: Yup.string().required('State is required'),
+  pincode: Yup.string()
+    .matches(/^\d{6}$/, 'Pincode must be exactly 6 digits')
+    .required('Pincode is required'),
+  aadhaar_card_no: Yup.string()
+    .matches(/^(\d{12}|\d{4}-\d{4}-\d{4})$/, 'Invalid Aadhaar format')
+    .required('Aadhaar is required'),
+  pan_card_no: Yup.string()
+    .matches(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, 'Invalid PAN format')
+    .required('PAN is required'),
+});
 
 const CustomersPage = () => {
-  const [customers] = useState<Customer[]>(initialCustomers);
+  const dispatch = useDispatch();
+  const { data: customers, loading, saving } = useSelector((state: RootState) => state.customers);
+  const user = useSelector((state: RootState) => state.auth.user);
+  const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [profileMode, setProfileMode] = useState<'view' | 'edit' | 'add' | null>(null);
+
+  useEffect(() => {
+    if (companyCode) {
+      dispatch(getCustomersAction(companyCode));
+    }
+  }, [dispatch, companyCode]);
 
   const filtered = customers.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.mobile.includes(search)
+    (c.name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.mobile || '').includes(search) ||
+    (c.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
+    (c.mobile_number || '').includes(search)
   );
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this customer?')) {
+      dispatch(deleteCustomerAction(id));
+    }
+  };
+
+  const initialValues = {
+    customer_name: '',
+    mobile_number: '',
+    email: '',
+    address: '',
+    city: '',
+    state: '',
+    pincode: '',
+    aadhaar_card_no: '',
+    pan_card_no: '',
+    photo: null as File | null,
+    company_id: companyCode,
+    branch_id: 'MAIN_BRANCH'
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center h-9 px-3 rounded-lg bg-card border border-input gap-2">
+          <div className="flex items-center h-10 px-4 rounded-xl bg-card border border-border shadow-sm gap-2 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search className="w-4 h-4 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search customers..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent text-sm outline-none w-48 placeholder:text-muted-foreground"
+              className="bg-transparent text-sm outline-none w-48 placeholder:text-muted-foreground font-medium"
             />
           </div>
+          {loading && <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium bg-muted/50 px-3 py-1 rounded-full border border-border animate-pulse">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+            Syncing...
+          </div>}
         </div>
         <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+          onClick={() => {
+            setShowForm(true);
+            setProfileMode('add');
+          }}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
         >
           <Plus className="w-4 h-4" /> Add Customer
         </button>
       </div>
 
       {/* Table */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">ID</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Mobile</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Email</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">City</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Created</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+              <tr className="border-b border-border bg-muted/30">
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">ID</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Contact</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">City</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Created</th>
+                <th className="text-right px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-border">
               {filtered.map((c) => (
-                <tr key={c.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.id}</td>
-                  <td className="px-4 py-3 font-semibold">{c.name}</td>
-                  <td className="px-4 py-3 tabular">{c.mobile}</td>
-                  <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{c.email}</td>
-                  <td className="px-4 py-3 hidden lg:table-cell">{c.city}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{c.createdDate}</td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => setSelectedCustomer(c)} className="p-1.5 rounded hover:bg-muted transition-colors" title="View">
-                        <Eye className="w-4 h-4 text-muted-foreground" />
+                <tr key={c._id || c.id} className="hover:bg-muted/30 transition-colors group">
+                  <td className="px-6 py-4 font-mono text-[10px] text-muted-foreground/60">{(c._id || c.id)?.slice(-8).toUpperCase()}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+                        {(c.customer_name || c.name || '?')[0].toUpperCase()}
+                      </div>
+                      <span className="font-bold text-foreground/90">{c.customer_name || c.name}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="font-medium tabular-nums">{c.mobile_number || c.mobile}</span>
+                      <span className="text-xs text-muted-foreground truncate max-w-[150px]">{c.email || 'No email'}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 hidden lg:table-cell text-muted-foreground font-medium">{c.city || '—'}</td>
+                  <td className="px-6 py-4 text-muted-foreground tabular-nums text-xs">{(c.createdDate || c.created_at)?.split('T')[0] || '—'}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => { setSelectedCustomer(c); setProfileMode('view'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
+                        <Eye className="w-4 h-4" />
                       </button>
-                      <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Edit">
-                        <Edit2 className="w-4 h-4 text-muted-foreground" />
+                      <button onClick={() => { setSelectedCustomer(c); setProfileMode('edit'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      <button className="p-1.5 rounded hover:bg-muted transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4 text-destructive" />
+                      <button 
+                        onClick={() => handleDelete(c._id || c.id!)}
+                        className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && !loading && (
+                <tr>
+                  <td colSpan={6} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 grayscale opacity-40">
+                      <Search className="w-8 h-8" />
+                      <p className="text-sm font-bold">No customers found</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </motion.div>
 
       {/* Add Customer Modal */}
-      {showForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-xl ring-1 ring-border shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between p-5 border-b border-border">
-              <h3 className="text-base font-bold">Add Customer</h3>
-              <button onClick={() => setShowForm(false)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-5 space-y-4">
-              {['Customer Name', 'Mobile Number', 'Email', 'Address', 'City', 'State', 'Pincode'].map((label) => (
-                <div key={label}>
-                  <label className="erp-label">{label}</label>
-                  <input className="erp-input" placeholder={label} />
+      <AnimatePresence>
+        {showForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-xl max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                <div>
+                  <h3 className="text-lg font-bold">Add New Customer</h3>
+                  <p className="text-xs text-muted-foreground">Complete the form below to register a new client.</p>
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-end gap-3 p-5 border-t border-border">
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">Save Customer</button>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Customer Profile Modal */}
-      {selectedCustomer && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/40">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card rounded-xl ring-1 ring-border shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex items-center justify-between p-5 border-b border-border">
-              <h3 className="text-base font-bold">{selectedCustomer.name} — Profile</h3>
-              <button onClick={() => setSelectedCustomer(null)} className="p-1 rounded hover:bg-muted"><X className="w-4 h-4" /></button>
-            </div>
-            <div className="p-5 space-y-6">
-              {/* Info */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-muted-foreground">Mobile:</span> <span className="ml-2 font-medium">{selectedCustomer.mobile}</span></div>
-                <div><span className="text-muted-foreground">Email:</span> <span className="ml-2 font-medium">{selectedCustomer.email}</span></div>
-                <div><span className="text-muted-foreground">City:</span> <span className="ml-2 font-medium">{selectedCustomer.city}</span></div>
-                <div><span className="text-muted-foreground">State:</span> <span className="ml-2 font-medium">{selectedCustomer.state}</span></div>
+                <button onClick={() => setShowForm(false)} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
 
-              {/* Purchases */}
-              <div>
-                <h4 className="erp-section-title">Vehicles Purchased</h4>
-                {saleOrders.filter(s => s.customerId === selectedCustomer.id).map(s => (
-                  <div key={s.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg mb-2 text-sm">
-                    <span className="font-medium">{s.vehicle.model.brand} {s.vehicle.model.model}</span>
-                    <span className="font-mono text-xs text-muted-foreground">{s.vehicle.chassisNumber}</span>
-                    <span className="font-semibold tabular">{formatCurrency(s.totalAmount)}</span>
-                  </div>
-                ))}
-              </div>
+              <Formik
+                initialValues={initialValues}
+                validationSchema={validationSchema}
+                onSubmit={(values, { setSubmitting }) => {
+                  dispatch(addCustomerAction(
+                    values,
+                    companyCode,
+                    () => {
+                      setShowForm(false);
+                      setSubmitting(false);
+                    },
+                    () => {
+                      setSubmitting(false);
+                    }
+                  ));
+                }}
+              >
+                {({ setFieldValue, values, isSubmitting }) => (
+                  <Form className="overflow-y-auto p-6 space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Photo Upload */}
+                      <div className="md:col-span-2">
+                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-3 block">Profile Photo</label>
+                        <div className="flex items-center gap-6">
+                          <label className="relative group w-24 h-24 rounded-2xl border-2 border-dashed border-border bg-muted/30 cursor-pointer overflow-hidden transition-all hover:border-primary/50 hover:bg-primary/5">
+                            <input 
+                              type="file" 
+                              name="photo"
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  setFieldValue('photo', e.target.files[0]);
+                                }
+                              }} 
+                            />
+                            {values.photo ? (
+                               <img src={URL.createObjectURL(values.photo)} className="w-full h-full object-cover" alt="Preview" />
+                            ) : (
+                              <div className="flex flex-col items-center justify-center h-full gap-1 text-muted-foreground group-hover:text-primary transition-colors">
+                                <Upload className="w-5 h-5" />
+                                <span className="text-[10px] font-bold">Upload</span>
+                              </div>
+                            )}
+                          </label>
+                          <div className="text-xs text-muted-foreground max-w-[200px]">
+                            <p className="font-bold text-foreground/80 mb-1">Upload a photo</p>
+                            <p>Recommended size: 256x256. Formats: JPG, PNG.</p>
+                          </div>
+                        </div>
+                      </div>
 
-              {/* Payments */}
-              <div>
-                <h4 className="erp-section-title">Payments Made</h4>
-                {payments.filter(p => p.customerId === selectedCustomer.id).map(p => (
-                  <div key={p.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg mb-2 text-sm">
-                    <span>{p.paymentType}</span>
-                    <span className="text-muted-foreground">{p.paymentDate}</span>
-                    <span className="font-semibold tabular">{formatCurrency(p.amount)}</span>
-                  </div>
-                ))}
-              </div>
+                      {[
+                        { label: 'Customer Name', name: 'customer_name', placeholder: 'e.g. John Doe' },
+                        { label: 'Mobile Number', name: 'mobile_number', placeholder: '10-digit mobile' },
+                        { label: 'Email Address', name: 'email', placeholder: 'john@example.com' },
+                        { label: 'Address', name: 'address', placeholder: 'Street, House no.' },
+                        { label: 'City', name: 'city', placeholder: 'City' },
+                        { label: 'State', name: 'state', placeholder: 'State' },
+                        { label: 'Pincode', name: 'pincode', placeholder: '6-digit code' },
+                        { label: 'Aadhaar Card No', name: 'aadhaar_card_no', placeholder: 'XXXX-XXXX-XXXX' },
+                        { label: 'PAN Card No', name: 'pan_card_no', placeholder: 'ABCDE1234F' }
+                      ].map((field) => (
+                        <div key={field.name} className={field.name === 'address' ? 'md:col-span-2' : ''}>
+                          <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">{field.label}</label>
+                          <Field 
+                            name={field.name}
+                            className="erp-input h-11 px-4 text-sm bg-muted/20 border-border/60 hover:border-border transition-all focus:ring-2 focus:ring-primary/10" 
+                            placeholder={field.placeholder} 
+                          />
+                          <ErrorMessage name={field.name} component="div" className="text-[10px] font-bold text-destructive pl-1 mt-1 animate-in fade-in slide-in-from-top-1" />
+                        </div>
+                      ))}
+                    </div>
 
-              {/* Ledger */}
-              <div>
-                <h4 className="erp-section-title">Ledger</h4>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="text-left py-2 text-xs font-semibold text-muted-foreground">Date</th>
-                      <th className="text-left py-2 text-xs font-semibold text-muted-foreground">Description</th>
-                      <th className="text-right py-2 text-xs font-semibold text-muted-foreground">Debit</th>
-                      <th className="text-right py-2 text-xs font-semibold text-muted-foreground">Credit</th>
-                      <th className="text-right py-2 text-xs font-semibold text-muted-foreground">Balance</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ledgerEntries.filter(l => l.customerId === selectedCustomer.id).map(l => (
-                      <tr key={l.id} className="border-b border-border last:border-0">
-                        <td className="py-2">{l.date}</td>
-                        <td className="py-2">{l.description}</td>
-                        <td className="py-2 text-right tabular">{l.debit > 0 ? formatCurrency(l.debit) : '—'}</td>
-                        <td className="py-2 text-right tabular">{l.credit > 0 ? formatCurrency(l.credit) : '—'}</td>
-                        <td className="py-2 text-right tabular font-semibold">{formatCurrency(l.balance)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </motion.div>
-        </div>
+                    <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                      <button 
+                        type="button"
+                        onClick={() => setShowForm(false)} 
+                        className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors"
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        type="submit"
+                        className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                            Saving...
+                          </div>
+                        ) : 'Save Customer'}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Customer Profile Modal (View/Edit) */}
+      {selectedCustomer && profileMode && (
+        <CustomerProfile
+          customer={selectedCustomer}
+          onClose={() => { setSelectedCustomer(null); setProfileMode(null); }}
+        />
       )}
     </div>
   );

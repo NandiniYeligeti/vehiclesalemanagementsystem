@@ -1,10 +1,16 @@
 import { Bell, Search, User } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/store/rootReducer';
+import { logout } from '@/store/ducks/auth.duck';
 
 interface TopNavProps {
   title: string;
 }
 
 const TopNav = ({ title }: TopNavProps) => {
+  const dispatch = useDispatch();
+  const { user } = useSelector((state: RootState) => state.auth);
+
   return (
     <header className="h-16 bg-card border-b border-border flex items-center justify-between px-6 lg:px-8 shrink-0">
       <h1 className="text-lg font-bold text-foreground pl-10 lg:pl-0">{title}</h1>
@@ -27,12 +33,20 @@ const TopNav = ({ title }: TopNavProps) => {
         </button>
 
         {/* User */}
-        <div className="flex items-center gap-2 pl-2 border-l border-border">
+        <button onClick={() => {
+          if (window.confirm('Are you sure you want to log out?')) {
+             dispatch(logout());
+             window.location.href = '/login';
+          }
+        }} className="flex items-center gap-2 pl-2 border-l border-border hover:bg-muted/50 p-1.5 rounded-xl transition-colors text-left">
           <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="w-4 h-4 text-primary" />
           </div>
-          <span className="hidden sm:block text-sm font-medium">Admin</span>
-        </div>
+          <div className="hidden sm:flex flex-col">
+             <span className="text-sm font-bold leading-none">{user?.company_name || 'Admin'}</span>
+             <span className="text-[10px] text-muted-foreground uppercase tracking-widest leading-none mt-1">Tenant: {user?.CompanyCode || 'DEF'}</span>
+          </div>
+        </button>
       </div>
     </header>
   );
