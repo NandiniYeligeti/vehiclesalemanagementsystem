@@ -1,10 +1,22 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
+import { toast } from 'sonner';
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   getVehicleModelsAction, 
   addVehicleModelAction, 
@@ -62,6 +74,10 @@ const VehiclesPage = () => {
   const [editingModel, setEditingModel] = useState<any>(null);
   const [editingInventory, setEditingInventory] = useState<any>(null);
 
+  const [modelToDelete, setModelToDelete] = useState<string | null>(null);
+  const [inventoryToDelete, setInventoryToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Redux state with fallback safety
   const { data: models = [], loading: modelsLoading } = useSelector((state: RootState) => state.vehicleModels || { data: [], loading: false });
   const { data: inventory = [], loading: inventoryLoading } = useSelector((state: RootState) => state.vehicleInventory || { data: [], loading: false });
@@ -94,15 +110,41 @@ const VehiclesPage = () => {
     Delivered: (inventory || []).filter(v => v.status === 'Delivered').length,
   };
 
-  const handleDeleteModel = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this vehicle model?')) {
-      dispatch(deleteVehicleModelAction(id));
+  const handleConfirmDeleteModel = () => {
+    if (modelToDelete) {
+      setIsDeleting(true);
+      dispatch(deleteVehicleModelAction(
+        modelToDelete,
+        companyCode,
+        () => {
+          setIsDeleting(false);
+          setModelToDelete(null);
+          toast.success('Vehicle model deleted');
+        },
+        (error: any) => {
+          setIsDeleting(false);
+          toast.error(error?.message || 'Failed to delete vehicle model');
+        }
+      ));
     }
   };
 
-  const handleDeleteInventory = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this vehicle from inventory?')) {
-      dispatch(deleteVehicleInventoryAction(id));
+  const handleConfirmDeleteInventory = () => {
+    if (inventoryToDelete) {
+      setIsDeleting(true);
+      dispatch(deleteVehicleInventoryAction(
+        inventoryToDelete,
+        companyCode,
+        () => {
+          setIsDeleting(false);
+          setInventoryToDelete(null);
+          toast.success('Vehicle removed from inventory');
+        },
+        (error: any) => {
+          setIsDeleting(false);
+          toast.error(error?.message || 'Failed to delete inventory item');
+        }
+      ));
     }
   };
 
@@ -125,6 +167,54 @@ const VehiclesPage = () => {
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={!!modelToDelete} onOpenChange={() => setModelToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Delete Model?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
+              Removing this model will affect inventory records. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteModel} 
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Delete Model"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!inventoryToDelete} onOpenChange={() => setInventoryToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Remove Vehicle?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
+              This will permanently remove the vehicle from your digital fleet.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleConfirmDeleteInventory} 
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Remove Vehicle"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Tab Toggle */}
       <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
         <button onClick={() => setTab('inventory')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'inventory' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>
@@ -202,13 +292,13 @@ const VehiclesPage = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button 
                             onClick={() => handleEditInventory(v)}
-                            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground"
+                            className="p-1.5 rounded hover:bg-primary/10 transition-colors text-primary"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => handleDeleteInventory(v._id || v.id!)}
-                            className="p-1.5 rounded hover:bg-muted transition-colors text-destructive"
+                            onClick={() => setInventoryToDelete(v.entity_id || v._id || v.id!)}
+                            className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-destructive"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -266,13 +356,13 @@ const VehiclesPage = () => {
                         <div className="flex items-center justify-end gap-1">
                           <button 
                             onClick={() => handleEditModel(m)}
-                            className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground"
+                            className="p-1.5 rounded hover:bg-primary/10 transition-colors text-primary"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button 
-                            onClick={() => handleDeleteModel(m._id || m.id!)}
-                            className="p-1.5 rounded hover:bg-muted transition-colors text-destructive"
+                            onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)}
+                            className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-destructive"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -315,10 +405,20 @@ const VehiclesPage = () => {
                 validationSchema={modelValidationSchema}
                 onSubmit={(values, { setSubmitting }) => {
                   if (editingModel) {
-                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, values, () => {
-                      handleCloseForms();
-                      setSubmitting(false);
-                    }, () => setSubmitting(false)));
+                    dispatch(updateVehicleModelAction(
+                      editingModel.entity_id || editingModel._id || editingModel.id, 
+                      values, 
+                      companyCode, 
+                      () => {
+                        handleCloseForms();
+                        setSubmitting(false);
+                        toast.success('Model updated');
+                      }, 
+                      (err: any) => {
+                        setSubmitting(false);
+                        toast.error(err?.message || 'Failed to update model');
+                      }
+                    ));
                   } else {
                     dispatch(addVehicleModelAction(
                       values,
@@ -326,10 +426,11 @@ const VehiclesPage = () => {
                       () => {
                         handleCloseForms();
                         setSubmitting(false);
+                        toast.success('Model added successfully');
                       },
                       (err: any) => {
                         setSubmitting(false);
-                        alert(err?.response?.data?.error || err.message || 'Failed to add model');
+                        toast.error(err?.response?.data?.error || err.message || 'Failed to add model');
                       }
                     ));
                   }
@@ -413,10 +514,20 @@ const VehiclesPage = () => {
                     purchase_date: values.purchase_date ? new Date(values.purchase_date).toISOString() : ''
                   };
                   if (editingInventory) {
-                    dispatch(updateVehicleInventoryAction(editingInventory.entity_id || editingInventory._id || editingInventory.id, payload, () => {
-                      handleCloseForms();
-                      setSubmitting(false);
-                    }, () => setSubmitting(false)));
+                    dispatch(updateVehicleInventoryAction(
+                      editingInventory.entity_id || editingInventory._id || editingInventory.id, 
+                      payload, 
+                      companyCode, 
+                      () => {
+                        handleCloseForms();
+                        setSubmitting(false);
+                        toast.success('Inventory updated');
+                      }, 
+                      (err: any) => {
+                        setSubmitting(false);
+                        toast.error(err?.message || 'Failed to update inventory');
+                      }
+                    ));
                   } else {
                     dispatch(addVehicleInventoryAction(
                       payload,
@@ -424,10 +535,11 @@ const VehiclesPage = () => {
                       () => {
                         handleCloseForms();
                         setSubmitting(false);
+                        toast.success('Vehicle added to inventory');
                       },
                       (err: any) => {
                         setSubmitting(false);
-                        alert(err?.response?.data?.error || err.message || 'Failed to add vehicle');
+                        toast.error(err?.response?.data?.error || err.message || 'Failed to add vehicle');
                       }
                     ));
                   }

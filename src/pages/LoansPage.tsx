@@ -18,6 +18,18 @@ const loanValidationSchema = Yup.object().shape({
   months: Yup.number().min(1).required('Tenure is required'),
 });
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from 'lucide-react';
+
 const LoansPage = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
@@ -30,6 +42,10 @@ const LoansPage = () => {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState('All');
+  
+  // Custom delete state
+  const [loanToDelete, setLoanToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (companyCode) {
@@ -61,14 +77,41 @@ const LoansPage = () => {
     return Math.round(emi);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this loan record?')) {
-      dispatch(deleteLoanAction(id));
+  const confirmDelete = () => {
+    if (loanToDelete) {
+      setIsDeleting(true);
+      dispatch(deleteLoanAction(loanToDelete, () => {
+        setIsDeleting(false);
+        setLoanToDelete(null);
+      }, () => setIsDeleting(false)));
     }
   };
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={!!loanToDelete} onOpenChange={() => setLoanToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Delete Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
+              Are you sure you want to remove this loan application? This will permanently delete the record.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Delete Portfolio"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* Header & Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -181,7 +224,7 @@ const LoansPage = () => {
                   <div className="flex items-center gap-2">
                     <button className="p-2.5 rounded-xl border border-border hover:bg-muted transition-all"><Edit2 className="w-4 h-4 text-muted-foreground" /></button>
                     <button 
-                      onClick={() => handleDelete(loan.entity_id || loan._id || loan.id!)}
+                      onClick={() => setLoanToDelete(loan.entity_id || loan._id || loan.id!)}
                       className="p-2.5 rounded-xl border border-destructive/10 text-destructive bg-destructive/5 hover:bg-destructive hover:text-white transition-all"
                     >
                       <Trash2 className="w-4 h-4" />

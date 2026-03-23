@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Search, Trash2, Edit, AlertTriangle, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
+import { toast } from 'sonner';
 
 import {
   getSalespersonsAction,
   addSalespersonAction,
+  updateSalespersonAction,
+  deleteSalespersonAction,
 } from '@/store/ducks/salespersons.ducks';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,15 +17,23 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const vehicleTypes = ['Car', 'Bike', 'Truck'];
 
 const SalespersonsPage = () => {
-
   const dispatch = useDispatch();
-
-  const { data: salespersons } = useSelector(
-    (state: RootState) => state.salespersons || { data: [] }
+  const { data: salespersons, loading, saving } = useSelector(
+    (state: RootState) => state.salespersons || { data: [], loading: false, saving: false }
   );
 
   const user = useSelector((state: RootState) => state.auth.user);
@@ -30,6 +41,8 @@ const SalespersonsPage = () => {
 
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [personToDelete, setPersonToDelete] = useState<string | null>(null);
 
   const [form, setForm] = useState<any>({
     commissionType: '',
@@ -52,98 +65,132 @@ const SalespersonsPage = () => {
     (d.full_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
- const handleSave = () => {
-  if (!form.full_name?.trim()) {
-    alert('Full name is required');
-    return;
-  }
+  const handleSave = () => {
+    if (!form.full_name?.trim()) {
+      toast.error('Full name is required');
+      return;
+    }
 
-  if (!/^\d{10}$/.test(form.mobile_number)) {
-    alert('Mobile number must be exactly 10 digits');
-    return;
-  }
+    if (!/^\d{10}$/.test(form.mobile_number)) {
+      toast.error('Mobile number must be exactly 10 digits');
+      return;
+    }
 
-  if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-    alert('Invalid email address');
-    return;
-  }
+    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      toast.error('Invalid email address');
+      return;
+    }
 
-  if (!(form.city || form.branch_id)) {
-    alert('Branch is required');
-    return;
-  }
+    if (!form.commissionType) {
+      toast.error('Commission type is required');
+      return;
+    }
 
-  if (!form.commissionType) {
-    alert('Commission type is required');
-    return;
-  }
+    if (!form.commissionValue) {
+      toast.error('Commission value is required');
+      return;
+    }
 
-  if (!form.commissionValue) {
-    alert('Commission value is required');
-    return;
-  }
+    const payload = {
+      ...form,
+      branch_id: form.city || form.branch_id || 'MAIN_BRANCH',
+      company_id: companyCode,
+      commissionValue: Number(form.commissionValue || 0),
+      vehicle: form.commissionType === 'percentage' ? form.vehicle : '',
+    };
 
-  if (
-    form.commissionType === 'percentage' &&
-    !form.vehicle
-  ) {
-    alert('Vehicle type is required for percentage commission');
-    return;
-  }
+    const id = form.entity_id || form._id || form.id;
 
-  const payload = {
-    ...form,
-    branch_id: form.city || form.branch_id || '',
-    company_id: companyCode,
-    commissionValue: Number(form.commissionValue || 0),
-    vehicle: form.commissionType === 'percentage' ? form.vehicle : '',
+    if (isEditing && id) {
+      dispatch(
+        updateSalespersonAction(id, payload, companyCode, () => {
+          setOpen(false);
+          setIsEditing(false);
+          setForm({});
+          toast.success('Salesperson updated successfully');
+          dispatch(getSalespersonsAction(companyCode));
+        })
+      );
+    } else {
+      dispatch(
+        addSalespersonAction(payload, companyCode, () => {
+          setOpen(false);
+          setForm({});
+          toast.success('Salesperson added successfully');
+          dispatch(getSalespersonsAction(companyCode));
+        })
+      );
+    }
   };
 
-  dispatch(
-    addSalespersonAction(payload, companyCode, () => {
-      setOpen(false);
-      setForm({});
-    })
-  );
-};
+  const confirmDelete = () => {
+    if (personToDelete) {
+      dispatch(deleteSalespersonAction(personToDelete, companyCode, () => {
+        toast.success('Salesperson deleted successfully');
+        setPersonToDelete(null);
+        dispatch(getSalespersonsAction(companyCode));
+      }));
+    }
+  };
 
   const renderCommission = (item: any) => {
-
     if (item.commissionType === 'fixed') {
       return `₹ ${item.commissionValue}`;
     }
-
     if (item.commissionType === 'percentage') {
       return `${item.commissionValue}% (${item.vehicle})`;
     }
-
     return '-';
   };
 
   return (
     <div className="space-y-6">
-
+      {/* Custom Deletion Dialog */}
+      <AlertDialog open={!!personToDelete} onOpenChange={() => setPersonToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl overflow-hidden p-8">
+          <div className="absolute top-0 left-0 w-full h-1 bg-destructive" />
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
+              Are you sure you want to remove this salesperson from your team? 
+              This action permanent and will remove all their performance tracking data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : "Remove from Team"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {/* HEADER */}
-      <div className="flex justify-between items-center">
-
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black">Sales Team</h1>
-          <p className="text-xs text-muted-foreground">Personnel Management</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Personnel Management</p>
         </div>
 
-        <div className="flex gap-3">
-
-          <div className="flex items-center gap-2 border rounded-xl px-4 h-10">
-            <Search className="w-4 h-4" />
+        <div className="flex gap-3 w-full sm:w-auto">
+          <div className="flex items-center gap-2 border rounded-xl px-4 h-11 bg-card w-full sm:w-72 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+            <Search className="w-4 h-4 text-muted-foreground" />
             <input
               placeholder="Search team members..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent outline-none"
+              className="bg-transparent outline-none text-sm w-full"
             />
           </div>
 
           <Button
+            className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
             onClick={() => {
               setForm({
                 commissionType: '',
@@ -155,203 +202,190 @@ const SalespersonsPage = () => {
                 branch_id: '',
                 city: '',
               });
+              setIsEditing(false);
               setOpen(true);
             }}
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Add Member
+            <Plus className="w-4 h-4 mr-1" /> Add Member
           </Button>
-
         </div>
       </div>
 
       {/* LIST */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((item: any) => (
-
-          <Card key={item._id} className="rounded-2xl shadow">
-
-            <CardContent className="p-4 space-y-2">
-
-              <div className="flex justify-between">
-
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    {item.full_name}
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    {item.branch_id}
-                  </p>
+          <Card key={item.entity_id || item._id || item.id} className="rounded-2xl shadow-sm hover:shadow-xl transition-all border-none erp-card overflow-hidden">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-start">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
+                    {item.full_name?.[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg leading-none">{item.full_name}</h3>
+                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
+                      {item.branch_id || 'MAIN BRANCH'}
+                    </p>
+                  </div>
                 </div>
-
-                <Badge>ACTIVE</Badge>
-
+                <Badge className="bg-green-500/10 text-green-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest">ACTIVE</Badge>
               </div>
 
-              <div className="text-sm space-y-1">
-
-                <p>
-                  <b>Mobile:</b> {item.mobile_number}
-                </p>
-
-                <p>
-                  <b>Email:</b> {item.email}
-                </p>
-
-                <p>
-                  <b>Commission:</b> {renderCommission(item)}
-                </p>
-
+              <div className="space-y-3 bg-muted/30 p-4 rounded-xl text-sm">
+                <div className="flex justify-between items-center opacity-70">
+                  <span className="text-xs font-bold uppercase tracking-wider">Mobile</span>
+                  <span className="font-mono">{item.mobile_number}</span>
+                </div>
+                <div className="flex justify-between items-center opacity-70">
+                  <span className="text-xs font-bold uppercase tracking-wider">Email</span>
+                  <span>{item.email || 'N/A'}</span>
+                </div>
+                <div className="flex justify-between items-center bg-primary/5 p-2 rounded-lg -mx-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-primary">Commission</span>
+                  <span className="font-black text-primary">{renderCommission(item)}</span>
+                </div>
               </div>
 
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  setForm(item);
-                  setOpen(true);
-                }}
-              >
-                Edit
-              </Button>
-
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary transition-all font-bold gap-2 h-10"
+                  onClick={() => {
+                    setForm(item);
+                    setForm({ ...item, city: item.branch_id });
+                    setIsEditing(true);
+                    setOpen(true);
+                  }}
+                >
+                  <Edit className="w-3.5 h-3.5" /> Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  className="rounded-xl border-border/60 hover:bg-destructive/5 hover:text-destructive transition-all font-bold h-10 px-3"
+                  onClick={() => setPersonToDelete(item.entity_id || item._id || item.id)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </CardContent>
-
           </Card>
-
         ))}
-
       </div>
 
+      {loading && filtered.length === 0 && (
+        <div className="flex items-center justify-center h-48 opacity-40 italic">
+          Fetching team members...
+        </div>
+      )}
+
       {/* ADD / EDIT DIALOG */}
-
       <Dialog open={open} onOpenChange={setOpen}>
-
-        <DialogContent>
-
-          <DialogHeader>
-            <DialogTitle>
-              Add Salesperson
+        <DialogContent className="max-w-md p-8 rounded-3xl border-none shadow-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-xl font-black">
+              {isEditing ? 'Edit Team Member' : 'New Salesperson'}
             </DialogTitle>
+            <p className="text-muted-foreground text-xs mt-1">Configure individual commission and branch details.</p>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+              <Input
+                placeholder="John Doe"
+                className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                value={form.full_name || ''}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+              />
+            </div>
 
-            <Input
-              placeholder="Name"
-              value={form.full_name || ''}
-              onChange={(e) =>
-                setForm({ ...form, full_name: e.target.value })
-              }
-            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Mobile</label>
+                <Input
+                  placeholder="10 digit number"
+                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                  value={form.mobile_number || ''}
+                  onChange={(e) => setForm({ ...form, mobile_number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Branch / City</label>
+                <Input
+                  placeholder="Main Branch"
+                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                  value={form.city || ''}
+                  onChange={(e) => setForm({ ...form, city: e.target.value, branch_id: e.target.value })}
+                />
+              </div>
+            </div>
 
-            <Input
-              placeholder="Branch / City"
-              value={form.city || ''}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  city: e.target.value,
-                  branch_id: e.target.value,
-                })
-              }
-            />
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
+              <Input
+                placeholder="john@example.com"
+                className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                value={form.email || ''}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+            </div>
 
-            <Input
-              placeholder="Mobile"
-              value={form.mobile_number || ''}
-              onChange={(e) =>
-                setForm({ ...form, mobile_number: e.target.value })
-              }
-            />
+            <div className="pt-2 border-t border-border mt-2 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Comm. Type</label>
+                  <Select
+                    value={form.commissionType}
+                    onValueChange={(val) => setForm({ ...form, commissionType: val })}
+                  >
+                    <SelectTrigger className="rounded-xl h-12 bg-muted/30 border-none">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fixed">Fixed ₹</SelectItem>
+                      <SelectItem value="percentage">Percent %</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Value</label>
+                  <Input
+                    type="number"
+                    placeholder="Enter value"
+                    className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 font-bold"
+                    value={form.commissionValue || ''}
+                    onChange={(e) => setForm({ ...form, commissionValue: e.target.value })}
+                  />
+                </div>
+              </div>
 
-            <Input
-              placeholder="Email"
-              value={form.email || ''}
-              onChange={(e) =>
-                setForm({ ...form, email: e.target.value })
-              }
-            />
+              {form.commissionType === 'percentage' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Applicable Vehicle</label>
+                  <Select
+                    value={form.vehicle}
+                    onValueChange={(val) => setForm({ ...form, vehicle: val })}
+                  >
+                    <SelectTrigger className="rounded-xl h-12 bg-muted/30 border-none">
+                      <SelectValue placeholder="Select Vehicle" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {vehicleTypes.map((v) => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
 
-            {/* COMMISSION TYPE */}
-
-            <Select
-              value={form.commissionType}
-              onValueChange={(val) =>
-                setForm({ ...form, commissionType: val })
-              }
-            >
-
-              <SelectTrigger>
-                <SelectValue placeholder="Select Commission Type" />
-              </SelectTrigger>
-
-              <SelectContent>
-                <SelectItem value="fixed">Fixed Amount</SelectItem>
-                <SelectItem value="percentage">Percentage</SelectItem>
-              </SelectContent>
-
-            </Select>
-
-            {/* VEHICLE TYPE */}
-
-            {form.commissionType === 'percentage' && (
-
-              <Select
-                value={form.vehicle}
-                onValueChange={(val) =>
-                  setForm({ ...form, vehicle: val })
-                }
-              >
-
-                <SelectTrigger>
-                  <SelectValue placeholder="Vehicle Type" />
-                </SelectTrigger>
-
-                <SelectContent>
-
-                  {vehicleTypes.map((v) => (
-                    <SelectItem key={v} value={v}>
-                      {v}
-                    </SelectItem>
-                  ))}
-
-                </SelectContent>
-
-              </Select>
-
-            )}
-
-            {/* COMMISSION VALUE */}
-
-            <Input
-              type="number"
-              placeholder={
-                form.commissionType === 'fixed'
-                  ? 'Enter Amount'
-                  : 'Enter %'
-              }
-              value={form.commissionValue || ''}
-              onChange={(e) =>
-                setForm({
-                  ...form,
-                  commissionValue: e.target.value,
-                })
-              }
-            />
-
-            <Button className="w-full" onClick={handleSave}>
-              Save
+            <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>
+              {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isEditing ? 'Update Profile' : 'Confirm Registration')}
             </Button>
-
           </div>
-
         </DialogContent>
-
       </Dialog>
-
     </div>
   );
 };

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Edit2, Trash2, Eye, X, Upload } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye, X, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
+import { toast } from 'sonner';
 import { 
   getCustomersAction, 
   addCustomerAction, 
@@ -14,6 +15,17 @@ import {
 
 import { formatCurrency, saleOrders, payments, ledgerEntries } from '@/data/mockData';
 import CustomerProfile from '@/components/CustomerProfile';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 const validationSchema = Yup.object().shape({
   customer_name: Yup.string()
@@ -49,6 +61,9 @@ const CustomersPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [profileMode, setProfileMode] = useState<'view' | 'edit' | 'add' | null>(null);
+  
+  // Custom Delete Confirmation state
+  const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (companyCode) {
@@ -63,9 +78,20 @@ const CustomersPage = () => {
     (c.mobile_number || '').includes(search)
   );
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this customer?')) {
-      dispatch(deleteCustomerAction(id));
+  const confirmDelete = () => {
+    if (customerToDelete) {
+      dispatch(deleteCustomerAction(
+        customerToDelete, 
+        companyCode,
+        () => {
+          toast.success("Customer deleted successfully");
+          setCustomerToDelete(null);
+        },
+        (err) => {
+          toast.error(err || "Failed to delete customer");
+          setCustomerToDelete(null);
+        }
+      ));
     }
   };
 
@@ -86,10 +112,35 @@ const CustomersPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Custom Alert Dialog for Deletion */}
+      <AlertDialog open={!!customerToDelete} onOpenChange={() => setCustomerToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-xl text-foreground">Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm font-medium">
+              This action cannot be undone. This will permanently delete the customer profile 
+              and remove their data from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-3 mt-4">
+            <AlertDialogCancel className="rounded-xl font-bold border-border/60 hover:bg-muted transition-all">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 transition-all border-none"
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "Confirm Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex items-center h-10 px-4 rounded-xl bg-card border border-border shadow-sm gap-2 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+          <div className="flex items-center h-10 px-4 rounded-xl bg-card border border-border/60 shadow-sm gap-2 focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search className="w-4 h-4 text-muted-foreground" />
             <input
               type="text"
@@ -158,7 +209,7 @@ const CustomersPage = () => {
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
-                        onClick={() => handleDelete(c._id || c.id!)}
+                        onClick={() => setCustomerToDelete(c._id || c.id!)}
                         className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
                       >
                         <Trash2 className="w-4 h-4" />

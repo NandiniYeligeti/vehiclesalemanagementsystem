@@ -143,17 +143,19 @@ export const addCustomerAction = (payload: any, companyCode: string, onSuccess?:
   onError,
 });
 
-export const updateCustomerAction = (customerId: string, payload: any, onSuccess?: (data: any) => void, onError?: (err: any) => void) => ({
+export const updateCustomerAction = (customerId: string, payload: any, companyCode: string, onSuccess?: (data: any) => void, onError?: (err: any) => void) => ({
   type: UPDATE_CUSTOMER,
   customerId,
   payload,
+  companyCode,
   onSuccess,
   onError,
 });
 
-export const deleteCustomerAction = (customerId: string, onSuccess?: (data: any) => void, onError?: (err: any) => void) => ({
+export const deleteCustomerAction = (customerId: string, companyCode: string, onSuccess?: (data: any) => void, onError?: (err: any) => void) => ({
   type: DELETE_CUSTOMER,
   customerId,
+  companyCode,
   onSuccess,
   onError,
 });

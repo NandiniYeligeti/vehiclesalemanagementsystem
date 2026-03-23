@@ -75,16 +75,18 @@ export const addSalespersonAction = (data: any, companyCode: string, onSuccess?:
   onError,
 });
 
-export const updateSalespersonAction = (id: string, data: any, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const updateSalespersonAction = (id: string, data: any, companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: UPDATE_SALESPERSON,
   payload: { id, data },
+  companyCode,
   onSuccess,
   onError,
 });
 
-export const deleteSalespersonAction = (id: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const deleteSalespersonAction = (id: string, companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: DELETE_SALESPERSON,
   payload: id,
+  companyCode,
   onSuccess,
   onError,
 });
@@ -120,7 +122,7 @@ function* addSalespersonSaga(action: any): SagaIterator {
 function* updateSalespersonSaga(action: any): SagaIterator {
   try {
     yield put({ type: SET_SAVING, payload: true });
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(salespersonService.updateSalesperson, companyCode, action.payload.id, action.payload.data);
     yield put(getSalespersonsAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);
@@ -135,7 +137,7 @@ function* updateSalespersonSaga(action: any): SagaIterator {
 function* deleteSalespersonSaga(action: any): SagaIterator {
   try {
     yield put({ type: SET_SAVING, payload: true });
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(salespersonService.deleteSalesperson, companyCode, action.payload);
     yield put(getSalespersonsAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);

@@ -16,6 +16,18 @@ interface UserRecord {
   created_at: string;
 }
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { AlertTriangle } from 'lucide-react';
+
 const UsersManagementPage = () => {
   const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || sessionStorage.getItem('companyCode') || '';
@@ -26,12 +38,14 @@ const UsersManagementPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-
+  
   const [formData, setFormData] = useState({
     username: '',
     email: '',
     password: '',
   });
+  
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     if (!companyCode) return;
@@ -48,7 +62,7 @@ const UsersManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchUsers();
+    if (companyCode) fetchUsers();
   }, [companyCode]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -71,15 +85,17 @@ const UsersManagementPage = () => {
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
     try {
-      setDeletingId(userId);
-      await deleteUserApi(companyCode, userId);
+      setDeletingId(userToDelete);
+      await deleteUserApi(companyCode, userToDelete);
       toast.success('User deleted successfully!');
+      setUserToDelete(null);
       fetchUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || error.message || 'Failed to delete user');
+      setUserToDelete(null);
     } finally {
       setDeletingId(null);
     }
@@ -87,6 +103,30 @@ const UsersManagementPage = () => {
 
   return (
     <div className="space-y-6">
+      <AlertDialog open={!!userToDelete} onOpenChange={() => setUserToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
+              <AlertTriangle className="w-8 h-8 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Remove User?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
+              This will revoke all access for this user immediately. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDeleteUser}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
+              disabled={!!deletingId}
+            >
+              {deletingId ? <Loader2 className="w-5 h-5 animate-spin" /> : "Delete Account"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -209,7 +249,7 @@ const UsersManagementPage = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button
-                      onClick={() => handleDeleteUser(u.id)}
+                      onClick={() => setUserToDelete(u.id)}
                       disabled={deletingId === u.id}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
                     >

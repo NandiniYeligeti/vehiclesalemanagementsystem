@@ -75,16 +75,18 @@ export const addVehicleInventoryAction = (data: any, companyCode: string, onSucc
   onError,
 });
 
-export const updateVehicleInventoryAction = (id: string, data: any, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const updateVehicleInventoryAction = (id: string, data: any, companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: UPDATE_VEHICLE_INVENTORY,
   payload: { id, data },
+  companyCode,
   onSuccess,
   onError,
 });
 
-export const deleteVehicleInventoryAction = (id: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const deleteVehicleInventoryAction = (id: string, companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: DELETE_VEHICLE_INVENTORY,
   payload: id,
+  companyCode,
   onSuccess,
   onError,
 });
@@ -120,7 +122,7 @@ function* addVehicleInventorySaga(action: any): SagaIterator {
 function* updateVehicleInventorySaga(action: any): SagaIterator {
   try {
     yield put({ type: SET_SAVING, payload: true });
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(vehicleService.updateVehicleInventory, companyCode, action.payload.id, action.payload.data);
     yield put(getVehicleInventoryAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);
@@ -135,7 +137,7 @@ function* updateVehicleInventorySaga(action: any): SagaIterator {
 function* deleteVehicleInventorySaga(action: any): SagaIterator {
   try {
     yield put({ type: SET_SAVING, payload: true });
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(vehicleService.deleteVehicleInventory, companyCode, action.payload);
     yield put(getVehicleInventoryAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);
