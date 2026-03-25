@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, Mail, Loader2, PlaySquare } from 'lucide-react';
+import { Eye, EyeOff, User, Building2 } from 'lucide-react';
 import { loginAction } from '@/store/ducks/auth.duck';
 import { RootState } from '@/store/rootReducer';
 
@@ -13,6 +12,8 @@ const LoginPage = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [themeColor, setThemeColor] = useState('#070B19');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,83 +29,146 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/20 relative overflow-hidden">
-      {/* Decorative background shapes */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/20 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/20 blur-[100px] rounded-full pointer-events-none" />
-
-      <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md p-8 bg-card rounded-3xl shadow-2xl ring-1 ring-border relative z-10 mx-4"
-      >
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20 text-primary shadow-inner">
-            <PlaySquare className="w-8 h-8" />
+    <div 
+       className="min-h-screen flex flex-col items-center justify-center relative font-sans transition-colors duration-500"
+       style={{ backgroundColor: themeColor }}
+    >
+      <div className="w-full max-w-[380px] p-8 sm:p-9 bg-white rounded-2xl shadow-xl relative z-10 mx-4">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center mx-auto mb-3 text-blue-600">
+            <Building2 className="w-7 h-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Welcome Back</h1>
-          <p className="text-sm text-muted-foreground mt-2">Enter your credentials to access your account</p>
+          <h1 className="text-[22px] font-semibold text-slate-800">SmartERP Login</h1>
+          
+          <div className="mt-1 flex justify-center">
+             <input 
+                type="file" 
+                className="block text-center text-[11px] text-slate-400 file:mr-1 file:py-0 file:px-0 file:border-0 file:text-[11px] file:bg-transparent file:text-slate-400 w-[140px]" 
+             />
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
           <div className="space-y-4">
+            {/* User ID */}
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
-                Email Address
+              <label className="text-[13px] font-bold text-slate-800 mb-1.5 block">
+                User ID
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="relative flex items-center border border-slate-200 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all bg-white">
+                <div className="pl-3 flex items-center justify-center text-slate-400">
+                  <User className="w-4 h-4" />
+                </div>
                 <input
                   type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
+                  placeholder="Enter User ID"
                   required
-                  className="w-full h-12 pl-11 pr-4 rounded-xl bg-muted/30 border border-border focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none font-medium"
+                  className="w-full h-[42px] pl-2 pr-3 text-[13px] text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
                 />
               </div>
             </div>
 
+            {/* Password */}
             <div>
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
+              <label className="text-[13px] font-bold text-slate-800 mb-1.5 block">
                 Password
               </label>
-              <div className="relative">
-                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="relative flex items-center border border-slate-200 rounded-lg overflow-hidden focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 transition-all bg-white">
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
+                  placeholder="Enter Password"
                   required
-                  className="w-full h-12 pl-11 pr-4 rounded-xl bg-muted/30 border border-border focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all outline-none font-medium"
+                  className="w-full h-[42px] pl-3 pr-10 text-[13px] text-slate-800 bg-transparent outline-none placeholder:text-slate-400"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 text-slate-400 hover:text-slate-600 focus:outline-none flex items-center justify-center"
+                >
+                  {showPassword ? (
+                     <EyeOff className="w-[18px] h-[18px]" />
+                  ) : (
+                     <Eye className="w-[18px] h-[18px]" />
+                  )}
+                </button>
               </div>
             </div>
           </div>
 
+          {/* Options */}
+          <div className="flex items-center justify-between mt-4 mb-6">
+            <label className="flex items-center cursor-pointer gap-2">
+              <input type="checkbox" className="w-[14px] h-[14px] rounded border-slate-300 text-slate-900 focus:ring-slate-900" />
+              <span className="text-[13px] font-bold text-slate-800">Remember Me</span>
+            </label>
+            <a href="#" className="text-[13px] text-blue-500 hover:text-blue-600">
+              Forgot Password?
+            </a>
+          </div>
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading || !email || !password}
-            className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold tracking-wide shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale disabled:pointer-events-none flex items-center justify-center gap-2"
+            className="w-full h-[42px] bg-[#121A2F] hover:bg-[#0A0F1D] text-white rounded-[6px] font-semibold text-[14px] transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" /> Authenticating...
-              </>
-            ) : (
-              'Sign In'
-            )}
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-border text-center">
-          <p className="text-xs text-muted-foreground font-medium">Secured Vehicle Sales Management System.</p>
+        {/* Footer */}
+        <div className="mt-8 text-center text-[11px] text-slate-400 font-medium">
+          Version 1.0 • SmartERP
         </div>
-      </motion.div>
+      </div>
+
+      {/* Theme Toggles */}
+      <div className="mt-8 flex items-center justify-center gap-2">
+        <button 
+           type="button"
+           onClick={() => setThemeColor('#070B19')}
+           className="px-3 py-1.5 bg-white text-slate-800 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50 transition-colors"
+        >
+          Dark
+        </button>
+        <button 
+           type="button"
+           onClick={() => setThemeColor('#1E3A8A')}
+           className="px-3 py-1.5 bg-white text-slate-800 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50 transition-colors"
+        >
+          Blue
+        </button>
+        <button 
+           type="button"
+           onClick={() => setThemeColor('#4C1D95')}
+           className="px-3 py-1.5 bg-white text-slate-800 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50 transition-colors"
+        >
+          Purple
+        </button>
+        <label className="px-3 py-1.5 bg-white text-slate-800 text-[11px] font-bold rounded shadow-sm hover:bg-slate-50 transition-colors flex items-center gap-1.5 cursor-pointer m-0">
+          Custom
+          <div 
+             className="w-3 h-3 rounded-sm border border-slate-200 overflow-hidden relative shadow-inner"
+             style={{ backgroundColor: themeColor }}
+          >
+             <input 
+                type="color" 
+                value={themeColor}
+                onChange={(e) => setThemeColor(e.target.value)}
+                className="absolute opacity-0 w-8 h-8 -top-2 -left-2 cursor-pointer"
+             />
+          </div>
+        </label>
+      </div>
     </div>
   );
 };
 
 export default LoginPage;
+
