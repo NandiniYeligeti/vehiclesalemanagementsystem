@@ -31,6 +31,7 @@ export interface Customer {
   pan_card_no: string;
   photo_url?: string;
   photo?: string;
+  documents?: string[];
   createdDate?: string;
   created_at?: string;
 }

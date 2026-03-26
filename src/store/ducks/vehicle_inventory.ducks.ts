@@ -23,6 +23,9 @@ export interface VehicleInventory {
   engine_number: string;
   purchase_date: string;
   status?: string;
+  accessories?: string[];
+  total_price?: number;
+  selling_price?: number;
   brand?: string;
   model?: string;
   variant?: string;

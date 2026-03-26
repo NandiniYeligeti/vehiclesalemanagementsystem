@@ -24,16 +24,23 @@ export const addCustomer = async (companyCode: string, data: any) => {
 };
 
 export const updateCustomer = async (companyCode: string, customerId: string, data: any) => {
-  const formData = new FormData();
-  Object.keys(data).forEach((key) => {
-    if (key === 'photo' && data[key] instanceof File) {
-      formData.append('photo', data[key]);
-    } else {
-      formData.append(key, data[key]);
-    }
-  });
+  let payload = data;
+  if (!(data instanceof FormData)) {
+    payload = new FormData();
+    Object.keys(data).forEach((key) => {
+      if ((key === 'photo' || key === 'documents') && (data[key] instanceof File || Array.isArray(data[key]))) {
+        if (Array.isArray(data[key])) {
+          data[key].forEach((f: any) => payload.append(key, f));
+        } else {
+          payload.append(key, data[key]);
+        }
+      } else {
+        payload.append(key, data[key]);
+      }
+    });
+  }
 
-  const response = await api.put(`/customer/${companyCode}/${customerId}`, formData, {
+  const response = await api.put(`/customer/${companyCode}/${customerId}`, payload, {
     headers: {
       "Content-Type": "multipart/form-data",
     },

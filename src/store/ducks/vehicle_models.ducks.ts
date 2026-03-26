@@ -22,6 +22,9 @@ export interface VehicleModel {
   variant: string;
   fuel_type: string;
   base_price: number;
+  type_id: string;
+  category_id: string;
+  colors: string[];
   company_id: string;
   branch_id: string;
   created_at?: string;

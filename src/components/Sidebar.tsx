@@ -12,6 +12,7 @@ const allMenuItems = [
   { id: 'customers',   label: 'Customers',         icon: Users,           roles: ['admin', 'user'] },
   { id: 'salespersons',label: 'Salespersons',      icon: UserCheck,       roles: ['admin', 'user'] },
   { id: 'vehicles',    label: 'Vehicles',          icon: Car,             roles: ['admin', 'user'] },
+  { id: 'vehicle-inventory', label: 'Vehicle Inventory', icon: ShoppingCart,    roles: ['admin', 'user'] },
   { id: 'sales',       label: 'Sales Orders',      icon: ShoppingCart,    roles: ['admin', 'user'] },
   { id: 'payments',    label: 'Payments',          icon: CreditCard,      roles: ['admin', 'user'] },
   { id: 'loans',       label: 'Loan Management',   icon: Landmark,        roles: ['admin', 'user'] },

@@ -12,12 +12,14 @@ import LedgerPage from '@/pages/LedgerPage';
 import ReportsPage from '@/pages/ReportsPage';
 import SettingsPage from '@/pages/SettingsPage';
 import UsersManagementPage from '@/pages/UsersManagementPage';
+import VehicleInventoryPage from '@/pages/VehicleInventoryPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'Dashboard',
   customers: 'Customers',
   salespersons: 'Salespersons',
   vehicles: 'Vehicles',
+  'vehicle-inventory': 'Vehicle Inventory',
   sales: 'Sales Orders',
   payments: 'Payments',
   loans: 'Loan Management',
@@ -35,7 +37,8 @@ const Index = () => {
       case 'dashboard': return <DashboardPage />;
       case 'customers': return <CustomersPage />;
       case 'salespersons': return <SalespersonsPage />;
-      case 'vehicles': return <VehiclesPage />;
+      case 'vehicles': return <VehiclesPage initialTab="models" />;
+      case 'vehicle-inventory': return <VehicleInventoryPage />;
       case 'sales': return <SalesOrderPage />;
       case 'payments': return <PaymentsPage />;
       case 'loans': return <LoansPage />;

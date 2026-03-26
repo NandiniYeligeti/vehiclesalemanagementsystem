@@ -34,6 +34,7 @@ import { watchPayments } from "./ducks/payments.ducks";
 import { watchLoans } from "./ducks/loans.ducks";
 import { watchGetDashboardStats } from "./ducks/dashboard.ducks";
 import { watchAuth } from "./ducks/auth.duck";
+import { watchVehicleFeatures } from "./ducks/vehicle_features.ducks";
 
 // ================================
 // ROOT SAGA
@@ -71,5 +72,6 @@ export default function* rootSaga(): SagaIterator {
     fork(watchPayments),
     fork(watchLoans),
     fork(watchGetDashboardStats),
+    fork(watchVehicleFeatures),
   ]);
 }

@@ -1,396 +1,222 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Edit2, Trash2, X, AlertTriangle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
+import { 
+  getVehicleModelsAction, addVehicleModelAction, deleteVehicleModelAction, updateVehicleModelAction 
+} from '@/store/ducks/vehicle_models.ducks';
+import { 
+  getTypesAction, addTypeAction, deleteTypeAction,
+  getCategoriesAction, addCategoryAction, deleteCategoryAction,
+  getAccessoriesAction, addAccessoryAction, deleteAccessoryAction
+} from '@/store/ducks/vehicle_features.ducks';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'sonner';
-
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+import { 
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
-import { 
-  getVehicleModelsAction, 
-  addVehicleModelAction, 
-  updateVehicleModelAction,
-  deleteVehicleModelAction 
-} from '@/store/ducks/vehicle_models.ducks';
-import { 
-  getVehicleInventoryAction, 
-  addVehicleInventoryAction, 
-  updateVehicleInventoryAction,
-  deleteVehicleInventoryAction 
-} from '@/store/ducks/vehicle_inventory.ducks';
 
 const modelValidationSchema = Yup.object().shape({
   brand: Yup.string().required('Brand is required'),
-  model: Yup.string().required('Model is required'),
+  model: Yup.string().required('Model name is required'),
   variant: Yup.string().required('Variant is required'),
   fuel_type: Yup.string().required('Fuel type is required'),
-  base_price: Yup.number().min(0, 'Price cannot be negative').required('Base price is required'),
+  base_price: Yup.number().min(0, 'Price cannot be negative').required('Required'),
+  type_id: Yup.string().required('Type is required'),
+  category_id: Yup.string().required('Category is required'),
 });
 
-const inventoryValidationSchema = Yup.object().shape({
-  vehicle_model_id: Yup.string().required('Vehicle model is required'),
-  color: Yup.string().required('Color is required'),
-  chassis_number: Yup.string().required('Chassis number is required'),
-  engine_number: Yup.string().required('Engine number is required'),
-  purchase_date: Yup.string().required('Purchase date is required'),
+const featureValidationSchema = Yup.object().shape({
+  name: Yup.string().required('Name is required'),
 });
 
-const formatDate = (dateString: string) => {
-  if (!dateString) return 'N/A';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  } catch (e) {
-    return dateString;
-  }
-};
+const accessoryValidationSchema = Yup.object().shape({
+  name: Yup.string().required('Name is required'),
+  price: Yup.number().min(0).required('Price is required'),
+});
 
-const VehiclesPage = () => {
+const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'accessories' | 'categories' | 'types' }) => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
 
-  const [tab, setTab] = useState<'models' | 'inventory'>('inventory');
+  const [tab, setTab] = useState<'models' | 'accessories' | 'categories' | 'types'>(initialTab || 'models');
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('All');
   const [showModelForm, setShowModelForm] = useState(false);
-  const [showInventoryForm, setShowInventoryForm] = useState(false);
+  const [showFeatureForm, setShowFeatureForm] = useState(false);
+  const [featureType, setFeatureType] = useState<'type' | 'category' | 'accessory'>('type');
 
   const [editingModel, setEditingModel] = useState<any>(null);
-  const [editingInventory, setEditingInventory] = useState<any>(null);
-
   const [modelToDelete, setModelToDelete] = useState<string | null>(null);
-  const [inventoryToDelete, setInventoryToDelete] = useState<string | null>(null);
+  const [featureToDelete, setFeatureToDelete] = useState<{id: string, type: 'type' | 'category' | 'accessory'} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Redux state with fallback safety
-  const { data: models = [], loading: modelsLoading } = useSelector((state: RootState) => state.vehicleModels || { data: [], loading: false });
-  const { data: inventory = [], loading: inventoryLoading } = useSelector((state: RootState) => state.vehicleInventory || { data: [], loading: false });
+  // DEFENSIVE SELECTORS
+  const rawModelsState = useSelector((state: RootState) => state.vehicleModels);
+  const models = Array.isArray(rawModelsState?.data) ? rawModelsState.data : [];
+  const modelsLoading = !!rawModelsState?.loading;
+
+  const rawFeaturesState = useSelector((state: RootState) => state.vehicleFeatures);
+  const types = Array.isArray(rawFeaturesState?.types) ? rawFeaturesState.types : [];
+  const categories = Array.isArray(rawFeaturesState?.categories) ? rawFeaturesState.categories : [];
+  const accessories = Array.isArray(rawFeaturesState?.accessories) ? rawFeaturesState.accessories : [];
+  const featuresLoading = !!rawFeaturesState?.loading;
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getVehicleModelsAction(companyCode));
-      dispatch(getVehicleInventoryAction(companyCode));
+      dispatch(getTypesAction(companyCode));
+      dispatch(getCategoriesAction(companyCode));
+      dispatch(getAccessoriesAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
-  const filteredInventory = (inventory || []).filter(v => {
-    const matchSearch = (v.chassis_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (v.brand || '').toLowerCase().includes(search.toLowerCase()) ||
-      (v.model || '').toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === 'All' || v.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  console.log('DEBUG: VehiclesPage data:', { types, categories, accessories, models });
 
-  const filteredModels = (models || []).filter(m =>
+  const filteredModels = models.filter(m =>
     (m.brand || '').toLowerCase().includes(search.toLowerCase()) || 
     (m.model || '').toLowerCase().includes(search.toLowerCase())
   );
 
-  const statusCounts = {
-    All: (inventory || []).length,
-    Available: (inventory || []).filter(v => v.status === 'Available').length,
-    Reserved: (inventory || []).filter(v => v.status === 'Reserved').length,
-    Sold: (inventory || []).filter(v => v.status === 'Sold').length,
-    Delivered: (inventory || []).filter(v => v.status === 'Delivered').length,
+  const handleEditModel = (v: any) => {
+    setEditingModel(v);
+    setShowModelForm(true);
   };
 
   const handleConfirmDeleteModel = () => {
     if (modelToDelete) {
       setIsDeleting(true);
-      dispatch(deleteVehicleModelAction(
-        modelToDelete,
-        companyCode,
-        () => {
-          setIsDeleting(false);
-          setModelToDelete(null);
-          toast.success('Vehicle model deleted');
-        },
-        (error: any) => {
-          setIsDeleting(false);
-          toast.error(error?.message || 'Failed to delete vehicle model');
-        }
-      ));
+      dispatch(deleteVehicleModelAction(modelToDelete, companyCode, () => {
+        setIsDeleting(false);
+        setModelToDelete(null);
+        toast.success('Vehicle model deleted');
+      }, (err: any) => {
+        setIsDeleting(false);
+        toast.error(err.message || 'Failed to delete');
+      }));
     }
   };
 
-  const handleConfirmDeleteInventory = () => {
-    if (inventoryToDelete) {
+  const handleConfirmDeleteFeature = () => {
+    if (featureToDelete) {
       setIsDeleting(true);
-      dispatch(deleteVehicleInventoryAction(
-        inventoryToDelete,
-        companyCode,
-        () => {
-          setIsDeleting(false);
-          setInventoryToDelete(null);
-          toast.success('Vehicle removed from inventory');
-        },
-        (error: any) => {
-          setIsDeleting(false);
-          toast.error(error?.message || 'Failed to delete inventory item');
-        }
-      ));
+      const { id, type } = featureToDelete;
+      const callback = (err?: any) => {
+        setIsDeleting(false);
+        setFeatureToDelete(null);
+        if (err) toast.error(err.message || `Failed to delete ${type}`);
+        else toast.success(`${type} deleted`);
+      }
+      if (type === 'type') dispatch(deleteTypeAction(companyCode, id, callback, callback));
+      else if (type === 'category') dispatch(deleteCategoryAction(companyCode, id, callback, callback));
+      else if (type === 'accessory') dispatch(deleteAccessoryAction(companyCode, id, callback, callback));
     }
-  };
-
-  const handleEditModel = (model: any) => {
-    setEditingModel(model);
-    setShowModelForm(true);
-  };
-
-  const handleEditInventory = (inv: any) => {
-    setEditingInventory(inv);
-    setShowInventoryForm(true);
   };
 
   const handleCloseForms = () => {
     setShowModelForm(false);
-    setShowInventoryForm(false);
+    setShowFeatureForm(false);
     setEditingModel(null);
-    setEditingInventory(null);
   };
 
   return (
     <div className="space-y-6">
-      <AlertDialog open={!!modelToDelete} onOpenChange={() => setModelToDelete(null)}>
-        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
-          <AlertDialogHeader>
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
-              <AlertTriangle className="w-8 h-8 text-destructive" />
-            </div>
-            <AlertDialogTitle className="text-center font-black text-2xl">Delete Model?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
-              Removing this model will affect inventory records. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
-            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDeleteModel} 
-              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
-              disabled={isDeleting}
-            >
-              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Delete Model"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={!!inventoryToDelete} onOpenChange={() => setInventoryToDelete(null)}>
-        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
-          <AlertDialogHeader>
-            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6">
-              <AlertTriangle className="w-8 h-8 text-destructive" />
-            </div>
-            <AlertDialogTitle className="text-center font-black text-2xl">Remove Vehicle?</AlertDialogTitle>
-            <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
-              This will permanently remove the vehicle from your digital fleet.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
-            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleConfirmDeleteInventory} 
-              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8"
-              disabled={isDeleting}
-            >
-              {isDeleting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Remove Vehicle"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Tab Toggle */}
-      <div className="flex items-center gap-1 p-1 bg-muted rounded-lg w-fit">
-        <button onClick={() => setTab('inventory')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'inventory' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>
-          Inventory
-        </button>
-        <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${tab === 'models' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'}`}>
-          Vehicle Models
-        </button>
+      <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+        <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'models' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>MODEL</button>
+        <button onClick={() => setTab('accessories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'accessories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>ACCESSORIES</button>
+        <button onClick={() => setTab('categories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'categories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>CATEGORY</button>
+        <button onClick={() => setTab('types')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'types' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>TYPE</button>
       </div>
 
-      {tab === 'inventory' ? (
-        <>
-          {/* Filters */}
+      {tab === 'models' && (
+        <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center h-9 px-3 rounded-lg bg-card border border-input gap-2">
-                <Search className="w-4 h-4 text-muted-foreground" />
-                <input 
-                  type="text" 
-                  placeholder="Search chassis, model..." 
-                  value={search} 
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="bg-transparent text-sm outline-none w-48 placeholder:text-muted-foreground" 
-                />
-              </div>
-              <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
-                {Object.entries(statusCounts).map(([status, count]) => (
-                  <button
-                    key={status}
-                    onClick={() => setStatusFilter(status)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-all ${statusFilter === status ? 'bg-primary text-primary-foreground' : 'bg-card border border-input text-muted-foreground hover:text-foreground'}`}
-                  >
-                    {status} ({count})
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button onClick={() => setShowInventoryForm(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity shrink-0">
-              <Plus className="w-4 h-4" /> Add Vehicle
-            </button>
-          </div>
-
-          {/* Inventory Table */}
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vehicle</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Color</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Chassis Number</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden md:table-cell">Engine Number</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Purchase Date</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInventory.map((v) => (
-                    <tr key={v._id || v.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-semibold">{v.brand} {v.model}</div>
-                        <div className="text-xs text-muted-foreground">{v.variant} • {v.fuel_type}</div>
-                      </td>
-                      <td className="px-4 py-3">{v.color}</td>
-                      <td className="px-4 py-3 font-mono text-xs">{v.chassis_number}</td>
-                      <td className="px-4 py-3 font-mono text-xs hidden md:table-cell">{v.engine_number}</td>
-                      <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell">{formatDate(v.purchase_date)}</td>
-                      <td className="px-4 py-3">
-                        <span className={`status-badge ${v.status === 'Available' ? 'status-available' : v.status === 'Sold' ? 'status-sold' : v.status === 'Reserved' ? 'status-reserved' : 'status-delivered'}`}>
-                          {v.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button 
-                            onClick={() => handleEditInventory(v)}
-                            className="p-1.5 rounded hover:bg-primary/10 transition-colors text-primary"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => setInventoryToDelete(v.entity_id || v._id || v.id!)}
-                            className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!inventoryLoading && filteredInventory.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="text-center py-12 text-muted-foreground italic">No vehicles found in inventory.</td>
-                    </tr>
-                  )}
-                  {inventoryLoading && <tr><td colSpan={7} className="text-center py-12 text-muted-foreground font-semibold animate-pulse">Syncing fleet data...</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        </>
-      ) : (
-        <>
-          {/* Models */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center h-9 px-3 rounded-lg bg-card border border-input gap-2">
+            <div className="flex items-center h-10 px-3 rounded-xl bg-card border border-border gap-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
               <Search className="w-4 h-4 text-muted-foreground" />
-              <input type="text" placeholder="Search catalog..." value={search} onChange={(e) => setSearch(e.target.value)}
-                className="bg-transparent text-sm outline-none w-48 placeholder:text-muted-foreground" />
+              <input type="text" placeholder="Search models..." value={search} onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground" />
             </div>
-            <button onClick={() => setShowModelForm(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity">
+            <button onClick={() => setShowModelForm(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight">
               <Plus className="w-4 h-4" /> Add Model
             </button>
           </div>
-
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Brand</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Model</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Variant</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fuel</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Base Price</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredModels.map((m) => (
-                    <tr key={m._id || m.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3 font-semibold">{m.brand}</td>
-                      <td className="px-4 py-3">{m.model}</td>
-                      <td className="px-4 py-3">{m.variant}</td>
-                      <td className="px-4 py-3"><span className="status-badge status-available">{m.fuel_type}</span></td>
-                      <td className="px-4 py-3 text-right tabular font-semibold">₹{(m.base_price || 0).toLocaleString('en-IN')}</td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button 
-                            onClick={() => handleEditModel(m)}
-                            className="p-1.5 rounded hover:bg-primary/10 transition-colors text-primary"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button 
-                            onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)}
-                            className="p-1.5 rounded hover:bg-destructive/10 transition-colors text-destructive"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {!modelsLoading && filteredModels.length === 0 && (
-                    <tr>
-                      <td colSpan={6} className="text-center py-12 text-muted-foreground italic">No models found in catalog.</td>
-                    </tr>
-                  )}
-                  {modelsLoading && <tr><td colSpan={6} className="text-center py-12 text-muted-foreground font-semibold animate-pulse">Syncing catalog data...</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </motion.div>
-        </>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredModels.map((m) => (
+              <motion.div key={m.entity_id || m._id || m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group">
+                <div className="p-6 space-y-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-xl font-black tracking-tight">{m.brand} {m.model}</h3>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{m.variant} • {m.fuel_type}</p>
+                    </div>
+                    <div className="p-2 rounded-xl bg-primary/5 text-primary">
+                      <Car className="w-5 h-5" />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="space-y-0.5">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Base Price</p>
+                      <p className="text-lg font-black text-primary">₹{(m.base_price || 0).toLocaleString('en-IN')}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button onClick={() => handleEditModel(m)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all"><Edit2 className="w-4 h-4" /></button>
+                      <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-all"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
       )}
 
-      {/* Add/Edit Model Modal */}
+      {tab === 'accessories' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold">Manage Accessories</h3>
+            <button onClick={() => { setFeatureType('accessory'); setShowFeatureForm(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20"><Plus className="w-4 h-4" /> New Accessory</button>
+          </div>
+          <div className="erp-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border"><tr><th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Name</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Price (₹)</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-20">Actions</th></tr></thead>
+              <tbody>
+                {accessories.map((a: any) => (
+                  <tr key={a.entity_id || a._id || a.id} className="border-b border-border hover:bg-muted/30 transition-colors"><td className="py-4 px-6 font-bold">{a.name}</td><td className="py-4 px-6 text-right font-black">₹{(a.price || 0).toLocaleString()}</td><td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: a.entity_id || a._id || a.id!, type: 'accessory'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {(tab === 'categories' || tab === 'types') && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-bold capitalize">Manage {tab}</h3>
+            <button onClick={() => { setFeatureType(tab === 'categories' ? 'category' : 'type'); setShowFeatureForm(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20"><Plus className="w-4 h-4" /> New {tab.slice(0,-1)}</button>
+          </div>
+          <div className="erp-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 border-b border-border"><tr><th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Name</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-20">Actions</th></tr></thead>
+              <tbody>
+                {(tab === 'categories' ? categories : types).map((item: any) => (
+                  <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors"><td className="py-4 px-6 font-bold">{item.name}</td><td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: item.entity_id || item._id || item.id!, type: tab === 'categories' ? 'category' : 'type'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <AnimatePresence>
         {showModelForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-              <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
-                <h3 className="text-base font-bold">{editingModel ? 'Edit Vehicle Model' : 'Add Vehicle Model'}</h3>
-                <button onClick={handleCloseForms} className="p-2 rounded-lg hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-border">
+              <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                <h3 className="text-lg font-bold">{editingModel ? 'Edit Vehicle Model' : 'New Vehicle Model'}</h3>
+                <button onClick={handleCloseForms} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
               <Formik
                 initialValues={{ 
@@ -398,88 +224,163 @@ const VehiclesPage = () => {
                   model: editingModel?.model || '', 
                   variant: editingModel?.variant || '', 
                   fuel_type: editingModel?.fuel_type || '', 
-                  base_price: editingModel?.base_price || 0, 
-                  company_id: editingModel?.company_id || 'DEFAULT_COMPANY', 
+                  base_price: editingModel?.base_price || 0,
+                  type_id: editingModel?.type_id || '',
+                  category_id: editingModel?.category_id || '',
+                  colors: editingModel?.colors || [],
+                  company_id: editingModel?.company_id || companyCode, 
                   branch_id: editingModel?.branch_id || 'MAIN_BRANCH' 
                 }}
                 validationSchema={modelValidationSchema}
                 onSubmit={(values, { setSubmitting }) => {
                   if (editingModel) {
-                    dispatch(updateVehicleModelAction(
-                      editingModel.entity_id || editingModel._id || editingModel.id, 
-                      values, 
-                      companyCode, 
-                      () => {
-                        handleCloseForms();
-                        setSubmitting(false);
-                        toast.success('Model updated');
-                      }, 
-                      (err: any) => {
-                        setSubmitting(false);
-                        toast.error(err?.message || 'Failed to update model');
-                      }
-                    ));
+                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, values, companyCode, () => {
+                      handleCloseForms();
+                      setSubmitting(false);
+                      toast.success('Model updated');
+                    }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
                   } else {
-                    dispatch(addVehicleModelAction(
-                      values,
-                      companyCode,
-                      () => {
-                        handleCloseForms();
-                        setSubmitting(false);
-                        toast.success('Model added successfully');
-                      },
-                      (err: any) => {
-                        setSubmitting(false);
-                        toast.error(err?.response?.data?.error || err.message || 'Failed to add model');
-                      }
-                    ));
+                    dispatch(addVehicleModelAction(values, companyCode, () => {
+                      handleCloseForms();
+                      setSubmitting(false);
+                      toast.success('Model added');
+                    }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
                   }
                 }}
               >
-                {({ isSubmitting }) => (
-                  <Form>
-                    <div className="p-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                          <label className="erp-label">Brand</label>
-                          <Field name="brand" className="erp-input h-10" placeholder="e.g. Maruti Suzuki" />
-                          <ErrorMessage name="brand" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="erp-label">Model</label>
-                          <Field name="model" className="erp-input h-10" placeholder="e.g. Swift" />
-                          <ErrorMessage name="model" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                        <div>
-                          <label className="erp-label">Variant</label>
-                          <Field name="variant" className="erp-input h-10" placeholder="e.g. VXI" />
-                          <ErrorMessage name="variant" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                        <div>
-                          <label className="erp-label">Fuel Type</label>
-                          <Field as="select" name="fuel_type" className="erp-select h-10">
-                            <option value="">Select</option>
-                            <option value="Petrol">Petrol</option>
-                            <option value="Diesel">Diesel</option>
-                            <option value="Electric">Electric</option>
-                            <option value="Hybrid">Hybrid</option>
-                            <option value="CNG">CNG</option>
-                          </Field>
-                          <ErrorMessage name="fuel_type" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                        <div className="col-span-2">
-                          <label className="erp-label">Base Price (₹)</label>
-                          <Field type="number" name="base_price" className="erp-input h-10" />
-                          <ErrorMessage name="base_price" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
+                {({ isSubmitting, values, setFieldValue }) => (
+                  <Form className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Brand Name</label>
+                        <Field name="brand" className="erp-input h-11 rounded-xl" placeholder="e.g., Tata" />
+                        <ErrorMessage name="brand" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Name</label>
+                        <Field name="model" className="erp-input h-11 rounded-xl" placeholder="e.g., Nexon" />
+                        <ErrorMessage name="model" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                     </div>
-                    <div className="flex justify-end gap-3 p-5 border-t border-border bg-muted/10">
-                      <button type="button" onClick={handleCloseForms} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-                      <button type="submit" disabled={isSubmitting} className="px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 transition-all">
-                        {isSubmitting ? 'Saving...' : (editingModel ? 'Update Model' : 'Save Model')}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Variant</label>
+                        <Field name="variant" className="erp-input h-11 rounded-xl" placeholder="e.g., XZ+" />
+                        <ErrorMessage name="variant" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                      <div className="col-span-1">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type</label>
+                        <Field as="select" name="fuel_type" className="erp-select h-11 rounded-xl">
+                          <option value="">Select...</option>
+                          <option value="Petrol">Petrol</option>
+                          <option value="Diesel">Diesel</option>
+                          <option value="Electric">Electric</option>
+                        </Field>
+                        <ErrorMessage name="fuel_type" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
+                        <Field as="select" name="type_id" className="erp-select h-11 rounded-xl">
+                          <option value="">Select Type</option>
+                          {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                        </Field>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
+                        <Field as="select" name="category_id" className="erp-select h-11 rounded-xl">
+                          <option value="">Select Category</option>
+                          {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
+                        </Field>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Base Price (₹)</label>
+                      <Field type="number" name="base_price" className="erp-input h-11 rounded-xl" />
+                      <ErrorMessage name="base_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Catalog</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {values.colors.map((color: string, index: number) => (
+                          <span key={index} className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-md flex items-center gap-1 group ring-1 ring-primary/20">
+                            {color}
+                            <button type="button" onClick={() => setFieldValue('colors', values.colors.filter((_: any, i: number) => i !== index))} className="hover:text-destructive"><X className="w-3 h-3" /></button>
+                          </span>
+                        ))}
+                      </div>
+                      <input 
+                        type="text" 
+                        placeholder="Type color and press Enter..." 
+                        className="erp-input h-11 rounded-xl w-full"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = e.currentTarget.value.trim();
+                            if (val && !values.colors.includes(val)) {
+                              setFieldValue('colors', [...values.colors, val]);
+                              e.currentTarget.value = '';
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                    <div className="flex justify-end gap-3 pt-4">
+                      <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">Discard</button>
+                      <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all tracking-tight">
+                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingModel ? 'Update Model' : 'Save Model')}
                       </button>
                     </div>
+                  </Form>
+                )}
+              </Formik>
+            </motion.div>
+          </div>
+        )}
+
+        {showFeatureForm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-border">
+              <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                <h3 className="text-lg font-bold uppercase tracking-widest">Add {featureType}</h3>
+                <button onClick={handleCloseForms} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              <Formik
+                initialValues={{ name: '', price: 0, company_id: companyCode, branch_id: 'MAIN_BRANCH' }}
+                validationSchema={featureType === 'accessory' ? accessoryValidationSchema : featureValidationSchema}
+                onSubmit={(values, { setSubmitting }) => {
+                  const callback = (err?: any) => {
+                    setSubmitting(false);
+                    if (err) toast.error(err.message || 'Failed to add');
+                    else {
+                      toast.success(`${featureType} added`);
+                      handleCloseForms();
+                    }
+                  }
+                  if (featureType === 'type') dispatch(addTypeAction(companyCode, values, callback, callback));
+                  else if (featureType === 'category') dispatch(addCategoryAction(companyCode, values, callback, callback));
+                  else if (featureType === 'accessory') dispatch(addAccessoryAction(companyCode, values, callback, callback));
+                }}
+              >
+                {({ isSubmitting }) => (
+                  <Form className="p-8 space-y-6">
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Name</label>
+                      <Field name="name" className="erp-input h-11 rounded-xl" placeholder={`Enter name`} />
+                      <ErrorMessage name="name" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                    </div>
+                    {featureType === 'accessory' && (
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Price (₹)</label>
+                        <Field type="number" name="price" className="erp-input h-11 rounded-xl" />
+                        <ErrorMessage name="price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                    )}
+                    <button type="submit" disabled={isSubmitting} className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 transition-all tracking-widest uppercase">
+                       {isSubmitting ? 'Processing...' : `Confirm ${featureType}`}
+                    </button>
                   </Form>
                 )}
               </Formik>
@@ -488,114 +389,31 @@ const VehiclesPage = () => {
         )}
       </AnimatePresence>
 
-      {/* Add/Edit Inventory Modal */}
-      <AnimatePresence>
-        {showInventoryForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
-              <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
-                <h3 className="text-base font-bold">{editingInventory ? 'Edit Inventory Vehicle' : 'Add Vehicle to Inventory'}</h3>
-                <button onClick={handleCloseForms} className="p-2 rounded-lg hover:bg-muted transition-colors"><X className="w-4 h-4" /></button>
-              </div>
-              <Formik
-                initialValues={{ 
-                  vehicle_model_id: editingInventory?.vehicle_model_id || '', 
-                  color: editingInventory?.color || '', 
-                  chassis_number: editingInventory?.chassis_number || '', 
-                  engine_number: editingInventory?.engine_number || '', 
-                  purchase_date: editingInventory?.purchase_date ? new Date(editingInventory.purchase_date).toISOString().split('T')[0] : '', 
-                  company_id: editingInventory?.company_id || 'DEFAULT_COMPANY', 
-                  branch_id: editingInventory?.branch_id || 'MAIN_BRANCH' 
-                }}
-                validationSchema={inventoryValidationSchema}
-                onSubmit={(values, { setSubmitting }) => {
-                  const payload = {
-                    ...values,
-                    purchase_date: values.purchase_date ? new Date(values.purchase_date).toISOString() : ''
-                  };
-                  if (editingInventory) {
-                    dispatch(updateVehicleInventoryAction(
-                      editingInventory.entity_id || editingInventory._id || editingInventory.id, 
-                      payload, 
-                      companyCode, 
-                      () => {
-                        handleCloseForms();
-                        setSubmitting(false);
-                        toast.success('Inventory updated');
-                      }, 
-                      (err: any) => {
-                        setSubmitting(false);
-                        toast.error(err?.message || 'Failed to update inventory');
-                      }
-                    ));
-                  } else {
-                    dispatch(addVehicleInventoryAction(
-                      payload,
-                      companyCode,
-                      () => {
-                        handleCloseForms();
-                        setSubmitting(false);
-                        toast.success('Vehicle added to inventory');
-                      },
-                      (err: any) => {
-                        setSubmitting(false);
-                        toast.error(err?.response?.data?.error || err.message || 'Failed to add vehicle');
-                      }
-                    ));
-                  }
-                }}
-              >
-                {({ isSubmitting }) => (
-                  <Form>
-                    <div className="p-6 space-y-4">
-                      <div>
-                        <label className="erp-label">Vehicle Model</label>
-                        <Field as="select" name="vehicle_model_id" className="erp-select h-10">
-                          <option value="">Select Model</option>
-                          {models.map(m => (
-                            <option key={m._id || m.id} value={m.entity_id || m._id || m.id}>
-                              {m.brand} {m.model} ({m.variant})
-                            </option>
-                          ))}
-                        </Field>
-                        <ErrorMessage name="vehicle_model_id" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                      </div>
-                      <div>
-                        <label className="erp-label">Body Color</label>
-                        <Field name="color" className="erp-input h-10" placeholder="e.g. Arctic White" />
-                        <ErrorMessage name="color" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="erp-label">Chassis/VIN</label>
-                          <Field name="chassis_number" className="erp-input h-10 font-mono" placeholder="Enter VIN" />
-                          <ErrorMessage name="chassis_number" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                        <div>
-                          <label className="erp-label">Engine Number</label>
-                          <Field name="engine_number" className="erp-input h-10 font-mono" placeholder="Enter Engine #" />
-                          <ErrorMessage name="engine_number" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                        </div>
-                      </div>
-                      <div>
-                        <label className="erp-label">Purchase Date</label>
-                        <Field type="date" name="purchase_date" className="erp-input h-10" />
-                        <ErrorMessage name="purchase_date" component="div" className="text-xs text-destructive mt-1 font-medium" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3 p-5 border-t border-border bg-muted/10">
-                      <button type="button" onClick={handleCloseForms} className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-muted transition-colors">Cancel</button>
-                      <button type="submit" disabled={isSubmitting} className="px-6 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 disabled:opacity-50 transition-all">
-                        {isSubmitting ? 'Processing...' : (editingInventory ? 'Update Vehicle' : 'Add Vehicle')}
-                      </button>
-                    </div>
-                  </Form>
-                )}
-              </Formik>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <AlertDialog open={!!modelToDelete} onOpenChange={() => setModelToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6"><AlertTriangle className="w-8 h-8 text-destructive" /></div>
+            <AlertDialogTitle className="text-center font-black text-2xl">Delete Model?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteModel} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8" disabled={isDeleting}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!featureToDelete} onOpenChange={() => setFeatureToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-6"><AlertTriangle className="w-8 h-8 text-destructive" /></div>
+            <AlertDialogTitle className="text-center font-black text-2xl uppercase">Delete {featureToDelete?.type}?</AlertDialogTitle>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
+            <AlertDialogCancel className="rounded-xl border-border/60 hover:bg-muted font-bold transition-all h-12 px-6">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDeleteFeature} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold shadow-lg shadow-destructive/20 border-none transition-all h-12 px-8" disabled={isDeleting}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

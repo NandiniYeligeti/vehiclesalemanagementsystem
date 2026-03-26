@@ -360,6 +360,7 @@ const CustomersPage = () => {
       {selectedCustomer && profileMode && (
         <CustomerProfile
           customer={selectedCustomer}
+          mode={profileMode === 'edit' ? 'edit' : 'view'}
           onClose={() => { setSelectedCustomer(null); setProfileMode(null); }}
         />
       )}
