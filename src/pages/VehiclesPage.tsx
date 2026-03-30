@@ -22,7 +22,7 @@ const modelValidationSchema = Yup.object().shape({
   brand: Yup.string().required('Brand is required'),
   model: Yup.string().required('Model name is required'),
   variant: Yup.string().required('Variant is required'),
-  fuel_type: Yup.string().required('Fuel type is required'),
+  fuel_type: Yup.array().min(1, 'At least one fuel type is required').required('Required'),
   base_price: Yup.number().min(0, 'Price cannot be negative').required('Required'),
   type_id: Yup.string().required('Type is required'),
   category_id: Yup.string().required('Category is required'),
@@ -149,7 +149,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="text-xl font-black tracking-tight">{m.brand} {m.model}</h3>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{m.variant} • {m.fuel_type}</p>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{m.variant} • {(m.fuel_type || []).join(', ')}</p>
                     </div>
                     <div className="p-2 rounded-xl bg-primary/5 text-primary">
                       <Car className="w-5 h-5" />
@@ -223,24 +223,31 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                   brand: editingModel?.brand || '', 
                   model: editingModel?.model || '', 
                   variant: editingModel?.variant || '', 
-                  fuel_type: editingModel?.fuel_type || '', 
+                  fuel_type: editingModel?.fuel_type || [], 
                   base_price: editingModel?.base_price || 0,
                   type_id: editingModel?.type_id || '',
                   category_id: editingModel?.category_id || '',
-                  colors: editingModel?.colors || [],
+                  colors: Array.isArray(editingModel?.colors) ? editingModel.colors.join(', ') : '',
+                  incentive_type: editingModel?.incentive_type || 'fixed',
+                  incentive_value: editingModel?.incentive_value || 0,
+                  color_count: editingModel?.color_count || 0,
                   company_id: editingModel?.company_id || companyCode, 
                   branch_id: editingModel?.branch_id || 'MAIN_BRANCH' 
                 }}
                 validationSchema={modelValidationSchema}
                 onSubmit={(values, { setSubmitting }) => {
+                  const payload = {
+                    ...values,
+                    colors: values.colors.split(',').map((s: string) => s.trim()).filter(Boolean)
+                  };
                   if (editingModel) {
-                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, values, companyCode, () => {
+                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, payload, companyCode, () => {
                       handleCloseForms();
                       setSubmitting(false);
                       toast.success('Model updated');
                     }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
                   } else {
-                    dispatch(addVehicleModelAction(values, companyCode, () => {
+                    dispatch(addVehicleModelAction(payload, companyCode, () => {
                       handleCloseForms();
                       setSubmitting(false);
                       toast.success('Model added');
@@ -269,13 +276,15 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                         <ErrorMessage name="variant" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                       <div className="col-span-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type</label>
-                        <Field as="select" name="fuel_type" className="erp-select h-11 rounded-xl">
-                          <option value="">Select...</option>
-                          <option value="Petrol">Petrol</option>
-                          <option value="Diesel">Diesel</option>
-                          <option value="Electric">Electric</option>
-                        </Field>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type (Multi Select)</label>
+                        <div className="grid grid-cols-3 gap-2 border border-border/40 p-3 rounded-xl bg-muted/10">
+                          {['Petrol', 'Diesel', 'Cng', 'Electric', 'Hybrid', 'Lpg'].map(f => (
+                            <label key={f} className="flex items-center gap-2 text-[11px] font-medium cursor-pointer">
+                              <Field type="checkbox" name="fuel_type" value={f} className="w-4 h-4 rounded border-border" />
+                              {f}
+                            </label>
+                          ))}
+                        </div>
                         <ErrorMessage name="fuel_type" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                     </div>
@@ -301,31 +310,33 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                       <ErrorMessage name="base_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                     </div>
 
-                    <div>
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Catalog</label>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {values.colors.map((color: string, index: number) => (
-                          <span key={index} className="px-2 py-1 bg-primary/10 text-primary text-[10px] font-black rounded-md flex items-center gap-1 group ring-1 ring-primary/20">
-                            {color}
-                            <button type="button" onClick={() => setFieldValue('colors', values.colors.filter((_: any, i: number) => i !== index))} className="hover:text-destructive"><X className="w-3 h-3" /></button>
-                          </span>
-                        ))}
+                    <div className="bg-muted/20 p-4 rounded-2xl border border-border/40 space-y-4">
+                      <div className="flex items-center gap-6">
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase block px-1">Incentive Type</label>
+                        <div className="flex gap-4">
+                          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                            <Field type="radio" name="incentive_type" value="fixed" className="w-4 h-4" /> Fixed
+                          </label>
+                          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
+                            <Field type="radio" name="incentive_type" value="percentage" className="w-4 h-4" /> Percentage
+                          </label>
+                        </div>
                       </div>
-                      <input 
-                        type="text" 
-                        placeholder="Type color and press Enter..." 
-                        className="erp-input h-11 rounded-xl w-full"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const val = e.currentTarget.value.trim();
-                            if (val && !values.colors.includes(val)) {
-                              setFieldValue('colors', [...values.colors, val]);
-                              e.currentTarget.value = '';
-                            }
-                          }
-                        }}
-                      />
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Incentive Value (₹)</label>
+                        <Field type="number" name="incentive_value" className="erp-input h-11 rounded-xl" placeholder="Enter amount" />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Catalog</label>
+                        <Field name="colors" className="erp-input h-11 rounded-xl" placeholder="Enter colors (e.g. Red, White, Black)" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Count</label>
+                        <Field type="number" name="color_count" className="erp-input h-11 rounded-xl" placeholder="Enter total colors" />
+                      </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
                       <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">Discard</button>

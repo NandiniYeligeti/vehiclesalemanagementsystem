@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
-  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus
+  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -17,6 +17,7 @@ const allMenuItems = [
   { id: 'payments',    label: 'Payments',          icon: CreditCard,      roles: ['admin', 'user'] },
   { id: 'loans',       label: 'Loan Management',   icon: Landmark,        roles: ['admin', 'user'] },
   { id: 'ledger',      label: 'Customer Ledger',   icon: BookOpen,        roles: ['admin', 'user'] },
+  { id: 'incentives',  label: 'Incentive Management', icon: Gift,      roles: ['admin', 'user'] },
   { id: 'reports',     label: 'Reports',           icon: BarChart3,       roles: ['admin', 'user'] },
   { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] }, // admin-only
   { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin', 'user'] },

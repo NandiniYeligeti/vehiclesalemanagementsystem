@@ -24,9 +24,17 @@ const DashboardPage = () => {
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
 
   useEffect(() => {
-    if (companyCode) {
+    if (!companyCode) return;
+    
+    // Initial fetch
+    dispatch(getDashboardStatsAction(companyCode));
+
+    // Live Data Polling: Fetch silently every 5 seconds
+    const interval = setInterval(() => {
       dispatch(getDashboardStatsAction(companyCode));
-    }
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [dispatch, companyCode]);
 
   const handleSeedDatabase = async () => {
@@ -59,8 +67,8 @@ const DashboardPage = () => {
 
   return (
     <div className="space-y-6 relative">
-      {(loading || isSeeding) && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-xl">
+      {(loading && !stats && !isSeeding) && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/50 backdrop-blur-sm rounded-xl min-h-[500px]">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       )}

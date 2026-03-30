@@ -22,8 +22,6 @@ export interface Salesperson {
   mobile_number: string;
   mobile?: string; // fallback
   email: string;
-  commission: number;
-  commissionPct?: number; // fallback
   branch_id: string;
   branch?: string; // fallback
   status?: string;

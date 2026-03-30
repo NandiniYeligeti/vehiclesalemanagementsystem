@@ -16,7 +16,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,8 +26,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-const vehicleTypes = ['Car', 'Bike', 'Truck'];
 
 const SalespersonsPage = () => {
   const dispatch = useDispatch();
@@ -45,9 +42,6 @@ const SalespersonsPage = () => {
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
 
   const [form, setForm] = useState<any>({
-    commissionType: '',
-    commissionValue: '',
-    vehicle: '',
     full_name: '',
     mobile_number: '',
     email: '',
@@ -81,22 +75,10 @@ const SalespersonsPage = () => {
       return;
     }
 
-    if (!form.commissionType) {
-      toast.error('Commission type is required');
-      return;
-    }
-
-    if (!form.commissionValue) {
-      toast.error('Commission value is required');
-      return;
-    }
-
     const payload = {
       ...form,
       branch_id: form.city || form.branch_id || 'MAIN_BRANCH',
       company_id: companyCode,
-      commissionValue: Number(form.commissionValue || 0),
-      vehicle: form.commissionType === 'percentage' ? form.vehicle : '',
     };
 
     const id = form.entity_id || form._id || form.id;
@@ -133,15 +115,7 @@ const SalespersonsPage = () => {
     }
   };
 
-  const renderCommission = (item: any) => {
-    if (item.commissionType === 'fixed') {
-      return `₹ ${item.commissionValue}`;
-    }
-    if (item.commissionType === 'percentage') {
-      return `${item.commissionValue}% (${item.vehicle})`;
-    }
-    return '-';
-  };
+
 
   return (
     <div className="space-y-6">
@@ -193,9 +167,6 @@ const SalespersonsPage = () => {
             className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
             onClick={() => {
               setForm({
-                commissionType: '',
-                commissionValue: '',
-                vehicle: '',
                 full_name: '',
                 mobile_number: '',
                 email: '',
@@ -240,10 +211,7 @@ const SalespersonsPage = () => {
                   <span className="text-xs font-bold uppercase tracking-wider">Email</span>
                   <span>{item.email || 'N/A'}</span>
                 </div>
-                <div className="flex justify-between items-center bg-primary/5 p-2 rounded-lg -mx-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-primary">Commission</span>
-                  <span className="font-black text-primary">{renderCommission(item)}</span>
-                </div>
+
               </div>
 
               <div className="flex gap-2">
@@ -331,54 +299,7 @@ const SalespersonsPage = () => {
               />
             </div>
 
-            <div className="pt-2 border-t border-border mt-2 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Comm. Type</label>
-                  <Select
-                    value={form.commissionType}
-                    onValueChange={(val) => setForm({ ...form, commissionType: val })}
-                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-muted/30 border-none">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="fixed">Fixed ₹</SelectItem>
-                      <SelectItem value="percentage">Percent %</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Value</label>
-                  <Input
-                    type="number"
-                    placeholder="Enter value"
-                    className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 font-bold"
-                    value={form.commissionValue || ''}
-                    onChange={(e) => setForm({ ...form, commissionValue: e.target.value })}
-                  />
-                </div>
-              </div>
 
-              {form.commissionType === 'percentage' && (
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Applicable Vehicle</label>
-                  <Select
-                    value={form.vehicle}
-                    onValueChange={(val) => setForm({ ...form, vehicle: val })}
-                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-muted/30 border-none">
-                      <SelectValue placeholder="Select Vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {vehicleTypes.map((v) => (
-                        <SelectItem key={v} value={v}>{v}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
 
             <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isEditing ? 'Update Profile' : 'Confirm Registration')}

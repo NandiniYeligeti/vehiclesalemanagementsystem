@@ -22,6 +22,9 @@ const inventoryValidationSchema = Yup.object().shape({
   purchase_date: Yup.string().required('Purchase date is required'),
   color: Yup.string().required('Color is required'),
   selling_price: Yup.number().min(0, 'Cannot be negative').required('Required'),
+  mfg_year: Yup.string().required('Required'),
+  inventory_date: Yup.string().required('Required'),
+  purchase_price: Yup.number().min(0, 'Cannot be negative').required('Required'),
 });
 
 const formatDate = (dateString: string) => {
@@ -197,6 +200,9 @@ const VehicleInventoryPage = () => {
                   chassis_number: editingItem?.chassis_number || '', 
                   engine_number: editingItem?.engine_number || '', 
                   purchase_date: editingItem?.purchase_date ? new Date(editingItem.purchase_date).toISOString().split('T')[0] : '',
+                  mfg_year: editingItem?.mfg_year || '',
+                  inventory_date: editingItem?.inventory_date ? new Date(editingItem.inventory_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                  purchase_price: editingItem?.purchase_price || 0,
                   status: editingItem?.status || 'Available',
                   accessories: editingItem?.accessories || [],
                   selling_price: editingItem?.selling_price || 0,
@@ -207,12 +213,13 @@ const VehicleInventoryPage = () => {
                 }}
                 validationSchema={inventoryValidationSchema}
                 onSubmit={(values, { setSubmitting }) => {
-                  const payload = {
-                    ...values,
-                    purchase_date: values.purchase_date ? new Date(values.purchase_date).toISOString() : '',
-                    total_price: (models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.base_price || 0) + 
-                                values.accessories.reduce((sum: number, id: string) => sum + (accessories.find(a => (a.entity_id || a._id || a.id) === id)?.price || 0), 0)
-                  };
+                    const payload = {
+                      ...values,
+                      purchase_date: values.purchase_date ? new Date(values.purchase_date).toISOString() : '',
+                      inventory_date: values.inventory_date ? new Date(values.inventory_date).toISOString() : '',
+                      total_price: (models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.base_price || 0) + 
+                                  values.accessories.reduce((sum: number, id: string) => sum + (accessories.find(a => (a.entity_id || a._id || a.id) === id)?.price || 0), 0)
+                    };
                   if (editingItem) {
                     dispatch(updateVehicleInventoryAction(editingItem.entity_id || editingItem._id || editingItem.id, payload, companyCode, () => {
                       setShowForm(false);
@@ -233,56 +240,93 @@ const VehicleInventoryPage = () => {
                     <div className="p-8 space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
-                          <Field as="select" name="selected_type" className="erp-select h-11 rounded-xl">
-                            <option value="">All Types</option>
-                            {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
-                          </Field>
-                        </div>
-                        <div className="col-span-1">
                           <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
                           <Field as="select" name="selected_category" className="erp-select h-11 rounded-xl">
                             <option value="">All Categories</option>
                             {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
                           </Field>
                         </div>
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Vehicle Model</label>
-                        <Field as="select" name="vehicle_model_id" className="erp-select h-11 rounded-xl">
-                          <option value="">Select a Model</option>
-                          {models.filter(m => 
-                            (!values.selected_type || m.type_id === values.selected_type) && 
-                            (!values.selected_category || m.category_id === values.selected_category)
-                          ).map(m => (
-                            <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model} ({m.variant})</option>
-                          ))}
-                        </Field>
-                        <ErrorMessage name="vehicle_model_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                      </div>
-
-                           <div>
-                             <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Vehicle Color</label>
-                             <Field name="color" className="erp-input h-11 rounded-xl" placeholder="Enter color (e.g. Red, Black, White)" />
-                             <ErrorMessage name="color" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                           </div>
-
-                      <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">VIN / Chassis</label>
-                          <Field name="chassis_number" className="erp-input h-11 rounded-xl font-mono" />
-                        </div>
-                        <div className="col-span-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Engine No</label>
-                          <Field name="engine_number" className="erp-input h-11 rounded-xl font-mono" />
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Vehicle Type</label>
+                          <Field as="select" name="selected_type" className="erp-select h-11 rounded-xl">
+                            <option value="">All Types</option>
+                            {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                          </Field>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
-                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Date</label>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Vehicle Model</label>
+                          <Field as="select" name="vehicle_model_id" className="erp-select h-11 rounded-xl">
+                            <option value="">Select Model</option>
+                            {models.filter(m => 
+                              (!values.selected_type || m.type_id === values.selected_type) && 
+                              (!values.selected_category || m.category_id === values.selected_category)
+                            ).map(m => (
+                              <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model}</option>
+                            ))}
+                          </Field>
+                          <ErrorMessage name="vehicle_model_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Variant</label>
+                          <div className="erp-input h-11 rounded-xl bg-muted/30 flex items-center px-3 text-muted-foreground text-sm cursor-not-allowed">
+                            {models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.variant || 'Select Variant'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type</label>
+                          <div className="erp-input h-11 rounded-xl bg-muted/30 flex items-center px-3 text-muted-foreground text-sm cursor-not-allowed">
+                            {(models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.fuel_type || []).join(', ') || 'Select Model First'}
+                          </div>
+                        </div>
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Vehicle Color</label>
+                          <Field name="color" className="erp-input h-11 rounded-xl" placeholder="Enter color" />
+                          <ErrorMessage name="color" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">MFG Year</label>
+                          <Field as="select" name="mfg_year" className="erp-select h-11 rounded-xl">
+                            <option value="">Select Year</option>
+                            {Array.from({length: 20}, (_, i) => new Date().getFullYear() - i).map(year => (
+                              <option key={year} value={year.toString()}>{year}</option>
+                            ))}
+                          </Field>
+                          <ErrorMessage name="mfg_year" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Inventory Date</label>
+                          <Field type="date" name="inventory_date" className="erp-input h-11 rounded-xl" />
+                          <ErrorMessage name="inventory_date" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">VIN / Chassis No</label>
+                          <Field name="chassis_number" className="erp-input h-11 rounded-xl placeholder:text-muted-foreground" placeholder="Enter VIN" />
+                          <ErrorMessage name="chassis_number" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Engine Number</label>
+                          <Field name="engine_number" className="erp-input h-11 rounded-xl placeholder:text-muted-foreground" placeholder="Enter Engine No" />
+                          <ErrorMessage name="engine_number" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Purchase Date</label>
                           <Field type="date" name="purchase_date" className="erp-input h-11 rounded-xl" />
+                          <ErrorMessage name="purchase_date" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Status</label>
@@ -294,24 +338,17 @@ const VehicleInventoryPage = () => {
                         </div>
                       </div>
 
-                      <div className="border rounded-2xl p-6 bg-muted/20 border-border/50">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-4 block px-1 tracking-widest leading-none">Accessories</label>
-                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                          {accessories.map((acc: any) => (
-                            <label key={acc.entity_id || acc._id || acc.id} className="flex items-center gap-3 p-3 rounded-xl bg-card border border-border/50 hover:bg-muted transition-colors cursor-pointer group">
-                              <Field type="checkbox" name="accessories" value={acc.entity_id || acc._id || acc.id} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" />
-                              <div className="flex-1 flex justify-between items-center pr-2">
-                                <span className="text-sm font-bold opacity-80 group-hover:opacity-100">{acc.name}</span>
-                                <span className="text-xs font-black text-primary/60 tracking-wider">₹{acc.price.toLocaleString()}</span>
-                              </div>
-                            </label>
-                          ))}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Purchase Price (₹)</label>
+                          <Field type="number" name="purchase_price" className="erp-input h-11 rounded-xl" />
+                          <ErrorMessage name="purchase_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
-                      </div>
-
-                      <div className="bg-primary/5 p-6 rounded-2xl ring-1 ring-primary/10">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Final Selling Price (₹)</label>
-                        <Field type="number" name="selling_price" className="erp-input h-12 rounded-xl text-xl font-black" />
+                        <div className="col-span-1">
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Selling Price (₹)</label>
+                          <Field type="number" name="selling_price" className="erp-input h-11 rounded-xl" />
+                          <ErrorMessage name="selling_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 p-6 border-t border-border bg-muted/10">

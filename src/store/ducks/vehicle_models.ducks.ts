@@ -20,11 +20,14 @@ export interface VehicleModel {
   brand: string;
   model: string;
   variant: string;
-  fuel_type: string;
+  fuel_type: string[];
   base_price: number;
   type_id: string;
   category_id: string;
   colors: string[];
+  incentive_type: string;
+  incentive_value: number;
+  color_count: number;
   company_id: string;
   branch_id: string;
   created_at?: string;
