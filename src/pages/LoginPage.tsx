@@ -90,9 +90,9 @@ export default function LoginPage() {
       } p-6 gap-4 transition-colors duration-500`}
       style={bgStyle}
     >
-      <div className="w-full max-w-4xl bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10">
+      <div className="w-full max-w-[760px] bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10 mx-auto">
         {/* Left Image Slider */}
-        <div className="hidden md:block relative h-full bg-black min-h-[500px]">
+        <div className="hidden md:block relative h-full bg-black min-h-[450px]">
           {images.map((img, i) => (
             <img
               key={i}
@@ -119,7 +119,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Panel */}
-        <div className="p-8 sm:p-10 space-y-6 flex flex-col justify-center bg-[#18181b]">
+        <div className="p-6 sm:p-8 space-y-5 flex flex-col justify-center bg-[#18181b]">
           {/* Company Logo */}
           <div className="flex justify-center -mb-2">
             <img

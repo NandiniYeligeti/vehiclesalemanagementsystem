@@ -136,17 +136,18 @@ const SalesOrderPage = () => {
           <div class="grid">
             <div>
               <div class="section-title">Customer Details</div>
-              <p><strong>${customer?.customer_name || 'N/A'}</strong></p>
-              <p>${customer?.mobile_number || ''}</p>
-              <p>${customer?.address || ''}</p>
-              <p>${customer?.city || ''}</p>
+              <p><strong>${order.customer_name || 'N/A'}</strong></p>
+              <p>${order.mobile_number || ''}</p>
+              <p>${order.address || ''}</p>
+              <p>${order.email || ''}</p>
             </div>
             <div>
               <div class="section-title">Vehicle Details</div>
-              <p><strong>${vehicle?.brand || ''} ${vehicle?.model || ''}</strong></p>
-              <p>Color: ${vehicle?.color || ''}</p>
-              <p>VIN: ${vehicle?.chassis_number || ''}</p>
-              <p>Engine: ${vehicle?.engine_number || ''}</p>
+              <p><strong>${order.brand || ''} ${order.model || ''}</strong></p>
+              <p>Variant: ${order.variant || ''}</p>
+              <p>Color: ${order.color || ''}</p>
+              <p>VIN: ${order.chassis_number || ''}</p>
+              <p>Engine: ${order.engine_number || ''}</p>
             </div>
           </div>
 
@@ -159,7 +160,7 @@ const SalesOrderPage = () => {
             </thead>
             <tbody>
               <tr>
-                <td>Vehicle Base Price</td>
+                <td>Vehicle Price</td>
                 <td style="text-align: right;">${formatCurrency(order.vehicle_price)}</td>
               </tr>
               <tr>
@@ -353,7 +354,7 @@ const SalesOrderPage = () => {
               setFieldValue('vehicle_inventory_id', vId);
               const vehicle = (inventory || []).find(v => (v.entity_id || v._id || v.id) === vId);
               if (vehicle) {
-                setFieldValue('vehicle_price', vehicle.base_price || 0);
+                setFieldValue('vehicle_price', vehicle.selling_price || vehicle.base_price || 0);
               }
             };
 
@@ -505,18 +506,20 @@ const SalesOrderPage = () => {
                 <div className="grid grid-cols-2 gap-6">
                   <div>
                     <h4 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-2">Customer</h4>
-                    <p className="font-bold">{customers.find(c => (c.entity_id || c._id || c.id) === selectedOrder.customer_id)?.customer_name || 'N/A'}</p>
-                    <p className="text-sm text-muted-foreground">{customers.find(c => (c.entity_id || c._id || c.id) === selectedOrder.customer_id)?.mobile_number || ''}</p>
+                    <p className="font-bold">{selectedOrder.customer_name || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">{selectedOrder.mobile_number || ''}</p>
+                    <p className="text-sm text-muted-foreground">{selectedOrder.email || ''}</p>
                   </div>
                   <div>
                     <h4 className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-2">Vehicle</h4>
-                    <p className="font-bold">{inventory.find(v => (v.entity_id || v._id || v.id) === selectedOrder.vehicle_inventory_id)?.brand} {inventory.find(v => (v.entity_id || v._id || v.id) === selectedOrder.vehicle_inventory_id)?.model}</p>
-                    <p className="text-sm text-muted-foreground">VIN: {inventory.find(v => (v.entity_id || v._id || v.id) === selectedOrder.vehicle_inventory_id)?.chassis_number}</p>
+                    <p className="font-bold">{selectedOrder.brand} {selectedOrder.model}</p>
+                    <p className="text-sm text-muted-foreground">Variant: {selectedOrder.variant}</p>
+                    <p className="text-sm text-muted-foreground">VIN: {selectedOrder.chassis_number}</p>
                   </div>
                 </div>
 
                 <div className="bg-muted/10 rounded-xl p-4 space-y-3">
-                  <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Base Price</span><span className="font-bold">{formatCurrency(selectedOrder.vehicle_price)}</span></div>
+                  <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Vehicle Price</span><span className="font-bold">{formatCurrency(selectedOrder.vehicle_price)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Reg. Charges</span><span className="font-bold">+ {formatCurrency(selectedOrder.registration_charges)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Insurance</span><span className="font-bold">+ {formatCurrency(selectedOrder.insurance)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Accessories</span><span className="font-bold">+ {formatCurrency(selectedOrder.accessories)}</span></div>

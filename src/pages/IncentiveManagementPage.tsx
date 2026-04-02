@@ -16,6 +16,7 @@ const IncentiveManagementPage = () => {
   const [tab, setTab] = useState<'Pending' | 'Paid' | 'History'>('Pending');
   const [search, setSearch] = useState('');
   const [editingIncentive, setEditingIncentive] = useState<any>(null);
+  const [payingIncentive, setPayingIncentive] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
   const rawSalesOrders = useSelector((state: RootState) => state.salesOrders?.data);
@@ -44,7 +45,7 @@ const IncentiveManagementPage = () => {
   // Filter by search
   const displayIncentives = tab === 'History' ? [] : filteredByTab.filter(so => {
     const sp = salespersons.find(s => (s.entity_id || s._id || s.id) === so.salesperson_id);
-    const spName = sp?.full_name || sp?.name || 'Unknown';
+    const spName = so.salesperson_name || sp?.full_name || sp?.name || 'Unknown';
     return (
       so.sales_order_code?.toLowerCase().includes(search.toLowerCase()) ||
       so.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -62,6 +63,7 @@ const IncentiveManagementPage = () => {
             ...log,
             sales_order_code: so.sales_order_code,
             salesperson_id: so.salesperson_id,
+            salesperson_name: so.salesperson_name,
             customer_name: so.customer_name,
             vehicle: `${so.brand} ${so.model}`,
           });
@@ -81,19 +83,25 @@ const IncentiveManagementPage = () => {
     }
   }
 
-  const getSalespersonName = (id: string) => {
+  const getSalespersonName = (id: string, denormalizedName?: string) => {
+    if (denormalizedName) return denormalizedName;
     const sp = salespersons.find(s => (s.entity_id || s._id || s.id) === id);
     return sp?.full_name || sp?.name || 'Unknown';
   };
 
-  const handleMarkPaid = (id: string, currentStatus: string) => {
-    if (currentStatus === 'Paid') return;
+  const handleMarkPaid = (id: string, paymentMethod: string, referenceNumber: string) => {
     setIsProcessing(id);
     dispatch(updateSalesOrderAction(
       id, 
-      { incentive_status: 'Paid', company_id: companyCode }, 
+      { 
+        incentive_status: 'Paid', 
+        incentive_payment_method: paymentMethod,
+        incentive_reference_number: referenceNumber,
+        company_id: companyCode 
+      }, 
       () => {
         setIsProcessing(null);
+        setPayingIncentive(null);
         toast.success('Incentive marked as paid');
       }, 
       () => {
@@ -133,7 +141,7 @@ const IncentiveManagementPage = () => {
                   <tr key={i} className="border-b border-border/40 hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-muted-foreground whitespace-nowrap">{new Date(log.timestamp).toLocaleString()}</td>
                     <td className="px-6 py-4 font-medium">{log.sales_order_code}</td>
-                    <td className="px-6 py-4 font-medium">{getSalespersonName(log.salesperson_id)}</td>
+                    <td className="px-6 py-4 font-medium">{getSalespersonName(log.salesperson_id, log.salesperson_name)}</td>
                     <td className="px-6 py-4 font-bold">
                       <span className={`px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md border ${
                         log.action === 'Paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
@@ -172,7 +180,7 @@ const IncentiveManagementPage = () => {
                 {displayIncentives.map((item) => (
                   <tr key={item.entity_id || item._id || item.id} className="border-b border-border/40 hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4 font-medium text-muted-foreground">{item.sales_order_code}</td>
-                    <td className="px-6 py-4 font-medium">{getSalespersonName(item.salesperson_id)}</td>
+                    <td className="px-6 py-4 font-medium">{getSalespersonName(item.salesperson_id, item.salesperson_name)}</td>
                     <td className="px-6 py-4 font-medium">{item.customer_name}</td>
                     <td className="px-6 py-4 font-medium">{item.brand} {item.model}</td>
                     <td className="px-6 py-4 font-medium">₹{(item.total_amount || 0).toLocaleString('en-IN')}</td>
@@ -184,11 +192,11 @@ const IncentiveManagementPage = () => {
                             Edit
                           </button>
                           <button 
-                            onClick={() => handleMarkPaid(item.entity_id || item._id || item.id, item.incentive_status)} 
+                            onClick={() => setPayingIncentive(item)} 
                             disabled={isProcessing === (item.entity_id || item._id || item.id)}
                             className="px-3 py-2 text-xs font-bold bg-white border border-border rounded-md text-[#0f172a] hover:bg-muted transition-all shadow-sm disabled:opacity-50"
                           >
-                            {isProcessing === (item.entity_id || item._id || item.id) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Mark Paid'}
+                            Mark Paid
                           </button>
                         </>
                       ) : (
@@ -214,6 +222,64 @@ const IncentiveManagementPage = () => {
       </div>
 
       <AnimatePresence>
+        {payingIncentive && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-[400px] mx-4 overflow-hidden border border-border pb-2">
+              <div className="flex items-center justify-between p-6 pb-2">
+                <h3 className="text-xl font-bold text-[#0f172a]">Payment Details</h3>
+              </div>
+              
+              <Formik
+                initialValues={{ payment_method: 'Bank Transfer', reference_number: '' }}
+                onSubmit={(values) => {
+                  handleMarkPaid(
+                    payingIncentive.entity_id || payingIncentive._id || payingIncentive.id,
+                    values.payment_method,
+                    values.reference_number
+                  );
+                }}
+              >
+                {({ isSubmitting }) => (
+                  <Form className="p-6 pt-2">
+                    <div className="space-y-4 mb-6">
+                      <div className="relative">
+                        <Field as="select" name="payment_method" className="w-full h-12 px-4 bg-white border-2 border-black rounded-lg appearance-none focus:outline-none font-bold text-[#0f172a]">
+                          <option value="Select Method">Select Method</option>
+                          <option value="Bank Transfer">Bank Transfer</option>
+                          <option value="Google Pay">Google Pay</option>
+                          <option value="Cheque">Cheque</option>
+                          <option value="Cash">Cash</option>
+                        </Field>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                          <svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M1 1L6 6L11 1" stroke="#0f172a" strokeWidth="2" strokeLinecap="round"/>
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <Field 
+                          type="text" 
+                          name="reference_number" 
+                          placeholder="Enter UTR Number" 
+                          className="w-full h-12 px-4 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-[#0f172a]/5 focus:border-[#0f172a] transition-all placeholder:text-slate-400 font-medium" 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="flex justify-end gap-3">
+                      <button type="button" onClick={() => setPayingIncentive(null)} className="px-6 py-2.5 text-sm font-bold rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">Cancel</button>
+                      <button type="submit" disabled={isProcessing !== null} className="px-6 py-2.5 bg-[#1e293b] text-white text-sm font-bold rounded-lg shadow-sm hover:bg-[#0f172a] transition-all flex items-center justify-center min-w-[140px]">
+                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Payment'}
+                      </button>
+                    </div>
+                  </Form>
+                )}
+              </Formik>
+            </motion.div>
+          </div>
+        )}
+
         {editingIncentive && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-border">
@@ -245,7 +311,7 @@ const IncentiveManagementPage = () => {
                     <div className="space-y-4 mb-6">
                       <div className="p-4 bg-muted/20 rounded-xl border border-border/50 flex flex-col gap-2">
                         <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-bold">Sales Order</span> <span className="text-sm font-black">{editingIncentive.sales_order_code}</span></div>
-                        <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-bold">Salesperson</span> <span className="text-sm font-bold">{getSalespersonName(editingIncentive.salesperson_id)}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-xs text-muted-foreground font-bold">Salesperson</span> <span className="text-sm font-bold">{getSalespersonName(editingIncentive.salesperson_id, editingIncentive.salesperson_name)}</span></div>
                       </div>
                       
                       <div>

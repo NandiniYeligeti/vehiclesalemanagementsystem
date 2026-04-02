@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
   Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift
 } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
+import { getCompanySettingsAction } from '@/store/ducks/company.ducks';
 
 const allMenuItems = [
   { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard, roles: ['admin', 'user'] },
@@ -20,7 +21,7 @@ const allMenuItems = [
   { id: 'incentives',  label: 'Incentive Management', icon: Gift,      roles: ['admin', 'user'] },
   { id: 'reports',     label: 'Reports',           icon: BarChart3,       roles: ['admin', 'user'] },
   { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] }, // admin-only
-  { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin', 'user'] },
+  { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin'] },
 ];
 
 interface SidebarProps {
@@ -29,11 +30,23 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
+  const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
+  const { settings } = useSelector((state: RootState) => state.company);
   const role = user?.role || 'user';
+  const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+
+  useEffect(() => {
+    if (companyCode) {
+      // Fetch if settings are missing OR if settings belong to a different company
+      if (!settings || settings.company_id !== companyCode) {
+        dispatch(getCompanySettingsAction(companyCode));
+      }
+    }
+  }, [dispatch, companyCode, settings?.company_id]);
 
   // Filter items the current role is allowed to see
   const menuItems = allMenuItems.filter((item) => item.roles.includes(role));
@@ -72,15 +85,21 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-5 border-b border-[hsl(var(--sidebar-border))]">
-          <Car className="w-7 h-7 text-primary shrink-0" />
+        <div className="h-16 flex items-center px-4 border-b border-[hsl(var(--sidebar-border))]">
+          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+             {settings?.logo_url ? (
+               <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain" />
+             ) : (
+               <Car className="w-5 h-5 text-primary" />
+             )}
+          </div>
           {!collapsed && (
             <motion.span
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="ml-3 text-lg font-bold text-[hsl(var(--sidebar-active))] tracking-tight"
+              className="ml-3 text-lg font-black text-[hsl(var(--sidebar-active))] tracking-tight truncate"
             >
-              AutoDesk
+              {settings?.company_name || 'AutoDesk'}
             </motion.span>
           )}
         </div>
