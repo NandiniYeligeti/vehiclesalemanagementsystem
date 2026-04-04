@@ -90,9 +90,9 @@ export default function LoginPage() {
       } p-6 gap-4 transition-colors duration-500`}
       style={bgStyle}
     >
-      <div className="w-full max-w-[760px] bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10 mx-auto">
+      <div className="w-full max-w-[850px] bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10 mx-auto">
         {/* Left Image Slider */}
-        <div className="hidden md:block relative h-full bg-black min-h-[450px]">
+        <div className="hidden md:block relative h-full bg-black min-h-[400px]">
           {images.map((img, i) => (
             <img
               key={i}
@@ -119,17 +119,17 @@ export default function LoginPage() {
         </div>
 
         {/* Right Panel */}
-        <div className="p-6 sm:p-8 space-y-5 flex flex-col justify-center bg-[#18181b]">
+        <div className="p-6 sm:p-7 space-y-4 flex flex-col justify-center bg-[#18181b]">
           {/* Company Logo */}
           <div className="flex justify-center -mb-2">
             <img
               src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
               alt="Company Logo"
-              className="h-14 object-contain opacity-90 hover:opacity-100 transition-opacity"
+              className="h-12 object-contain opacity-90 hover:opacity-100 transition-opacity"
             />
           </div>
 
-          <h1 className="text-[26px] tracking-tight font-semibold text-center text-white">
+          <h1 className="text-2xl tracking-tight font-semibold text-center text-white">
             {showForgot ? "Forgot Password" : "SmartERP Login"}
           </h1>
 
@@ -205,7 +205,7 @@ export default function LoginPage() {
               <button 
                  type="submit"
                  disabled={loading || !email || !password}
-                 className="w-full bg-[#1d4ed8] font-semibold py-3.5 flex justify-center items-center rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-[15px] tracking-wide"
+                 className="w-full bg-[#1d4ed8] font-semibold py-3 flex justify-center items-center rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-[15px] tracking-wide"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -217,19 +217,14 @@ export default function LoginPage() {
           )}
 
           {/* Premium Company Branding */}
-          <div className="text-center text-xs text-gray-400 space-y-1.5 pt-8 mt-2">
-            <div className="w-full h-px bg-white/10 mb-6"></div>
+          <div className="text-center text-xs text-gray-400 space-y-1 pt-4 mt-1">
+            <div className="w-full h-px bg-white/10 mb-4"></div>
             <p className="font-bold text-gray-200 text-sm tracking-wide">Rupesh Infotech Pvt. Ltd.</p>
             <p className="text-gray-400 text-xs">SmartERP Business Suite</p>
-            <p className="pt-2 text-gray-400/80 flex items-center justify-center gap-1.5">
+            <p className="pt-1 text-gray-400/80 flex items-center justify-center gap-1.5 font-medium">
                <span className="text-red-400 text-sm">📍</span> Mumbai, Maharashtra, India
             </p>
-            <p className="text-gray-400/80 flex items-center justify-center gap-2 pb-1">
-               <span className="flex items-center gap-1.5"><span className="text-blue-300">✉️</span> support@rupeshinfotech.com</span>
-               <span className="text-gray-600">|</span>
-               <span className="flex items-center gap-1.5"><span className="text-emerald-400">📞</span> +91 98765 43210</span>
-            </p>
-            <p className="pt-2 text-[10.5px] text-gray-500/80 tracking-widest uppercase">© 2026 All Rights Reserved</p>
+            <p className="text-[10px] text-gray-500/80 tracking-widest uppercase">© 2026 All Rights Reserved</p>
           </div>
         </div>
       </div>
