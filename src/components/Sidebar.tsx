@@ -49,7 +49,20 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
   }, [dispatch, companyCode, settings?.company_id]);
 
   // Filter items the current role is allowed to see
-  const menuItems = allMenuItems.filter((item) => item.roles.includes(role));
+  const menuItems = allMenuItems.filter((item) => {
+    // 1. Role-based check
+    const isRoleAllowed = item.roles.includes(role) || role === 'super_admin';
+    if (!isRoleAllowed) return false;
+
+    // 2. User-specific menus check (only for 'user' role, admins see all their role items)
+    if (role === 'user') {
+       // If the user has a specific menu list, only show those.
+       // (Optional: if empty, show nothing or default? Let's say if empty, they see nothing assigned)
+       return (user?.menus || []).includes(item.id);
+    }
+
+    return true;
+  });
 
   return (
     <>

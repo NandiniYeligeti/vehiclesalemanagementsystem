@@ -35,6 +35,11 @@ const store = configureStore({
           "payments/UPDATE_PAYMENT",
           "loans/ADD_LOAN",
           "loans/UPDATE_LOAN",
+          "bankMaster/ADD_BANK",
+          "bankMaster/UPDATE_BANK",
+          "bankMaster/DELETE_BANK",
+          "companyMasters/ADD_MASTER",
+          "companyMasters/DELETE_MASTER",
         ],
 
         ignoredActionPaths: [
@@ -42,6 +47,7 @@ const store = configureStore({
           "payload.profileImage",
           "onSuccess",
           "onError",
+          "callback",
           "meta.arg",
         ],
 

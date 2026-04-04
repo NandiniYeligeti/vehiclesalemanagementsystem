@@ -20,6 +20,9 @@ export interface CompanySettings {
   phone: string;
   email: string;
   invoice_prefix: string;
+  invoice_suffix: string;
+  sales_prefix: string;
+  sales_suffix: string;
   currency: string;
   timezone: string;
 }

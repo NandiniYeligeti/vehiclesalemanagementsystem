@@ -12,6 +12,7 @@ import authReducer from "./ducks/auth.duck";
 import vehicleFeaturesReducer from "./ducks/vehicle_features.ducks";
 import companyReducer from "./ducks/company.ducks";
 import companyMastersReducer from "./ducks/company_masters.ducks";
+import bankMasterReducer from "./ducks/bank_master.ducks";
 import { persistReducer } from "../persist/persist";
 
 // ================================
@@ -30,6 +31,7 @@ const rootReducer = combineReducers({
   vehicleFeatures: vehicleFeaturesReducer,
   company: companyReducer,
   companyMasters: companyMastersReducer,
+  bankMaster: bankMasterReducer,
 
   auth: persistReducer(authReducer, {
     key: "auth",

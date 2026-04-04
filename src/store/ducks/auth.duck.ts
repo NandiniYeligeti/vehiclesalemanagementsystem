@@ -15,6 +15,7 @@ export interface User {
   role: string;
   CompanyCode: string;
   company_name: string;
+  menus: string[];
 }
 
 interface AuthState {
@@ -66,6 +67,7 @@ const authSlice = createSlice({
         role: incomingUser.role,
         CompanyCode: incomingUser.company_code, // DashboardPage mapping dependency backwards compatibility
         company_name: incomingUser.company_name,
+        menus: incomingUser.menus || [],
       };
       state.isAuthenticated = true;
       sessionStorage.setItem("accessToken", action.payload.token);
@@ -90,6 +92,7 @@ const authSlice = createSlice({
         role: 'admin',
         CompanyCode: company.company_code,
         company_name: company.company_name,
+        menus: company.menus || [],
       };
       state.isAuthenticated = true;
       state.impersonating = true;

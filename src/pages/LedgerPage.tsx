@@ -73,6 +73,7 @@ const LedgerPage = () => {
         groupMap[vId] = {
           vehicle_id: vId,
           vehicle_name: item.vehicle_name || 'Other/Unassigned',
+          sales_order_code: item.sales_order_code || '',
           items: [],
           outstanding: 0
         };
@@ -132,9 +133,11 @@ const LedgerPage = () => {
           value={selectedVehicleId}
           onChange={(e) => setSelectedVehicleId(e.target.value)}
         >
-          <option value="all">Select Vehicle</option>
+          <option value="all">All Sales Orders / Vehicles</option>
           {vehiclesArray.map(v => (
-            <option key={v.vehicle_id} value={v.vehicle_id}>{v.vehicle_name}</option>
+            <option key={v.vehicle_id} value={v.vehicle_id}>
+              {v.sales_order_code ? `${v.sales_order_code} — ` : ''}{v.vehicle_name}
+            </option>
           ))}
         </select>
       </div>
@@ -176,10 +179,14 @@ const LedgerPage = () => {
            key={group.vehicle_id} 
            className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden"
         >
-          {/* Card Header */}
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
             <CarFront className="w-5 h-5 text-red-500 fill-red-100" />
-            <h3 className="font-bold text-slate-800">{group.vehicle_name}</h3>
+            <div className="flex flex-col">
+              <h3 className="font-bold text-slate-800">{group.vehicle_name}</h3>
+              {group.sales_order_code && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{group.sales_order_code}</span>
+              )}
+            </div>
           </div>
 
           <div className="overflow-x-auto">

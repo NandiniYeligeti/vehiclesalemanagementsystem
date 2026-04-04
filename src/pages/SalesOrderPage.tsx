@@ -22,6 +22,9 @@ const salesOrderSchema = Yup.object().shape({
   registration_charges: Yup.number().min(0),
   insurance: Yup.number().min(0),
   accessories: Yup.number().min(0),
+  discount_type: Yup.string(),
+  discount_value: Yup.number().min(0),
+  discount_reason: Yup.string(),
   down_payment: Yup.number().min(0),
   loan_amount: Yup.number().min(0),
 });
@@ -76,10 +79,16 @@ const SalesOrderPage = () => {
     registration_charges: 0,
     insurance: 0,
     accessories: 0,
+    discount_type: 'Percentage',
+    discount_value: 0,
+    discount_reason: '',
+    discount_amount: 0,
     total_amount: 0,
     down_payment: 0,
     loan_amount: 0,
     balance_amount: 0,
+    payment_type: 'Full Payment',
+    payment_mode: '',
     status: 'Confirmed'
   });
 
@@ -175,6 +184,12 @@ const SalesOrderPage = () => {
                 <td>Accessories</td>
                 <td style="text-align: right;">${formatCurrency(order.accessories)}</td>
               </tr>
+              ${order.discount_amount > 0 ? `
+              <tr>
+                <td style="color: green; font-weight: bold;">Discount (${order.discount_type})</td>
+                <td style="text-align: right; color: green; font-weight: bold;">- ${formatCurrency(order.discount_amount)}</td>
+              </tr>
+              ` : ''}
             </tbody>
           </table>
 
@@ -257,6 +272,7 @@ const SalesOrderPage = () => {
                           <div className="flex flex-col">
                             <span className="font-bold text-primary">{order.sales_order_code || 'DRAFT'}</span>
                             <span className="text-[10px] text-muted-foreground font-mono">{new Date(order.sale_date).toLocaleDateString()}</span>
+                            <span className="text-[9px] uppercase font-bold text-orange-500">{order.payment_type}</span>
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -342,14 +358,32 @@ const SalesOrderPage = () => {
           }}
         >
           {({ values, setFieldValue, isSubmitting, resetForm }) => {
-            const { vehicle_price, registration_charges, insurance, accessories, down_payment, loan_amount } = values;
-            const total = Number(vehicle_price) + Number(registration_charges) + Number(insurance) + Number(accessories);
+            const { vehicle_price, registration_charges, insurance, accessories, down_payment, loan_amount, discount_type, discount_value, payment_type } = values;
+            
+            const discount_amount = useMemo(() => {
+              if (discount_type === 'Percentage') {
+                return (Number(vehicle_price) * Number(discount_value)) / 100;
+              }
+              return Number(discount_value);
+            }, [vehicle_price, discount_type, discount_value]);
+
+            const subtotal = Number(vehicle_price) + Number(registration_charges) + Number(insurance) + Number(accessories);
+            const total = subtotal - discount_amount;
+
+            useEffect(() => {
+              if (payment_type === 'Full Payment') {
+                setFieldValue('down_payment', total);
+                setFieldValue('loan_amount', 0);
+              }
+            }, [payment_type, total, setFieldValue]);
+
             const balance = total - Number(down_payment) - Number(loan_amount);
 
             useEffect(() => {
+              setFieldValue('discount_amount', discount_amount);
               setFieldValue('total_amount', total);
               setFieldValue('balance_amount', balance);
-            }, [total, balance, setFieldValue]);
+            }, [discount_amount, total, balance, setFieldValue]);
 
             const selectedCustomer = (customers || []).find(c => (c.entity_id || c._id || c.id) === values.customer_id);
             const selectedVehicle = (inventory || []).find(v => (v.entity_id || v._id || v.id) === values.vehicle_inventory_id);
@@ -449,15 +483,128 @@ const SalesOrderPage = () => {
                     </div>
                   </motion.section>
 
-                  <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="erp-card p-6">
-                    <h3 className="erp-section-title">Down Payment & Loan</h3>
+                  <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="erp-card p-6">
+                    <h3 className="erp-section-title">Discount Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div><label className="erp-label">Down Payment</label><Field type="number" name="down_payment" className="erp-input tabular" /></div>
-                      <div><label className="erp-label">Loan Amount</label><Field type="number" name="loan_amount" className="erp-input tabular" /></div>
-                      <div className="sm:col-span-2">
-                        <label className="erp-label text-primary font-bold">Balance Amount Due</label>
-                        <input className="erp-input tabular font-bold text-lg bg-primary/5 border-primary/20 text-primary" value={formatCurrency(values.balance_amount)} readOnly />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <label className="erp-label">Discount Type</label>
+                          <Field as="select" name="discount_type" className="erp-select">
+                            <option value="Percentage">Percentage (%)</option>
+                            <option value="Fixed">Fixed Amount (₹)</option>
+                          </Field>
+                        </div>
+                        <div className="flex-1">
+                          <label className="erp-label">Value</label>
+                          <Field type="number" name="discount_value" className="erp-input tabular" />
+                        </div>
                       </div>
+                      <div>
+                        <label className="erp-label">Select Reason</label>
+                        <Field as="select" name="discount_reason" className="erp-select">
+                          <option value="">Select Reason</option>
+                          <option value="Festival Offer">Festival Offer</option>
+                          <option value="Corporate Discount">Corporate Discount</option>
+                          <option value="Loyalty Reward">Loyalty Reward</option>
+                          <option value="Employee Referral">Employee Referral</option>
+                          <option value="Manager Approval">Manager Approval</option>
+                        </Field>
+                      </div>
+                      <div className="sm:col-span-2">
+                        {values.discount_amount > 0 && (
+                          <div className="text-sm font-bold text-green-500 animate-pulse">
+                            You saved {formatCurrency(values.discount_amount)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </motion.section>
+
+                  <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="erp-card p-6">
+                    <h3 className="erp-section-title">Vehicle Payment</h3>
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-6">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="radio"
+                            name="payment_type"
+                            value="Full Payment"
+                            checked={values.payment_type === 'Full Payment'}
+                            onChange={() => setFieldValue('payment_type', 'Full Payment')}
+                            className="w-4 h-4 text-primary bg-muted border-border focus:ring-primary focus:ring-offset-0"
+                          />
+                          <span className="text-sm font-bold group-hover:text-primary transition-colors">Full Payment</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="radio"
+                            name="payment_type"
+                            value="Down Payment + Loan"
+                            checked={values.payment_type === 'Down Payment + Loan'}
+                            onChange={() => setFieldValue('payment_type', 'Down Payment + Loan')}
+                            className="w-4 h-4 text-primary bg-muted border-border focus:ring-primary focus:ring-offset-0"
+                          />
+                          <span className="text-sm font-bold group-hover:text-primary transition-colors">Down Payment + Loan</span>
+                        </label>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4">
+                        {values.payment_type === 'Full Payment' ? (
+                          <>
+                            <div>
+                              <label className="erp-label">Total Vehicle Cost</label>
+                              <input className="erp-input bg-muted/30 tabular font-bold" value={total} readOnly />
+                            </div>
+                            <div>
+                              <label className="erp-label">Mode of Payment</label>
+                              <Field as="select" name="payment_mode" className="erp-select">
+                                <option value="">Select payment mode</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="UPI">UPI / Digital</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                              </Field>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div><label className="erp-label">Down Payment</label><Field type="number" name="down_payment" className="erp-input tabular" /></div>
+                            <div><label className="erp-label">Loan Amount/Finance</label><Field type="number" name="loan_amount" className="erp-input tabular" /></div>
+                            <div>
+                              <label className="erp-label">Down Payment Mode</label>
+                              <Field as="select" name="payment_mode" className="erp-select">
+                                <option value="">Select payment mode</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Cheque">Cheque</option>
+                                <option value="UPI">UPI / Digital</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                              </Field>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="bg-muted/20 rounded-xl p-4 space-y-2 border border-border/50">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Total:</span>
+                          <span className="font-bold">{formatCurrency(total)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">{values.payment_type === 'Full Payment' ? 'Paid Fully:' : 'Total Amount (DP + Loan):'}</span>
+                          <span className="font-bold text-primary">{formatCurrency(Number(values.down_payment) + Number(values.loan_amount))}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-muted-foreground">Payment Mode:</span>
+                          <span className="font-bold">{values.payment_mode || '-'}</span>
+                        </div>
+                      </div>
+
+                      {values.payment_type === 'Down Payment + Loan' && (
+                        <div>
+                          <label className="erp-label text-primary font-bold">Balance Amount Due</label>
+                          <input className="erp-input tabular font-bold text-lg bg-primary/5 border-primary/20 text-primary" value={formatCurrency(values.balance_amount)} readOnly />
+                        </div>
+                      )}
                     </div>
                   </motion.section>
                 </div>
@@ -468,16 +615,26 @@ const SalesOrderPage = () => {
                     <h3 className="text-lg font-bold mb-6 flex items-center gap-2"><div className="w-1.5 h-6 bg-primary rounded-full" />Order Summary</h3>
                     
                     <div className="space-y-4 tabular text-sm relative z-10">
-                      <div className="flex justify-between items-center opacity-70"><span>Vehicle Base Price</span><span>{formatCurrency(values.vehicle_price)}</span></div>
-                      <div className="flex justify-between items-center opacity-70"><span>Registration & Tax</span><span className="text-green-400">+ {formatCurrency(values.registration_charges)}</span></div>
-                      <div className="flex justify-between items-center opacity-70"><span>Insurance Premium</span><span className="text-green-400">+ {formatCurrency(values.insurance)}</span></div>
-                      <div className="flex justify-between items-center opacity-70"><span>Added Accessories</span><span className="text-green-400">+ {formatCurrency(values.accessories)}</span></div>
-                      <div className="pt-4 mt-4 border-t border-background/10 flex justify-between items-end">
-                        <div><span className="block text-[10px] uppercase tracking-widest opacity-50 font-black">Grand Total</span><span className="text-2xl font-black text-primary">{formatCurrency(values.total_amount)}</span></div>
+                      <div className="flex justify-between items-center opacity-70"><span>Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+                      {values.discount_amount > 0 && (
+                        <div className="flex justify-between items-center text-green-400 font-bold">
+                          <span>Discount</span>
+                          <span>- {formatCurrency(values.discount_amount)}</span>
+                        </div>
+                      )}
+                      
+                      <div className="pt-4 mt-2 border-t border-background/10">
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <span className="block text-[10px] uppercase tracking-widest opacity-50 font-black mb-1">Final Total</span>
+                            <span className="text-2xl font-black text-primary">{formatCurrency(values.total_amount)}</span>
+                          </div>
+                        </div>
                       </div>
+
                       <div className="space-y-2 pt-2">
                         <div className="flex justify-between items-center text-xs opacity-60"><span>Total Paid (DP + Loan)</span><span>- {formatCurrency(Number(values.down_payment) + Number(values.loan_amount))}</span></div>
-                        <div className="flex justify-between items-center font-bold text-base border-t border-background/10 pt-3 text-white"><span>Amount Receivable</span><span>{formatCurrency(values.balance_amount)}</span></div>
+                        <div className="flex justify-between items-center font-bold text-base border-t border-background/10 pt-3 text-white"><span>Balance Due</span><span>{formatCurrency(values.balance_amount)}</span></div>
                       </div>
                     </div>
 
@@ -528,6 +685,12 @@ const SalesOrderPage = () => {
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Reg. Charges</span><span className="font-bold">+ {formatCurrency(selectedOrder.registration_charges)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Insurance</span><span className="font-bold">+ {formatCurrency(selectedOrder.insurance)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Accessories</span><span className="font-bold">+ {formatCurrency(selectedOrder.accessories)}</span></div>
+                  {selectedOrder.discount_amount > 0 && (
+                    <div className="flex justify-between border-b border-border pb-2 text-green-500 font-bold">
+                      <span className="text-sm">Discount ({selectedOrder.discount_type})</span>
+                      <span>- {formatCurrency(selectedOrder.discount_amount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between pt-2"><span className="text-lg font-black uppercase text-primary">Grand Total</span><span className="text-xl font-black text-primary">{formatCurrency(selectedOrder.total_amount)}</span></div>
                 </div>
 
@@ -535,6 +698,11 @@ const SalesOrderPage = () => {
                   <div className="p-3 bg-muted/30 rounded-lg text-center"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Down Payment</span><span className="font-bold">{formatCurrency(selectedOrder.down_payment)}</span></div>
                   <div className="p-3 bg-muted/30 rounded-lg text-center"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Loan Amount</span><span className="font-bold">{formatCurrency(selectedOrder.loan_amount)}</span></div>
                   <div className="p-3 bg-primary/10 rounded-lg text-center"><span className="block text-[10px] uppercase text-primary mb-1">Receivable</span><span className="font-bold text-primary">{formatCurrency(selectedOrder.balance_amount)}</span></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-muted/30 rounded-lg"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Payment Type</span><span className="font-bold">{selectedOrder.payment_type}</span></div>
+                  <div className="p-3 bg-muted/30 rounded-lg"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Payment Mode</span><span className="font-bold">{selectedOrder.payment_mode || 'N/A'}</span></div>
                 </div>
               </div>
 

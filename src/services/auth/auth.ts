@@ -31,3 +31,8 @@ export const deleteUserApi = async (companyCode: string, userId: string) => {
   const response = await api.delete(`/users/${companyCode}/${userId}`);
   return response.data;
 };
+
+export const updateUserMenusApi = async (userId: string, menus: string[]) => {
+  const response = await api.put(`/users/${userId}/menus`, { menus });
+  return response.data;
+};

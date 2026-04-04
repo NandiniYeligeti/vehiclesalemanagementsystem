@@ -6,7 +6,7 @@ import {
 } from '@/store/ducks/vehicle_inventory.ducks';
 import { getVehicleModelsAction } from '@/store/ducks/vehicle_models.ducks';
 import { getTypesAction, getCategoriesAction, getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
-import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, DollarSign, Fingerprint } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, DollarSign, Fingerprint, Eye } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -48,6 +48,7 @@ const VehicleInventoryPage = () => {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
 
   // DEFENSIVE SELECTORS
   const rawInventoryState = useSelector((state: RootState) => state.vehicleInventory);
@@ -110,7 +111,7 @@ const VehicleInventoryPage = () => {
             <input type="text" placeholder="Search chassis, engine or model..." value={search} onChange={(e) => setSearch(e.target.value)}
               className="bg-transparent text-sm outline-none w-full sm:w-64 placeholder:text-muted-foreground/60" />
           </div>
-          <button onClick={() => { setEditingItem(null); setShowForm(true); }} className="erp-button-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-primary/20 whitespace-nowrap">
+          <button onClick={() => { setEditingItem(null); setIsViewOnly(false); setShowForm(true); }} className="erp-button-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-primary/20 whitespace-nowrap">
             <Plus className="w-4 h-4" /> Add Vehicle
           </button>
         </div>
@@ -178,8 +179,23 @@ const VehicleInventoryPage = () => {
                   <p className="text-2xl font-black text-primary">₹{(item.selling_price || item.total_price || 0).toLocaleString('en-IN')}</p>
                 </div>
                 <div className="flex gap-2 justify-end">
-                  <button onClick={() => { setEditingItem(item); setShowForm(true); }} className="flex-1 h-10 px-3 rounded-xl bg-primary/5 text-primary hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ring-1 ring-primary/20"><Edit2 className="w-3.5 h-3.5" /> Edit</button>
-                  <button onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)} className="h-10 w-10 rounded-xl bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-all ring-1 ring-destructive/20 flex items-center justify-center"><Trash2 className="w-4 h-4" /></button>
+                  <button 
+                    onClick={() => { 
+                      setEditingItem(item); 
+                      setIsViewOnly(item.status !== 'Available');
+                      setShowForm(true); 
+                    }} 
+                    className={`flex-1 h-10 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ring-1 ${
+                      item.status === 'Available' ? 'bg-primary/5 text-primary hover:bg-primary hover:text-white ring-primary/20' : 'bg-muted/40 text-muted-foreground ring-border hover:bg-muted'
+                    }`}
+                  >
+                    {item.status === 'Available' ? <><Edit2 className="w-3.5 h-3.5" /> Edit</> : <><Eye className="w-3.5 h-3.5" /> View</>}
+                  </button>
+                  {item.status === 'Available' && (
+                    <button onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)} className="h-10 w-10 rounded-xl bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-all ring-1 ring-destructive/20 flex items-center justify-center">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -199,7 +215,7 @@ const VehicleInventoryPage = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-border">
               <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
-                <h3 className="text-xl font-black uppercase tracking-tighter">Inventory Management</h3>
+                <h3 className="text-xl font-black uppercase tracking-tighter">{isViewOnly ? 'Vehicle Details' : 'Inventory Management'}</h3>
                 <button onClick={() => setShowForm(false)} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
               <Formik
@@ -263,14 +279,14 @@ const VehicleInventoryPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Category</label>
-                          <Field as="select" name="selected_category" className="erp-select h-12 rounded-xl text-xs font-bold bg-muted/40 border-none focus:ring-2 focus:ring-primary/20">
+                          <Field as="select" name="selected_category" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-bold bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">All Categories</option>
                             {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
                           </Field>
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Vehicle Type</label>
-                          <Field as="select" name="selected_type" className="erp-select h-12 rounded-xl text-xs font-bold bg-muted/40 border-none focus:ring-2 focus:ring-primary/20">
+                          <Field as="select" name="selected_type" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-bold bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">All Types</option>
                             {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
                           </Field>
@@ -280,7 +296,7 @@ const VehicleInventoryPage = () => {
                       <div>
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Selected Model & Showroom</label>
                         <div className="grid grid-cols-2 gap-4">
-                          <Field as="select" name="vehicle_model_id" className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20">
+                          <Field as="select" name="vehicle_model_id" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">Select Model</option>
                             {models.filter(m => 
                               (!values.selected_type || m.type_id === values.selected_type) && 
@@ -289,7 +305,7 @@ const VehicleInventoryPage = () => {
                               <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model}</option>
                             ))}
                           </Field>
-                          <Field as="select" name="showroom" className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20">
+                          <Field as="select" name="showroom" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">Select Showroom</option>
                             {showrooms.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                           </Field>
@@ -306,7 +322,7 @@ const VehicleInventoryPage = () => {
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Vehicle Color</label>
-                          <Field name="color" className="erp-input h-12 rounded-xl text-xs font-bold px-4" placeholder="Enter color" />
+                          <Field name="color" disabled={isViewOnly} className="erp-input h-12 rounded-xl text-xs font-bold px-4 disabled:opacity-70" placeholder="Enter color" />
                           <ErrorMessage name="color" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                       </div>
@@ -314,7 +330,7 @@ const VehicleInventoryPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">MFG Year</label>
-                          <Field as="select" name="mfg_year" className="erp-select h-12 rounded-xl text-xs font-bold">
+                          <Field as="select" name="mfg_year" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-bold disabled:opacity-70">
                             <option value="">Select Year</option>
                             {Array.from({length: 20}, (_, i) => new Date().getFullYear() - i).map(year => (
                               <option key={year} value={year.toString()}>{year}</option>
@@ -324,7 +340,7 @@ const VehicleInventoryPage = () => {
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Inventory Date</label>
-                          <Field type="date" name="inventory_date" className="erp-input h-12 rounded-xl text-xs font-bold px-4" />
+                          <Field type="date" name="inventory_date" disabled={isViewOnly} className="erp-input h-12 rounded-xl text-xs font-bold px-4 disabled:opacity-70" />
                           <ErrorMessage name="inventory_date" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                       </div>
@@ -332,12 +348,12 @@ const VehicleInventoryPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">VIN / Chassis No</label>
-                          <Field name="chassis_number" className="erp-input h-12 rounded-xl placeholder:text-muted-foreground font-mono text-xs font-bold px-4" placeholder="Enter VIN" />
+                          <Field name="chassis_number" disabled={isViewOnly} className="erp-input h-12 rounded-xl placeholder:text-muted-foreground font-mono text-xs font-bold px-4 disabled:opacity-70" placeholder="Enter VIN" />
                           <ErrorMessage name="chassis_number" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Engine Number</label>
-                          <Field name="engine_number" className="erp-input h-12 rounded-xl placeholder:text-muted-foreground font-mono text-xs font-bold px-4" placeholder="Enter Engine No" />
+                          <Field name="engine_number" disabled={isViewOnly} className="erp-input h-12 rounded-xl placeholder:text-muted-foreground font-mono text-xs font-bold px-4 disabled:opacity-70" placeholder="Enter Engine No" />
                           <ErrorMessage name="engine_number" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                       </div>
@@ -345,12 +361,12 @@ const VehicleInventoryPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Purchase Date</label>
-                          <Field type="date" name="purchase_date" className="erp-input h-12 rounded-xl text-xs font-bold px-4" />
+                          <Field type="date" name="purchase_date" disabled={isViewOnly} className="erp-input h-12 rounded-xl text-xs font-bold px-4 disabled:opacity-70" />
                           <ErrorMessage name="purchase_date" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Status</label>
-                          <Field as="select" name="status" className="erp-select h-12 rounded-xl text-xs font-bold">
+                          <Field as="select" name="status" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-bold disabled:opacity-70">
                             <option value="Available">Available</option>
                             <option value="Reserved">Reserved</option>
                             <option value="Sold">Sold</option>
@@ -361,21 +377,23 @@ const VehicleInventoryPage = () => {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Purchase Price (₹)</label>
-                          <Field type="number" name="purchase_price" className="erp-input h-12 rounded-xl text-xs font-bold px-4" />
+                          <Field type="number" name="purchase_price" disabled={isViewOnly} className="erp-input h-12 rounded-xl text-xs font-bold px-4 disabled:opacity-70" />
                           <ErrorMessage name="purchase_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                         <div className="col-span-1">
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Selling Price (₹)</label>
-                          <Field type="number" name="selling_price" className="erp-input h-12 rounded-xl text-xs font-bold px-4" />
+                          <Field type="number" name="selling_price" disabled={isViewOnly} className="erp-input h-12 rounded-xl text-xs font-bold px-4 disabled:opacity-70" />
                           <ErrorMessage name="selling_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                         </div>
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 p-6 border-t border-border bg-muted/10">
-                      <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-colors">Discard</button>
-                      <button type="submit" disabled={isSubmitting} className="erp-button-primary px-8 py-3 h-12 shadow-lg shadow-primary/20">
-                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Stock'}
-                      </button>
+                      <button type="button" onClick={() => setShowForm(false)} className="px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted transition-colors">{isViewOnly ? 'Close' : 'Discard'}</button>
+                      {!isViewOnly && (
+                        <button type="submit" disabled={isSubmitting} className="erp-button-primary px-8 py-3 h-12 shadow-lg shadow-primary/20">
+                          {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Confirm Stock'}
+                        </button>
+                      )}
                     </div>
                   </Form>
                 );

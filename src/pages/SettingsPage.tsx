@@ -1,12 +1,70 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { Save, Loader2, Globe, Building2, MapPin, Phone, Mail, FileText, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
+import { Save, Loader2, Globe, Building2, MapPin, Phone, Mail, FileText, Image as ImageIcon, Plus, Trash2, Hash } from 'lucide-react';
 import { Formik, Form, Field } from 'formik';
 import { RootState } from '@/store/rootReducer';
 import { getCompanySettingsAction, updateCompanySettingsAction } from '@/store/ducks/company.ducks';
 import { toast } from 'sonner';
 import { getMastersAction, addMasterAction, deleteMasterAction } from '@/store/ducks/company_masters.ducks';
+import { getBanksAction, addBankAction, deleteBankAction, BankMaster } from '@/store/ducks/bank_master.ducks';
+
+const BankMasterSection = ({ data, onAdd, onDelete, loading }: { data: BankMaster[], onAdd: (bank: BankMaster) => void, onDelete: (id: string) => void, loading: boolean }) => {
+  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', contact_person: '', contact_number: '' });
+  return (
+    <div className="erp-card p-8 bg-white border border-border/50 shadow-sm rounded-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-primary" /> Banking Channel Masters
+        </h3>
+        <span className="px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest leading-none">{data.length} Banks</span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-muted/20 p-4 rounded-xl border border-border/40">
+        <input value={formData.bank_name} onChange={(e) => setFormData(p => ({ ...p, bank_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Bank Name" />
+        <input value={formData.branch_name} onChange={(e) => setFormData(p => ({ ...p, branch_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Branch" />
+        <input value={formData.contact_person} onChange={(e) => setFormData(p => ({ ...p, contact_person: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Contact Person" />
+        <div className="flex gap-2">
+          <input value={formData.contact_number} onChange={(e) => setFormData(p => ({ ...p, contact_number: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Mobile" />
+          <button 
+            onClick={() => { if(formData.bank_name) { onAdd(formData as any); setFormData({ bank_name: '', branch_name: '', contact_person: '', contact_number: '' }); } }} 
+            className="px-4 rounded-xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+        {data.map((bank) => (
+          <div key={bank.entity_id || bank.id} className="relative p-5 rounded-2xl bg-muted/30 border border-border/50 group hover:bg-white hover:border-primary/30 transition-all">
+             <div className="flex items-start justify-between mb-2">
+               <h4 className="font-black text-slate-900 text-sm">{bank.bank_name}</h4>
+               <button 
+                 onClick={() => onDelete(bank.entity_id || bank.id!)} 
+                 className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+               >
+                 <Trash2 className="w-3.5 h-3.5" />
+               </button>
+             </div>
+             <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4 tracking-tighter opacity-80">{bank.branch_name} Branch</p>
+             <div className="space-y-1.5 pt-3 border-t border-border/40">
+                <p className="text-[10px] font-black text-slate-800 flex items-center gap-2 tracking-tight">
+                   <span className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center text-primary text-[8px] font-black uppercase tracking-widest leading-none">CP</span>
+                   {bank.contact_person}
+                </p>
+                <p className="text-[10px] font-black text-slate-800 flex items-center gap-2 tracking-tight">
+                   <Phone className="w-3 h-3 text-emerald-500" />
+                   {bank.contact_number}
+                </p>
+             </div>
+          </div>
+        ))}
+        {data.length === 0 && <p className="col-span-full text-[10px] text-muted-foreground/60 italic text-center py-10 bg-muted/10 rounded-2xl border border-dashed border-border/50">No banks registered in the master list yet.</p>}
+      </div>
+    </div>
+  );
+};
 
 const MasterSection = ({ title, type, data, onAdd, onDelete, loading }: { title: string, type: 'Showroom' | 'Branch' | 'Area', data: any[], onAdd: (name: string) => void, onDelete: (id: string) => void, loading: boolean }) => {
   const [name, setName] = React.useState('');
@@ -52,11 +110,13 @@ const SettingsPage = () => {
   
   const { settings, loading, saving } = useSelector((state: RootState) => state.company);
   const { data: masters, loading: mastersLoading } = useSelector((state: RootState) => state.companyMasters);
+  const { data: banks = [], loading: banksLoading } = useSelector((state: RootState) => state.bankMaster);
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getCompanySettingsAction(companyCode));
       dispatch(getMastersAction(companyCode));
+      dispatch(getBanksAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -87,7 +147,10 @@ const SettingsPage = () => {
     address: settings?.address || '',
     phone: settings?.phone || '',
     email: settings?.email || '',
-    invoice_prefix: settings?.invoice_prefix || 'SO-',
+    invoice_prefix: settings?.invoice_prefix || 'INV-',
+    invoice_suffix: settings?.invoice_suffix || '',
+    sales_prefix: settings?.sales_prefix || 'SO',
+    sales_suffix: settings?.sales_suffix || '',
     currency: settings?.currency || 'INR',
     timezone: settings?.timezone || 'Asia/Kolkata',
   };
@@ -228,11 +291,6 @@ const SettingsPage = () => {
                       <Field name="gst_number" className="erp-input font-mono uppercase" placeholder="22AAAAA0000A1Z5" />
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Invoice Prefix</label>
-                      <Field name="invoice_prefix" className="erp-input font-mono uppercase" placeholder="SO-" />
-                    </div>
-
                     <div className="sm:col-span-2 space-y-1.5 pt-2">
                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 flex items-center gap-1.5">
                          <MapPin className="w-3 h-3 text-primary" /> Company Address
@@ -252,6 +310,52 @@ const SettingsPage = () => {
                         <Mail className="w-3 h-3 text-primary" /> Support Email
                       </label>
                       <Field name="email" className="erp-input" placeholder="admin@company.com" />
+                    </div>
+                  </div>
+
+                  {/* Document Numbering Section */}
+                  <div className="mt-8 p-6 bg-muted/10 border border-border/40 rounded-2xl space-y-6">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Hash className="w-4 h-4 text-primary" />
+                      <h4 className="text-xs font-black uppercase tracking-widest text-primary">Document Numbering Configuration</h4>
+                    </div>
+
+                    {/* Invoice Numbering */}
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Invoice Numbering</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-muted-foreground/70 ml-1">Prefix</label>
+                          <Field name="invoice_prefix" className="erp-input font-mono uppercase" placeholder="INV-" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-muted-foreground/70 ml-1">Suffix</label>
+                          <Field name="invoice_suffix" className="erp-input font-mono uppercase" placeholder="-2026" />
+                        </div>
+                      </div>
+                      <div className="py-2.5 px-4 rounded-xl bg-primary/5 border border-primary/15 flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Preview:</span>
+                        <span className="font-mono font-black text-sm text-primary">{values.invoice_prefix || ''}00001{values.invoice_suffix || ''}</span>
+                      </div>
+                    </div>
+
+                    {/* Sales Order Numbering */}
+                    <div className="space-y-3 pt-4 border-t border-border/30">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Sales Order Numbering</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-muted-foreground/70 ml-1">Sales Prefix</label>
+                          <Field name="sales_prefix" className="erp-input font-mono uppercase" placeholder="SO" />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold text-muted-foreground/70 ml-1">Sales Suffix</label>
+                          <Field name="sales_suffix" className="erp-input font-mono uppercase" placeholder="-FY26" />
+                        </div>
+                      </div>
+                      <div className="py-2.5 px-4 rounded-xl bg-primary/5 border border-primary/15 flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Preview:</span>
+                        <span className="font-mono font-black text-sm text-primary">{values.sales_prefix || ''}a1b2c3{values.sales_suffix || ''}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -310,6 +414,26 @@ const SettingsPage = () => {
             loading={mastersLoading}
           />
         </div>
+      </div>
+
+      {/* Bank Master Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+             <Building2 className="w-5 h-5" />
+           </div>
+           <div>
+             <h3 className="text-lg font-black text-[#0f172a]">Bank Master Management</h3>
+             <p className="text-xs text-muted-foreground font-medium">Define partnering banks and their primary contact details.</p>
+           </div>
+        </div>
+        
+        <BankMasterSection 
+          data={banks} 
+          onAdd={(bank) => dispatch(addBankAction(bank, companyCode, () => toast.success('Bank added to master')))}
+          onDelete={(id) => dispatch(deleteBankAction(id, companyCode, () => toast.success('Bank removed')))}
+          loading={banksLoading}
+        />
       </div>
     </div>
   );

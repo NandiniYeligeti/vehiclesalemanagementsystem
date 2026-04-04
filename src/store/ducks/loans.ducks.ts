@@ -23,10 +23,12 @@ export interface Loan {
   bank_name: string;
   loan_amount: number;
   interest_rate: number;
-  months: number;
-  emi: number;
+  duration_months: number;
+  emi_amount: number;
   status: string;
   account_number?: string;
+  bank_person?: string;
+  mobile?: string;
   disbursement_date?: string;
   created_at?: string;
 }

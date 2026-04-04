@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { Plus, X, User, Mail, KeyRound, Loader2, Trash2, Users, Eye, EyeOff, Shield } from 'lucide-react';
 import { RootState } from '@/store/rootReducer';
-import { createUserApi, getUsersApi, deleteUserApi } from '@/services/auth/auth';
+import { createUserApi, getUsersApi, deleteUserApi, updateUserMenusApi } from '@/services/auth/auth';
 import { toast } from 'sonner';
 
 interface UserRecord {
@@ -13,8 +13,25 @@ interface UserRecord {
   role: string;
   company_code: string;
   company_name: string;
+  menus: string[];
   created_at: string;
 }
+
+const allMenus = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'customers', label: 'Customers' },
+  { id: 'salespersons', label: 'Salespersons' },
+  { id: 'vehicles', label: 'Vehicles' },
+  { id: 'vehicle-inventory', label: 'Inventory' },
+  { id: 'sales', label: 'Sales Orders' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'loans', label: 'Loans' },
+  { id: 'ledger', label: 'Ledger' },
+  { id: 'incentives', label: 'Incentives' },
+  { id: 'reports', label: 'Reports' },
+  { id: 'users', label: 'User Management' },
+  { id: 'settings', label: 'Settings' },
+];
 
 import {
   AlertDialog,
@@ -44,6 +61,10 @@ const UsersManagementPage = () => {
     email: '',
     password: '',
   });
+  
+  const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+  const [updatingMenus, setUpdatingMenus] = useState(false);
+  const [tempMenus, setTempMenus] = useState<string[]>([]);
   
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
@@ -248,18 +269,30 @@ const UsersManagementPage = () => {
                     {u.created_at?.split('T')[0] || '—'}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => setUserToDelete(u.id)}
-                      disabled={deletingId === u.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
-                    >
-                      {deletingId === u.id ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Trash2 className="w-3.5 h-3.5" />
-                      )}
-                      Delete
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedUser(u);
+                          setTempMenus(u.menus || []);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
+                      >
+                        <Shield className="w-3.5 h-3.5" />
+                        Rights
+                      </button>
+                      <button
+                        onClick={() => setUserToDelete(u.id)}
+                        disabled={deletingId === u.id}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                      >
+                        {deletingId === u.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Trash2 className="w-3.5 h-3.5" />
+                        )}
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}
@@ -430,6 +463,89 @@ const UsersManagementPage = () => {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* User Rights Modal */}
+      <AnimatePresence>
+        {selectedUser && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col border border-border"
+            >
+              <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
+                <div>
+                  <h3 className="text-xl font-bold">Assign Rights: {selectedUser.username}</h3>
+                  <p className="text-sm text-muted-foreground">Select the menus this user is allowed to access.</p>
+                </div>
+                <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-muted rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="p-8 overflow-y-auto">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {allMenus.map(menu => (
+                    <label 
+                      key={menu.id} 
+                      className={`
+                        flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer
+                        ${tempMenus.includes(menu.id) 
+                          ? 'bg-primary/5 border-primary text-primary shadow-lg shadow-primary/10' 
+                          : 'bg-muted/10 border-transparent hover:border-border text-muted-foreground'}
+                      `}
+                    >
+                      <input
+                        type="checkbox"
+                        className="hidden"
+                        checked={tempMenus.includes(menu.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setTempMenus([...tempMenus, menu.id]);
+                          else setTempMenus(tempMenus.filter(m => m !== menu.id));
+                        }}
+                      />
+                      <div className={`
+                        w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all
+                        ${tempMenus.includes(menu.id) ? 'bg-primary border-primary' : 'border-muted-foreground/30'}
+                      `}>
+                        {tempMenus.includes(menu.id) && <motion.div initial={{scale:0}} animate={{scale:1}}><Plus className="w-3.5 h-3.5 text-primary-foreground rotate-45" /></motion.div>}
+                      </div>
+                      <span className="font-bold text-sm">{menu.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-border bg-muted/10 flex justify-end gap-3">
+                <button
+                  onClick={() => setSelectedUser(null)}
+                  className="px-6 py-2.5 rounded-xl font-bold hover:bg-muted transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      setUpdatingMenus(true);
+                      await updateUserMenusApi(selectedUser.id, tempMenus);
+                      toast.success('Permissions updated successfully!');
+                      setSelectedUser(null);
+                      fetchUsers();
+                    } catch (e: any) {
+                      toast.error('Failed to update permissions');
+                    } finally {
+                      setUpdatingMenus(false);
+                    }
+                  }}
+                  disabled={updatingMenus}
+                  className="px-10 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                >
+                  {updatingMenus ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Permissions"}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
