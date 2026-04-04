@@ -18,23 +18,38 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 
+const categoryValidationSchema = Yup.object().shape({
+  code: Yup.string().required('Category code is required'),
+  name: Yup.string().required('Category name is required'),
+});
+
+const typeValidationSchema = Yup.object().shape({
+  category_id: Yup.string().required('Category is required'),
+  code: Yup.string().required('Type code is required'),
+  name: Yup.string().required('Type name is required'),
+});
+
 const modelValidationSchema = Yup.object().shape({
+  category_id: Yup.string().required('Category is required'),
+  type_id: Yup.string().required('Type is required'),
+  model_code: Yup.string().required('Model code is required'),
   brand: Yup.string().required('Brand is required'),
   model: Yup.string().required('Model name is required'),
   variant: Yup.string().required('Variant is required'),
   fuel_type: Yup.array().min(1, 'At least one fuel type is required').required('Required'),
   base_price: Yup.number().min(0, 'Price cannot be negative').required('Required'),
-  type_id: Yup.string().required('Type is required'),
+});
+
+const accessoryValidationSchema = Yup.object().shape({
   category_id: Yup.string().required('Category is required'),
+  type_id: Yup.string().required('Type is required'),
+  model_id: Yup.string().required('Model is required'),
+  name: Yup.string().required('Name is required'),
+  price: Yup.number().min(0).required('Price is required'),
 });
 
 const featureValidationSchema = Yup.object().shape({
   name: Yup.string().required('Name is required'),
-});
-
-const accessoryValidationSchema = Yup.object().shape({
-  name: Yup.string().required('Name is required'),
-  price: Yup.number().min(0).required('Price is required'),
 });
 
 const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'accessories' | 'categories' | 'types' }) => {
@@ -124,10 +139,10 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
-        <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'models' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>MODEL</button>
         <button onClick={() => setTab('accessories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'accessories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>ACCESSORIES</button>
-        <button onClick={() => setTab('categories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'categories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>CATEGORY</button>
+        <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'models' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>MODEL</button>
         <button onClick={() => setTab('types')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'types' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>TYPE</button>
+        <button onClick={() => setTab('categories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'categories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>CATEGORY</button>
       </div>
 
       {tab === 'models' && (
@@ -199,10 +214,20 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
           </div>
           <div className="erp-card overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-muted/50 border-b border-border"><tr><th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Name</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-20">Actions</th></tr></thead>
+              <thead className="bg-muted/50 border-b border-border">
+                <tr>
+                  {tab === 'categories' && <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-32">Code</th>}
+                  <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Name</th>
+                  <th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-20">Actions</th>
+                </tr>
+              </thead>
               <tbody>
                 {(tab === 'categories' ? categories : types).map((item: any) => (
-                  <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors"><td className="py-4 px-6 font-bold">{item.name}</td><td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: item.entity_id || item._id || item.id!, type: tab === 'categories' ? 'category' : 'type'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td></tr>
+                  <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    {tab === 'categories' && <td className="py-4 px-6 font-mono text-xs text-primary">{item.code}</td>}
+                    <td className="py-4 px-6 font-bold">{item.name}</td>
+                    <td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: item.entity_id || item._id || item.id!, type: tab === 'categories' ? 'category' : 'type'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -222,6 +247,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                 initialValues={{ 
                   brand: editingModel?.brand || '', 
                   model: editingModel?.model || '', 
+                  model_code: editingModel?.model_code || '',
                   variant: editingModel?.variant || '', 
                   fuel_type: editingModel?.fuel_type || [], 
                   base_price: editingModel?.base_price || 0,
@@ -290,19 +316,29 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
-                        <Field as="select" name="type_id" className="erp-select h-11 rounded-xl">
-                          <option value="">Select Type</option>
-                          {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
-                        </Field>
-                      </div>
-                      <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
-                        <Field as="select" name="category_id" className="erp-select h-11 rounded-xl">
+                        <Field as="select" name="category_id" className="erp-select h-11 rounded-xl" onChange={(e: any) => {
+                          setFieldValue('category_id', e.target.value);
+                          setFieldValue('type_id', '');
+                        }}>
                           <option value="">Select Category</option>
                           {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
                         </Field>
+                        <ErrorMessage name="category_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
+                        <Field as="select" name="type_id" className="erp-select h-11 rounded-xl" disabled={!values.category_id}>
+                          <option value="">Select Type</option>
+                          {types.filter((t: any) => t.category_id === values.category_id).map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                        </Field>
+                        <ErrorMessage name="type_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Code (Unique)</label>
+                      <Field name="model_code" className="erp-input h-11 rounded-xl" placeholder="e.g. NXN-001" />
+                      <ErrorMessage name="model_code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Base Price (₹)</label>
@@ -359,8 +395,22 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                 <button onClick={handleCloseForms} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
               <Formik
-                initialValues={{ name: '', price: 0, company_id: companyCode, branch_id: 'MAIN_BRANCH' }}
-                validationSchema={featureType === 'accessory' ? accessoryValidationSchema : featureValidationSchema}
+                initialValues={{ 
+                  name: '', 
+                  code: '', 
+                  price: 0, 
+                  category_id: '',
+                  type_id: '',
+                  model_id: '',
+                  company_id: companyCode, 
+                  branch_id: 'MAIN_BRANCH' 
+                }}
+                validationSchema={
+                  featureType === 'accessory' ? accessoryValidationSchema : 
+                  featureType === 'category' ? categoryValidationSchema : 
+                  featureType === 'type' ? typeValidationSchema :
+                  featureValidationSchema
+                }
                 onSubmit={(values, { setSubmitting }) => {
                   const callback = (err?: any) => {
                     setSubmitting(false);
@@ -375,11 +425,76 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                   else if (featureType === 'accessory') dispatch(addAccessoryAction(companyCode, values, callback, callback));
                 }}
               >
-                {({ isSubmitting }) => (
+                {({ isSubmitting, values, setFieldValue }) => (
                   <Form className="p-8 space-y-6">
+                    {featureType === 'type' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
+                          <Field as="select" name="category_id" className="erp-select h-11 rounded-xl">
+                            <option value="">Select Category</option>
+                            {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
+                          </Field>
+                          <ErrorMessage name="category_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type Code</label>
+                          <Field name="code" className="erp-input h-11 rounded-xl" placeholder={`e.g. COMPCT`} />
+                          <ErrorMessage name="code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+                    )}
+
+                    {featureType === 'accessory' && (
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
+                          <Field as="select" name="category_id" className="erp-select h-11 rounded-xl" onChange={(e: any) => {
+                            setFieldValue('category_id', e.target.value);
+                            setFieldValue('type_id', '');
+                            setFieldValue('model_id', '');
+                          }}>
+                            <option value="">Select Category</option>
+                            {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
+                          </Field>
+                          <ErrorMessage name="category_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
+                          <Field as="select" name="type_id" className="erp-select h-11 rounded-xl" disabled={!values.category_id} onChange={(e: any) => {
+                            setFieldValue('type_id', e.target.value);
+                            setFieldValue('model_id', '');
+                          }}>
+                            <option value="">Select Type</option>
+                            {types.filter((t: any) => t.category_id === values.category_id).map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                          </Field>
+                          <ErrorMessage name="type_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model</label>
+                          <Field as="select" name="model_id" className="erp-select h-11 rounded-xl" disabled={!values.type_id}>
+                            <option value="">Select Model</option>
+                            {models.filter((m: any) => m.type_id === values.type_id).map((m: any) => <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model}</option>)}
+                          </Field>
+                          <ErrorMessage name="model_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Accessory Code (Optional)</label>
+                          <Field name="code" className="erp-input h-11 rounded-xl" placeholder="e.g. MATS-01" />
+                        </div>
+                      </div>
+                    )}
+
+                    {featureType === 'category' && (
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category Code</label>
+                        <Field name="code" className="erp-input h-11 rounded-xl" placeholder={`e.g. SUV, SEDAN`} />
+                        <ErrorMessage name="code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                      </div>
+                    )}
                     <div>
                       <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Name</label>
-                      <Field name="name" className="erp-input h-11 rounded-xl" placeholder={`Enter name`} />
+                      <Field name="name" className="erp-input h-11 rounded-xl" placeholder={`Enter ${featureType} name`} />
                       <ErrorMessage name="name" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                     </div>
                     {featureType === 'accessory' && (
@@ -389,7 +504,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                         <ErrorMessage name="price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                     )}
-                    <button type="submit" disabled={isSubmitting} className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 transition-all tracking-widest uppercase">
+                    <button type="submit" disabled={isSubmitting || (featureType === 'accessory' && !values.model_id)} className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg shadow-primary/20 active:scale-95 disabled:opacity-50 transition-all tracking-widest uppercase">
                        {isSubmitting ? 'Processing...' : `Confirm ${featureType}`}
                     </button>
                   </Form>

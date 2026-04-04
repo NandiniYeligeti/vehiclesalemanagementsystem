@@ -27,11 +27,14 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { getMastersAction } from '@/store/ducks/company_masters.ducks';
+
 const SalespersonsPage = () => {
   const dispatch = useDispatch();
   const { data: salespersons, loading, saving } = useSelector(
     (state: RootState) => state.salespersons || { data: [], loading: false, saving: false }
   );
+  const { data: masters } = useSelector((state: RootState) => state.companyMasters);
 
   const user = useSelector((state: RootState) => state.auth.user);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
@@ -45,15 +48,21 @@ const SalespersonsPage = () => {
     full_name: '',
     mobile_number: '',
     email: '',
-    branch_id: '',
-    city: '',
+    showroom: '',
+    branch: '',
+    area: '',
   });
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getSalespersonsAction(companyCode));
+      dispatch(getMastersAction(companyCode));
     }
   }, [dispatch, companyCode]);
+
+  const showrooms = (masters || []).filter(m => m.type === 'Showroom');
+  const branches = (masters || []).filter(m => m.type === 'Branch');
+  const areas = (masters || []).filter(m => m.type === 'Area');
 
   const filtered = (salespersons || []).filter((d: any) =>
     (d.full_name || '').toLowerCase().includes(search.toLowerCase())
@@ -70,15 +79,10 @@ const SalespersonsPage = () => {
       return;
     }
 
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      toast.error('Invalid email address');
-      return;
-    }
-
     const payload = {
       ...form,
-      branch_id: form.city || form.branch_id || 'MAIN_BRANCH',
       company_id: companyCode,
+      branch_id: form.branch || 'MAIN_BRANCH',
     };
 
     const id = form.entity_id || form._id || form.id;
@@ -115,10 +119,8 @@ const SalespersonsPage = () => {
     }
   };
 
-
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-12">
       {/* Custom Deletion Dialog */}
       <AlertDialog open={!!personToDelete} onOpenChange={() => setPersonToDelete(null)}>
         <AlertDialogContent className="rounded-3xl border-none shadow-2xl overflow-hidden p-8">
@@ -130,7 +132,7 @@ const SalespersonsPage = () => {
             <AlertDialogTitle className="text-center font-black text-2xl">Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
               Are you sure you want to remove this salesperson from your team? 
-              This action permanent and will remove all their performance tracking data.
+              This action is permanent and will remove all their performance tracking data.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
@@ -145,6 +147,7 @@ const SalespersonsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
@@ -170,8 +173,9 @@ const SalespersonsPage = () => {
                 full_name: '',
                 mobile_number: '',
                 email: '',
-                branch_id: '',
-                city: '',
+                showroom: '',
+                branch: '',
+                area: '',
               });
               setIsEditing(false);
               setOpen(true);
@@ -185,7 +189,7 @@ const SalespersonsPage = () => {
       {/* LIST */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filtered.map((item: any) => (
-          <Card key={item.entity_id || item._id || item.id} className="rounded-2xl shadow-sm hover:shadow-xl transition-all border-none erp-card overflow-hidden">
+          <Card key={item.entity_id || item._id || item.id} className="rounded-2xl shadow-sm hover:shadow-xl transition-all border-none erp-card overflow-hidden group">
             <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
@@ -194,24 +198,34 @@ const SalespersonsPage = () => {
                   </div>
                   <div>
                     <h3 className="font-bold text-lg leading-none">{item.full_name}</h3>
-                    <p className="text-[10px] text-muted-foreground uppercase font-black tracking-widest mt-1">
-                      {item.branch_id || 'MAIN BRANCH'}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-1.5">
+                      <Badge className="bg-primary/5 text-primary border-none px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter">
+                         {item.showroom || 'No Showroom'}
+                      </Badge>
+                      <Badge className="bg-muted text-muted-foreground border-none px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter">
+                         {item.branch || 'No Branch'}
+                      </Badge>
+                    </div>
                   </div>
                 </div>
                 <Badge className="bg-green-500/10 text-green-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest">ACTIVE</Badge>
               </div>
 
               <div className="space-y-3 bg-muted/30 p-4 rounded-xl text-sm">
-                <div className="flex justify-between items-center opacity-70">
-                  <span className="text-xs font-bold uppercase tracking-wider">Mobile</span>
-                  <span className="font-mono">{item.mobile_number}</span>
-                </div>
-                <div className="flex justify-between items-center opacity-70">
-                  <span className="text-xs font-bold uppercase tracking-wider">Email</span>
-                  <span>{item.email || 'N/A'}</span>
-                </div>
-
+                 <div className="grid grid-cols-2 gap-y-2">
+                    <div className="space-y-0.5">
+                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Mobile</p>
+                       <p className="font-bold text-xs">{item.mobile_number}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Area</p>
+                       <p className="font-bold text-xs">{item.area || 'N/A'}</p>
+                    </div>
+                    <div className="sm:col-span-2 space-y-0.5 pt-1">
+                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Support Email</p>
+                       <p className="font-bold text-xs truncate">{item.email || 'N/A'}</p>
+                    </div>
+                 </div>
               </div>
 
               <div className="flex gap-2">
@@ -220,7 +234,6 @@ const SalespersonsPage = () => {
                   className="flex-1 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary transition-all font-bold gap-2 h-10"
                   onClick={() => {
                     setForm(item);
-                    setForm({ ...item, city: item.branch_id });
                     setIsEditing(true);
                     setOpen(true);
                   }}
@@ -254,7 +267,7 @@ const SalespersonsPage = () => {
             <DialogTitle className="text-xl font-black">
               {isEditing ? 'Edit Team Member' : 'New Salesperson'}
             </DialogTitle>
-            <p className="text-muted-foreground text-xs mt-1">Configure individual commission and branch details.</p>
+            <p className="text-muted-foreground text-xs mt-1">Configure individual personnel details and assigned branch.</p>
           </DialogHeader>
 
           <div className="space-y-5">
@@ -279,27 +292,51 @@ const SalespersonsPage = () => {
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Branch / City</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
                 <Input
-                  placeholder="Main Branch"
+                  placeholder="john@example.com"
                   className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
-                  value={form.city || ''}
-                  onChange={(e) => setForm({ ...form, city: e.target.value, branch_id: e.target.value })}
+                  value={form.email || ''}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
-              <Input
-                placeholder="john@example.com"
-                className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
-                value={form.email || ''}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-              />
+            <div className="grid grid-cols-3 gap-3">
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Showroom</label>
+                  <select 
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    value={form.showroom || ''}
+                    onChange={(e) => setForm({ ...form, showroom: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    {showrooms.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                  </select>
+               </div>
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Branch</label>
+                  <select 
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    value={form.branch || ''}
+                    onChange={(e) => setForm({ ...form, branch: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    {branches.map(b => <option key={b.id} value={b.name}>{b.name}</option>)}
+                  </select>
+               </div>
+               <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Area</label>
+                  <select 
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    value={form.area || ''}
+                    onChange={(e) => setForm({ ...form, area: e.target.value })}
+                  >
+                    <option value="">Select</option>
+                    {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                  </select>
+               </div>
             </div>
-
-
 
             <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isEditing ? 'Update Profile' : 'Confirm Registration')}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X } from 'lucide-react';
+import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -284,18 +284,23 @@ const SalesOrderPage = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-1">
                             <button 
                               onClick={() => { setSelectedOrder(order); setShowViewModal(true); }}
-                              className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-all group/btn" title="View Details"
+                              className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-all group/btn hover:scale-110 active:scale-95" title="View Details"
                             >
                               <Eye className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={() => handlePrint(order)}
-                              className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all" title="Print Invoice"
+                              className="p-2 rounded-lg hover:bg-orange-500/10 text-orange-500 transition-all hover:scale-110 active:scale-95" title="Print Invoice"
                             >
                               <Printer className="w-4 h-4" />
+                            </button>
+                            <button 
+                              className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all hover:scale-110 active:scale-95" title="Email Order"
+                            >
+                              <Mail className="w-4 h-4" />
                             </button>
                           </div>
                         </td>

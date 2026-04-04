@@ -1,11 +1,49 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-import { Save, Loader2, Globe, Building2, MapPin, Phone, Mail, FileText, Image as ImageIcon } from 'lucide-react';
+import { Save, Loader2, Globe, Building2, MapPin, Phone, Mail, FileText, Image as ImageIcon, Plus, Trash2 } from 'lucide-react';
 import { Formik, Form, Field } from 'formik';
 import { RootState } from '@/store/rootReducer';
 import { getCompanySettingsAction, updateCompanySettingsAction } from '@/store/ducks/company.ducks';
 import { toast } from 'sonner';
+import { getMastersAction, addMasterAction, deleteMasterAction } from '@/store/ducks/company_masters.ducks';
+
+const MasterSection = ({ title, type, data, onAdd, onDelete, loading }: { title: string, type: 'Showroom' | 'Branch' | 'Area', data: any[], onAdd: (name: string) => void, onDelete: (id: string) => void, loading: boolean }) => {
+  const [name, setName] = React.useState('');
+  return (
+    <div className="erp-card p-6 bg-white border border-border/50 shadow-sm rounded-2xl flex flex-col gap-4">
+      <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground">{title}</h3>
+      <div className="flex gap-2">
+        <input 
+          value={name} 
+          onChange={(e) => setName(e.target.value)} 
+          className="erp-input h-10 text-xs" 
+          placeholder={`Enter new ${title.toLowerCase()}`}
+        />
+        <button 
+          onClick={() => { if(name) { onAdd(name); setName(''); } }} 
+          className="p-2.5 rounded-xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+        {data.map((item) => (
+          <div key={item.entity_id || item.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 group hover:bg-muted/50 transition-colors">
+            <span className="text-xs font-bold">{item.name}</span>
+            <button 
+              onClick={() => onDelete(item.entity_id || item.id)} 
+              className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+        {data.length === 0 && <p className="text-[10px] text-muted-foreground/60 italic text-center py-4">No {title.toLowerCase()}s added yet.</p>}
+      </div>
+    </div>
+  );
+};
 
 const SettingsPage = () => {
   const dispatch = useDispatch();
@@ -13,12 +51,26 @@ const SettingsPage = () => {
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
   
   const { settings, loading, saving } = useSelector((state: RootState) => state.company);
+  const { data: masters, loading: mastersLoading } = useSelector((state: RootState) => state.companyMasters);
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getCompanySettingsAction(companyCode));
+      dispatch(getMastersAction(companyCode));
     }
   }, [dispatch, companyCode]);
+
+  const handleAddMaster = (type: 'Showroom' | 'Branch' | 'Area', name: string) => {
+    dispatch(addMasterAction(companyCode, { type, name, company_id: companyCode }, () => {
+      toast.success(`${type} added successfully`);
+    }));
+  };
+
+  const handleDeleteMaster = (id: string, type: string) => {
+    dispatch(deleteMasterAction(companyCode, id, () => {
+      toast.success(`${type} deleted successfully`);
+    }));
+  };
 
   if (loading && !settings) {
     return (
@@ -40,8 +92,12 @@ const SettingsPage = () => {
     timezone: settings?.timezone || 'Asia/Kolkata',
   };
 
+  const showrooms = (masters || []).filter(m => m.type === 'Showroom');
+  const branches = (masters || []).filter(m => m.type === 'Branch');
+  const areas = (masters || []).filter(m => m.type === 'Area');
+
   return (
-    <div className="max-w-4xl space-y-6 pb-20">
+    <div className="max-w-4xl space-y-12 pb-20">
       <div className="flex flex-col gap-1">
         <h2 className="text-2xl font-black text-[#0f172a]">Settings</h2>
         <p className="text-muted-foreground font-medium">Manage your company profile and application preferences.</p>
@@ -215,6 +271,46 @@ const SettingsPage = () => {
           </Form>
         )}
       </Formik>
+
+      {/* Masters Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+           <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+             <MapPin className="w-5 h-5" />
+           </div>
+           <div>
+             <h3 className="text-lg font-black text-[#0f172a]">Organization Masters</h3>
+             <p className="text-xs text-muted-foreground font-medium">Manage Showrooms, Branches and Operating Areas.</p>
+           </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <MasterSection 
+            title="Showrooms" 
+            type="Showroom" 
+            data={showrooms} 
+            onAdd={(name) => handleAddMaster('Showroom', name)} 
+            onDelete={(id) => handleDeleteMaster(id, 'Showroom')}
+            loading={mastersLoading}
+          />
+          <MasterSection 
+            title="Branches" 
+            type="Branch" 
+            data={branches} 
+            onAdd={(name) => handleAddMaster('Branch', name)} 
+            onDelete={(id) => handleDeleteMaster(id, 'Branch')}
+            loading={mastersLoading}
+          />
+          <MasterSection 
+            title="Areas" 
+            type="Area" 
+            data={areas} 
+            onAdd={(name) => handleAddMaster('Area', name)} 
+            onDelete={(id) => handleDeleteMaster(id, 'Area')}
+            loading={mastersLoading}
+          />
+        </div>
+      </div>
     </div>
   );
 };

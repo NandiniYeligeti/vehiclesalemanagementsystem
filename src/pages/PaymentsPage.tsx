@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Printer, X, Loader2 } from 'lucide-react';
+import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -46,6 +46,11 @@ const PaymentsPage = () => {
   const { data: customers = [] } = useSelector((state: RootState) => state.customers);
   const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons);
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders);
+
+  const getCustomerName = (customerId: string) => {
+    const customer = customers.find(c => (c.entity_id || c._id || c.id) === customerId);
+    return customer?.customer_name || customer?.name || 'Unknown';
+  };
 
   useEffect(() => {
     if (companyCode) {
@@ -99,18 +104,21 @@ const PaymentsPage = () => {
             <thead>
               <tr className="border-b border-border bg-muted/50">
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Receipt</th>
+                <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Invoice / SO</th>
                 <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Amount</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Mode</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((p) => (
                 <tr key={p._id || p.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-4 font-bold text-primary">{p.payment_code}</td>
+                  <td className="px-6 py-4 font-medium text-foreground">{getCustomerName(p.customer_id)}</td>
                   <td className="px-6 py-4 font-mono text-xs">{p.invoice_number}</td>
                   <td className="px-6 py-4 text-right tabular font-bold text-foreground">{formatCurrency(p.payment_amount)}</td>
                   <td className="px-6 py-4 text-muted-foreground">{formatDate(p.payment_date)}</td>
@@ -123,16 +131,24 @@ const PaymentsPage = () => {
                       Completed
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <button title="View" className="p-1.5 hover:bg-muted rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"><Eye className="w-4 h-4" /></button>
+                      <button title="Download" className="p-1.5 hover:bg-muted rounded-lg text-emerald-600 transition-colors hover:scale-110 active:scale-95"><Download className="w-4 h-4" /></button>
+                      <button title="Print" className="p-1.5 hover:bg-muted rounded-lg text-amber-600 transition-colors hover:scale-110 active:scale-95"><Printer className="w-4 h-4" /></button>
+                      <button title="Mail" className="p-1.5 hover:bg-muted rounded-lg text-blue-600 transition-colors hover:scale-110 active:scale-95"><Mail className="w-4 h-4" /></button>
+                    </div>
+                  </td>
                 </tr>
               ))}
               {!paymentsLoading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="text-center py-20 text-muted-foreground italic font-medium">No payment records found.</td>
+                  <td colSpan={9} className="text-center py-20 text-muted-foreground italic font-medium">No payment records found.</td>
                 </tr>
               )}
               {paymentsLoading && (
                 <tr>
-                  <td colSpan={7} className="text-center py-20 animate-pulse text-primary font-bold">Synchronizing financial ledger...</td>
+                  <td colSpan={9} className="text-center py-20 animate-pulse text-primary font-bold">Synchronizing financial ledger...</td>
                 </tr>
               )}
             </tbody>

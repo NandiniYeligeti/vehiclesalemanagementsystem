@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { getSalesOrdersAction, updateSalesOrderAction } from '@/store/ducks/sales_orders.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
-import { Search, Loader2, Edit2, CheckCircle2, X } from 'lucide-react';
+import { Search, Loader2, Edit2, CheckCircle2, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field } from 'formik';
 import { toast } from 'sonner';
@@ -111,6 +111,29 @@ const IncentiveManagementPage = () => {
     ));
   };
 
+  const handleDeleteIncentive = (id: string) => {
+    if (!window.confirm('Are you sure you want to remove this incentive record? This will clear all incentive data for this order.')) return;
+    setIsProcessing(id);
+    dispatch(updateSalesOrderAction(
+      id,
+      {
+        incentive_status: '',
+        incentive_amount: 0,
+        incentive_payment_method: '',
+        incentive_reference_number: '',
+        company_id: companyCode
+      },
+      () => {
+        setIsProcessing(null);
+        toast.success('Incentive record removed');
+      },
+      () => {
+        setIsProcessing(null);
+        toast.error('Failed to remove record');
+      }
+    ));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -200,9 +223,19 @@ const IncentiveManagementPage = () => {
                           </button>
                         </>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0f172a] bg-muted/50 rounded-md border border-border/50">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> PAID
-                        </span>
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-black uppercase tracking-widest text-[#0f172a] bg-muted/50 rounded-md border border-border/50">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> PAID
+                          </span>
+                          <button 
+                            onClick={() => handleDeleteIncentive(item.entity_id || item._id || item.id)}
+                            disabled={isProcessing === (item.entity_id || item._id || item.id)}
+                            className="p-1.5 text-xs font-bold bg-white border border-destructive/20 rounded-md text-destructive hover:bg-destructive/5 transition-all shadow-sm disabled:opacity-50"
+                            title="Delete Incentive Record"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>

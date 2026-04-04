@@ -25,6 +25,10 @@ export interface VehicleFeatureItem {
   id?: string;
   _id?: string;
   entity_id?: string;
+  category_id?: string;
+  type_id?: string;
+  model_id?: string;
+  code?: string;
   name: string;
   price?: number;
 }
