@@ -32,7 +32,7 @@ export const deleteUserApi = async (companyCode: string, userId: string) => {
   return response.data;
 };
 
-export const updateUserMenusApi = async (userId: string, menus: string[]) => {
-  const response = await api.put(`/users/${userId}/menus`, { menus });
+export const updateUserMenusApi = async (userId: string, menus: string[], permissions: any[]) => {
+  const response = await api.put(`/users/${userId}/menus`, { menus, permissions });
   return response.data;
 };

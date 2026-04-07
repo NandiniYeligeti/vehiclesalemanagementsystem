@@ -205,8 +205,16 @@ const LedgerPage = () => {
                   <tr key={entry.id || Math.random()}>
                     <td className="px-5 py-3">{formatDate(entry.date)}</td>
                     <td className="px-5 py-3">{entry.description}</td>
-                    <td className="px-5 py-3 text-red-500">{entry.debit > 0 ? formatCurrency(entry.debit) : '-'}</td>
-                    <td className="px-5 py-3 text-emerald-600">{entry.credit > 0 ? formatCurrency(entry.credit) : '-'}</td>
+                    <td className="px-5 py-3 text-red-500">
+                      {entry.description === 'Discount Allowed' 
+                        ? formatCurrency(entry.credit) 
+                        : (entry.debit > 0 ? formatCurrency(entry.debit) : '-')}
+                    </td>
+                    <td className="px-5 py-3 text-emerald-600">
+                      {entry.description === 'Discount Allowed' 
+                        ? '-' 
+                        : (entry.credit > 0 ? formatCurrency(entry.credit) : '-')}
+                    </td>
                     <td className="px-5 py-3 font-medium text-slate-800">{formatCurrency(entry.localBalance)}</td>
                   </tr>
                 ))}

@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
-  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift
+  Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift,
+  ChevronDown, Settings2
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -20,8 +21,16 @@ const allMenuItems = [
   { id: 'ledger',      label: 'Customer Ledger',   icon: BookOpen,        roles: ['admin', 'user'] },
   { id: 'incentives',  label: 'Incentive Management', icon: Gift,      roles: ['admin', 'user'] },
   { id: 'reports',     label: 'Reports',           icon: BarChart3,       roles: ['admin', 'user'] },
-  { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] }, // admin-only
-  { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin'] },
+  { 
+    id: 'setup', 
+    label: 'Setup', 
+    icon: Settings2, 
+    roles: ['admin'],
+    children: [
+      { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] },
+      { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin'] },
+    ]
+  },
 ];
 
 interface SidebarProps {
@@ -33,6 +42,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
   const dispatch = useDispatch();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
 
   const { user } = useSelector((state: RootState) => state.auth);
   const { settings } = useSelector((state: RootState) => state.company);
@@ -50,18 +60,29 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
 
   // Filter items the current role is allowed to see
   const menuItems = allMenuItems.filter((item) => {
-    // 1. Role-based check
     const isRoleAllowed = item.roles.includes(role) || role === 'super_admin';
     if (!isRoleAllowed) return false;
 
-    // 2. User-specific menus check (only for 'user' role, admins see all their role items)
     if (role === 'user') {
-       // If the user has a specific menu list, only show those.
-       // (Optional: if empty, show nothing or default? Let's say if empty, they see nothing assigned)
        return (user?.menus || []).includes(item.id);
     }
 
     return true;
+  }).map(item => {
+    if (item.children) {
+      return {
+        ...item,
+        children: item.children.filter((child: any) => {
+          const isChildAllowed = (child.roles || []).includes(role) || role === 'super_admin';
+          if (!isChildAllowed) return false;
+          if (role === 'user') {
+            return (user?.menus || []).includes(child.id);
+          }
+          return true;
+        })
+      };
+    }
+    return item;
   });
 
   return (
@@ -120,6 +141,69 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
         {/* Menu */}
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {menuItems.map((item) => {
+            if (item.children && item.children.length > 0) {
+              const isAnyChildActive = item.children.some((child: any) => activeTab === child.id);
+              
+              return (
+                <div key={item.id} className="space-y-1">
+                  <button
+                    onClick={() => {
+                      if (collapsed) setCollapsed(false);
+                      setSetupOpen(!setupOpen);
+                    }}
+                    className={`
+                      w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium
+                      transition-all duration-100
+                      ${isAnyChildActive ? 'text-[hsl(var(--sidebar-active))]' : 'text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))]'}
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className={`w-5 h-5 shrink-0 ${isAnyChildActive ? 'text-primary' : ''}`} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </div>
+                    {!collapsed && (
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${setupOpen ? 'rotate-180' : ''}`} />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {setupOpen && !collapsed && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden space-y-1 ml-4 border-l border-[hsl(var(--sidebar-border))] pl-2"
+                      >
+                        {item.children.map((child: any) => {
+                          const isChildActive = activeTab === child.id;
+                          return (
+                            <button
+                              key={child.id}
+                              onClick={() => {
+                                onTabChange(child.id);
+                                setMobileOpen(false);
+                              }}
+                              className={`
+                                w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                                transition-all duration-100
+                                ${isChildActive
+                                  ? 'bg-[hsl(var(--sidebar-active-bg))] text-[hsl(var(--sidebar-active))]'
+                                  : 'hover:bg-[hsl(var(--sidebar-hover-bg))] text-[hsl(var(--sidebar-fg))]'
+                                }
+                              `}
+                            >
+                              <child.icon className={`w-4 h-4 shrink-0 ${isChildActive ? 'text-primary' : ''}`} />
+                              <span>{child.label}</span>
+                            </button>
+                          );
+                        })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            }
+
             const isActive = activeTab === item.id;
             return (
               <button

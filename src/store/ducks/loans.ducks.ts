@@ -79,16 +79,18 @@ export const addLoanAction = (data: any, companyCode: string, onSuccess?: () => 
   onError,
 });
 
-export const updateLoanAction = (id: string, data: any, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const updateLoanAction = (companyCode: string, id: string, data: any, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: UPDATE_LOAN,
   payload: { id, data },
+  companyCode,
   onSuccess,
   onError,
 });
 
-export const deleteLoanAction = (id: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
+export const deleteLoanAction = (companyCode: string, id: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: DELETE_LOAN,
   payload: id,
+  companyCode,
   onSuccess,
   onError,
 });
@@ -117,7 +119,7 @@ function* addLoanSaga(action: any): SagaIterator {
 
 function* updateLoanSaga(action: any): SagaIterator {
   try {
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(loanService.updateLoan, companyCode, action.payload.id, action.payload.data);
     yield put(getLoansAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);
@@ -129,7 +131,7 @@ function* updateLoanSaga(action: any): SagaIterator {
 
 function* deleteLoanSaga(action: any): SagaIterator {
   try {
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(loanService.deleteLoan, companyCode, action.payload);
     yield put(getLoansAction(companyCode));
     if (action.onSuccess) yield call(action.onSuccess);

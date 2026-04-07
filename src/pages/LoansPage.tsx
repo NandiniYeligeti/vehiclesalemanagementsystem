@@ -195,7 +195,7 @@ const LoansPage = () => {
     if (formData.loan_amount <= 0) return toast.error("Invalid loan amount");
 
     if (selectedLoan) {
-      dispatch(updateLoanAction(selectedLoan.entity_id || selectedLoan._id || '', formData, () => {
+      dispatch(updateLoanAction(companyCode, selectedLoan.entity_id || selectedLoan._id || '', formData, () => {
         toast.success("Loan updated successfully");
         setShowForm(false);
       }));
@@ -209,7 +209,7 @@ const LoansPage = () => {
 
   const confirmDelete = () => {
     if (loanToDelete) {
-      dispatch(deleteLoanAction(loanToDelete, () => {
+      dispatch(deleteLoanAction(companyCode, loanToDelete, () => {
         toast.success("Loan deleted");
         setLoanToDelete(null);
       }));

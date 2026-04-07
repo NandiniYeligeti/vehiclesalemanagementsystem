@@ -6,6 +6,13 @@ import { RootState } from '@/store/rootReducer';
 import { createUserApi, getUsersApi, deleteUserApi, updateUserMenusApi } from '@/services/auth/auth';
 import { toast } from 'sonner';
 
+interface MenuPermission {
+  menu_id: string;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
 interface UserRecord {
   id: string;
   username: string;
@@ -14,6 +21,7 @@ interface UserRecord {
   company_code: string;
   company_name: string;
   menus: string[];
+  permissions: MenuPermission[];
   created_at: string;
 }
 
@@ -65,6 +73,7 @@ const UsersManagementPage = () => {
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
   const [updatingMenus, setUpdatingMenus] = useState(false);
   const [tempMenus, setTempMenus] = useState<string[]>([]);
+  const [tempPermissions, setTempPermissions] = useState<MenuPermission[]>([]);
   
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
@@ -274,6 +283,7 @@ const UsersManagementPage = () => {
                         onClick={() => {
                           setSelectedUser(u);
                           setTempMenus(u.menus || []);
+                          setTempPermissions(u.permissions || []);
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
                       >
@@ -486,37 +496,103 @@ const UsersManagementPage = () => {
                 <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-muted rounded-xl transition-colors"><X className="w-5 h-5" /></button>
               </div>
               
-              <div className="p-8 overflow-y-auto">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {allMenus.map(menu => (
-                    <label 
-                      key={menu.id} 
-                      className={`
-                        flex items-center gap-3 p-4 rounded-2xl border-2 transition-all cursor-pointer
-                        ${tempMenus.includes(menu.id) 
-                          ? 'bg-primary/5 border-primary text-primary shadow-lg shadow-primary/10' 
-                          : 'bg-muted/10 border-transparent hover:border-border text-muted-foreground'}
-                      `}
-                    >
-                      <input
-                        type="checkbox"
-                        className="hidden"
-                        checked={tempMenus.includes(menu.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setTempMenus([...tempMenus, menu.id]);
-                          else setTempMenus(tempMenus.filter(m => m !== menu.id));
-                        }}
-                      />
-                      <div className={`
-                        w-5 h-5 rounded-md flex items-center justify-center border-2 transition-all
-                        ${tempMenus.includes(menu.id) ? 'bg-primary border-primary' : 'border-muted-foreground/30'}
-                      `}>
-                        {tempMenus.includes(menu.id) && <motion.div initial={{scale:0}} animate={{scale:1}}><Plus className="w-3.5 h-3.5 text-primary-foreground rotate-45" /></motion.div>}
-                      </div>
-                      <span className="font-bold text-sm">{menu.label}</span>
-                    </label>
-                  ))}
-                </div>
+              <div className="p-0 overflow-y-auto flex-1">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="sticky top-0 bg-card z-10 shadow-sm border-b border-border">
+                    <tr className="bg-muted/30">
+                      <th className="text-left px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Module Name</th>
+                      <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Access</th>
+                      <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Add</th>
+                      <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Edit</th>
+                      <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Delete</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {allMenus.map(menu => {
+                      const isAccessed = tempMenus.includes(menu.id);
+                      const perm = tempPermissions.find(p => p.menu_id === menu.id) || { menu_id: menu.id, can_add: false, can_edit: false, can_delete: false };
+                      
+                      const togglePermission = (field: keyof Omit<MenuPermission, 'menu_id'>) => {
+                        const newPerms = [...tempPermissions];
+                        const index = newPerms.findIndex(p => p.menu_id === menu.id);
+                        if (index > -1) {
+                          newPerms[index] = { ...newPerms[index], [field]: !newPerms[index][field] };
+                        } else {
+                          newPerms.push({ menu_id: menu.id, can_add: false, can_edit: false, can_delete: false, [field]: true });
+                        }
+                        setTempPermissions(newPerms);
+                        
+                        // If checking any right, auto-grant access
+                        if (!isAccessed) setTempMenus([...tempMenus, menu.id]);
+                      };
+
+                      return (
+                        <tr key={menu.id} className={`hover:bg-muted/20 transition-colors ${isAccessed ? 'bg-primary/[0.02]' : 'opacity-60'}`}>
+                          <td className="px-6 py-4 font-bold text-foreground">{menu.label}</td>
+                          <td className="px-4 py-4 text-center">
+                            <label className="flex items-center justify-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={isAccessed}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setTempMenus([...tempMenus, menu.id]);
+                                  } else {
+                                    setTempMenus(tempMenus.filter(m => m !== menu.id));
+                                    setTempPermissions(tempPermissions.filter(p => p.menu_id !== menu.id));
+                                  }
+                                }}
+                              />
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isAccessed ? 'bg-primary border-primary' : 'border-border'}`}>
+                                {isAccessed && <Plus className="w-3.5 h-3.5 text-primary-foreground rotate-45" />}
+                              </div>
+                            </label>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <label className={`flex items-center justify-center cursor-pointer ${!isAccessed ? 'pointer-events-none opacity-20' : ''}`}>
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={perm.can_add}
+                                onChange={() => togglePermission('can_add')}
+                              />
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_add ? 'bg-emerald-500 border-emerald-500' : 'border-border'}`}>
+                                {perm.can_add && <Plus className="w-3.5 h-3.5 text-white" />}
+                              </div>
+                            </label>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <label className={`flex items-center justify-center cursor-pointer ${!isAccessed ? 'pointer-events-none opacity-20' : ''}`}>
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={perm.can_edit}
+                                onChange={() => togglePermission('can_edit')}
+                              />
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_edit ? 'bg-blue-500 border-blue-500' : 'border-border'}`}>
+                                {perm.can_edit && <Shield className="w-3.5 h-3.5 text-white" />}
+                              </div>
+                            </label>
+                          </td>
+                          <td className="px-4 py-4 text-center">
+                            <label className={`flex items-center justify-center cursor-pointer ${!isAccessed ? 'pointer-events-none opacity-20' : ''}`}>
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={perm.can_delete}
+                                onChange={() => togglePermission('can_delete')}
+                              />
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_delete ? 'bg-destructive border-destructive' : 'border-border'}`}>
+                                {perm.can_delete && <X className="w-3.5 h-3.5 text-white" />}
+                              </div>
+                            </label>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               <div className="p-6 border-t border-border bg-muted/10 flex justify-end gap-3">
@@ -530,7 +606,7 @@ const UsersManagementPage = () => {
                   onClick={async () => {
                     try {
                       setUpdatingMenus(true);
-                      await updateUserMenusApi(selectedUser.id, tempMenus);
+                      await updateUserMenusApi(selectedUser.id, tempMenus, tempPermissions);
                       toast.success('Permissions updated successfully!');
                       setSelectedUser(null);
                       fetchUsers();

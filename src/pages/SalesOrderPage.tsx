@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail } from 'lucide-react';
+import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail, BookOpen, CreditCard } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -9,6 +9,8 @@ import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { addSalesOrderAction, getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
+import { getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
+import { ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -22,11 +24,14 @@ const salesOrderSchema = Yup.object().shape({
   registration_charges: Yup.number().min(0),
   insurance: Yup.number().min(0),
   accessories: Yup.number().min(0),
+  selected_accessories: Yup.array().of(Yup.string()),
   discount_type: Yup.string(),
   discount_value: Yup.number().min(0),
   discount_reason: Yup.string(),
   down_payment: Yup.number().min(0),
   loan_amount: Yup.number().min(0),
+  loan_status: Yup.string(),
+  utr_number: Yup.string(),
 });
 
 const SalesOrderPage = () => {
@@ -39,11 +44,19 @@ const SalesOrderPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showLedgerDrawer, setShowLedgerDrawer] = useState(false);
+  const [drawerOrderId, setDrawerOrderId] = useState<string | null>(null);
+  const [drawerOrderCode, setDrawerOrderCode] = useState<string | null>(null);
+  const [drawerCustomerId, setDrawerCustomerId] = useState<string | null>(null);
 
   const { data: customers = [] } = useSelector((state: RootState) => state.customers || { data: [] });
   const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons || { data: [] });
   const { data: inventory = [] } = useSelector((state: RootState) => state.vehicleInventory || { data: [] });
   const { data: salesOrders = [], loading: ordersLoading } = useSelector((state: RootState) => state.salesOrders || { data: [], loading: false });
+  const { accessories = [] } = useSelector((state: RootState) => state.vehicleFeatures || { accessories: [] });
+  const { ledger, ledgerLoading } = useSelector((state: RootState) => state.customers);
+
+  const [isAccessoryDropdownOpen, setIsAccessoryDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (companyCode) {
@@ -51,6 +64,7 @@ const SalesOrderPage = () => {
       dispatch(getSalespersonsAction(companyCode));
       dispatch(getVehicleInventoryAction(companyCode));
       dispatch(getSalesOrdersAction(companyCode));
+      dispatch(getAccessoriesAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -79,6 +93,7 @@ const SalesOrderPage = () => {
     registration_charges: 0,
     insurance: 0,
     accessories: 0,
+    selected_accessories: [] as string[],
     discount_type: 'Percentage',
     discount_value: 0,
     discount_reason: '',
@@ -89,6 +104,8 @@ const SalesOrderPage = () => {
     balance_amount: 0,
     payment_type: 'Full Payment',
     payment_mode: '',
+    utr_number: '',
+    loan_status: 'Applied',
     status: 'Confirmed'
   });
 
@@ -100,6 +117,27 @@ const SalesOrderPage = () => {
       return searchStr.includes(searchTerm.toLowerCase());
     });
   }, [salesOrders, customers, inventory, searchTerm]);
+
+  const openLedgerDrawer = (order: any) => {
+    setDrawerOrderId(order.entity_id || order._id || order.id);
+    setDrawerOrderCode(order.sales_order_code);
+    setDrawerCustomerId(order.customer_id);
+    dispatch(getCustomerLedgerAction(order.customer_id));
+    setShowLedgerDrawer(true);
+  };
+
+  const filteredLedger = useMemo(() => {
+    if (!ledger || !drawerOrderCode) return [];
+    
+    // Process ledger to have local balance calculation
+    const orderItems = ledger.filter((item: any) => item.sales_order_code === drawerOrderCode);
+    let runBalance = 0;
+    return orderItems.map((item: any) => {
+      runBalance += (item.debit || 0);
+      runBalance -= (item.credit || 0);
+      return { ...item, localBalance: runBalance };
+    });
+  }, [ledger, drawerOrderCode]);
 
   const handlePrint = (order: any) => {
     const customer = customers.find(c => (c.entity_id || c._id || c.id) === order.customer_id);
@@ -291,13 +329,17 @@ const SalesOrderPage = () => {
                           {formatCurrency(order.total_amount)}
                         </td>
                         <td className="px-6 py-4 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${
-                            order.status === 'Confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
-                            order.status === 'Draft' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
-                            'bg-blue-500/10 text-blue-500 border-blue-500/20'
-                          }`}>
+                          <button 
+                            type="button"
+                            onClick={() => openLedgerDrawer(order)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 ${
+                              order.status === 'Confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
+                              order.status === 'Draft' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
+                              'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                            }`}
+                          >
                             {order.status || 'Pending'}
-                          </span>
+                          </button>
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
@@ -388,9 +430,16 @@ const SalesOrderPage = () => {
             const selectedCustomer = (customers || []).find(c => (c.entity_id || c._id || c.id) === values.customer_id);
             const selectedVehicle = (inventory || []).find(v => (v.entity_id || v._id || v.id) === values.vehicle_inventory_id);
 
+            const filteredAccessories = useMemo(() => {
+              if (!selectedVehicle) return [];
+              return (accessories || []).filter((a: any) => a.model_id === selectedVehicle.vehicle_model_id);
+            }, [accessories, selectedVehicle]);
+
             const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
               const vId = e.target.value;
               setFieldValue('vehicle_inventory_id', vId);
+              setFieldValue('selected_accessories', []);
+              setFieldValue('accessories', 0);
               const vehicle = (inventory || []).find(v => (v.entity_id || v._id || v.id) === vId);
               if (vehicle) {
                 setFieldValue('vehicle_price', vehicle.selling_price || vehicle.base_price || 0);
@@ -479,7 +528,102 @@ const SalesOrderPage = () => {
                       <div><label className="erp-label">Vehicle Price</label><Field type="number" name="vehicle_price" className="erp-input tabular font-semibold" readOnly /></div>
                       <div><label className="erp-label">Registration Charges</label><Field type="number" name="registration_charges" className="erp-input tabular" /></div>
                       <div><label className="erp-label">Insurance</label><Field type="number" name="insurance" className="erp-input tabular" /></div>
-                      <div><label className="erp-label">Accessories</label><Field type="number" name="accessories" className="erp-input tabular" /></div>
+                      <div>
+                        <label className="erp-label">Accessories Amount</label>
+                        <Field type="number" name="accessories" className="erp-input tabular bg-muted/30 font-bold" readOnly />
+                      </div>
+
+                      {/* Accessories Selection Dropdown */}
+                      <div className="sm:col-span-2">
+                        <label className="erp-label">Select Accessories</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            disabled={!values.vehicle_inventory_id}
+                            onClick={() => setIsAccessoryDropdownOpen(!isAccessoryDropdownOpen)}
+                            className={`erp-input flex items-center justify-between text-left transition-all ${!values.vehicle_inventory_id ? 'opacity-50 cursor-not-allowed bg-muted/20' : 'hover:border-primary/50'}`}
+                          >
+                            <span className="truncate">
+                              {!values.vehicle_inventory_id 
+                                ? 'Please select a vehicle first' 
+                                : values.selected_accessories.length > 0 
+                                  ? `${values.selected_accessories.length} accessories selected`
+                                  : 'Pick available accessories...'}
+                            </span>
+                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform duration-300 ${isAccessoryDropdownOpen ? 'rotate-180' : ''}`} />
+                          </button>
+                          
+                          <AnimatePresence>
+                            {isAccessoryDropdownOpen && (
+                              <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsAccessoryDropdownOpen(false)} />
+                                <motion.div
+                                  initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                                  className="absolute z-50 mt-3 w-full bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+                                  style={{ transformOrigin: 'top' }}
+                                >
+                                  {filteredAccessories.length > 0 ? (
+                                    <div className="p-2 max-h-72 overflow-y-auto custom-scrollbar">
+                                      <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 border-b border-border/50 mb-1">
+                                        Compatible Accessories for {selectedVehicle?.model}
+                                      </div>
+                                      {filteredAccessories.map((acc: any) => {
+                                        const aid = acc.entity_id || acc._id || acc.id;
+                                        const isSelected = values.selected_accessories.includes(aid);
+                                        return (
+                                          <label
+                                            key={aid}
+                                            className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all group ${isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'}`}
+                                          >
+                                            <div className={`w-5 h-5 rounded-lg border-2 flex items-center justify-center transition-all duration-300 ${isSelected ? 'bg-primary border-primary scale-110' : 'border-border group-hover:border-primary/30'}`}>
+                                              {isSelected && <Check className="w-3.5 h-3.5 text-primary-foreground stroke-[3]" />}
+                                            </div>
+                                            <input
+                                              type="checkbox"
+                                              className="hidden"
+                                              checked={isSelected}
+                                              onChange={() => {
+                                                const newSelection = isSelected
+                                                  ? values.selected_accessories.filter((id: string) => id !== aid)
+                                                  : [...values.selected_accessories, aid];
+                                                
+                                                setFieldValue('selected_accessories', newSelection);
+                                                
+                                                const totalAccAmount = filteredAccessories
+                                                  .filter((a: any) => newSelection.includes(a.entity_id || a._id || a.id))
+                                                  .reduce((sum: number, a: any) => sum + (Number(a.price) || 0), 0);
+                                                
+                                                setFieldValue('accessories', totalAccAmount);
+                                              }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-sm font-bold truncate group-hover:text-primary transition-colors">{acc.name}</p>
+                                              <p className="text-xs text-muted-foreground">{acc.code || 'No Code'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                              <p className="text-sm font-black text-primary">{formatCurrency(acc.price || 0)}</p>
+                                            </div>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  ) : (
+                                    <div className="p-10 text-center space-y-2">
+                                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <X className="w-6 h-6 text-muted-foreground" />
+                                      </div>
+                                      <p className="text-sm font-bold">No accessories found</p>
+                                      <p className="text-xs text-muted-foreground px-6">There are no accessories registered for this vehicle model in the system.</p>
+                                    </div>
+                                  )}
+                                </motion.div>
+                              </>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
                     </div>
                   </motion.section>
 
@@ -561,25 +705,48 @@ const SalesOrderPage = () => {
                                 <option value="">Select payment mode</option>
                                 <option value="Cash">Cash</option>
                                 <option value="Cheque">Cheque</option>
-                                <option value="UPI">UPI / Digital</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="GPay">GPay / PhonePe</option>
+                                <option value="Bank Transfer">Bank Transfer (UTR)</option>
+                                <option value="Net Banking">Net Banking</option>
                               </Field>
                             </div>
+                            {['Bank Transfer', 'GPay', 'Net Banking'].includes(values.payment_mode) && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                <label className="erp-label">UTR Number / Ref No.</label>
+                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder="Enter Transaction Reference Number" />
+                              </motion.div>
+                            )}
                           </>
                         ) : (
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div><label className="erp-label">Down Payment</label><Field type="number" name="down_payment" className="erp-input tabular" /></div>
-                            <div><label className="erp-label">Loan Amount/Finance</label><Field type="number" name="loan_amount" className="erp-input tabular" /></div>
+                            <div><label className="erp-label">Loan (Applied)</label><Field type="number" name="loan_amount" className="erp-input tabular" /></div>
+                            <div className="sm:col-span-2">
+                              <label className="erp-label">Loan Status</label>
+                              <Field as="select" name="loan_status" className="erp-select">
+                                <option value="Applied">Applied</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Disbursed">Disbursed</option>
+                                <option value="Rejected">Rejected</option>
+                              </Field>
+                            </div>
                             <div>
                               <label className="erp-label">Down Payment Mode</label>
                               <Field as="select" name="payment_mode" className="erp-select">
                                 <option value="">Select payment mode</option>
                                 <option value="Cash">Cash</option>
                                 <option value="Cheque">Cheque</option>
-                                <option value="UPI">UPI / Digital</option>
-                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="GPay">GPay / PhonePe</option>
+                                <option value="Bank Transfer">Bank Transfer (UTR)</option>
+                                <option value="Net Banking">Net Banking</option>
                               </Field>
                             </div>
+                            {['Bank Transfer', 'GPay', 'Net Banking'].includes(values.payment_mode) && (
+                              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="sm:col-span-2">
+                                <label className="erp-label">UTR Number / Ref No.</label>
+                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder="Enter Transaction Reference Number" />
+                              </motion.div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -680,7 +847,7 @@ const SalesOrderPage = () => {
                   </div>
                 </div>
 
-                <div className="bg-muted/10 rounded-xl p-4 space-y-3">
+                <div className="bg-muted/10 rounded-xl p-4 space-y-3 border border-border/50 shadow-sm transition-all hover:bg-muted/20">
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Vehicle Price</span><span className="font-bold">{formatCurrency(selectedOrder.vehicle_price)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Reg. Charges</span><span className="font-bold">+ {formatCurrency(selectedOrder.registration_charges)}</span></div>
                   <div className="flex justify-between border-b border-border pb-2"><span className="text-sm">Insurance</span><span className="font-bold">+ {formatCurrency(selectedOrder.insurance)}</span></div>
@@ -688,27 +855,150 @@ const SalesOrderPage = () => {
                   {selectedOrder.discount_amount > 0 && (
                     <div className="flex justify-between border-b border-border pb-2 text-green-500 font-bold">
                       <span className="text-sm">Discount ({selectedOrder.discount_type})</span>
-                      <span>- {formatCurrency(selectedOrder.discount_amount)}</span>
+                      <span className="font-bold text-green-500">- {formatCurrency(selectedOrder.discount_amount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between pt-2"><span className="text-lg font-black uppercase text-primary">Grand Total</span><span className="text-xl font-black text-primary">{formatCurrency(selectedOrder.total_amount)}</span></div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="p-3 bg-muted/30 rounded-lg text-center"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Down Payment</span><span className="font-bold">{formatCurrency(selectedOrder.down_payment)}</span></div>
-                  <div className="p-3 bg-muted/30 rounded-lg text-center"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Loan Amount</span><span className="font-bold">{formatCurrency(selectedOrder.loan_amount)}</span></div>
-                  <div className="p-3 bg-primary/10 rounded-lg text-center"><span className="block text-[10px] uppercase text-primary mb-1">Receivable</span><span className="font-bold text-primary">{formatCurrency(selectedOrder.balance_amount)}</span></div>
+                  <div className="flex justify-between pt-2 text-primary font-black text-lg"><span>Total Amount</span><span>{formatCurrency(selectedOrder.total_amount)}</span></div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="p-3 bg-muted/30 rounded-lg"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Payment Type</span><span className="font-bold">{selectedOrder.payment_type}</span></div>
-                  <div className="p-3 bg-muted/30 rounded-lg"><span className="block text-[10px] uppercase text-muted-foreground mb-1">Payment Mode</span><span className="font-bold">{selectedOrder.payment_mode || 'N/A'}</span></div>
+                  <div className="bg-muted px-4 py-3 rounded-xl"><p className="text-[9px] uppercase font-black text-muted-foreground mb-1">Paid Amount (DP + Loan)</p><p className="font-bold text-green-600">{formatCurrency(Number(selectedOrder.down_payment) + Number(selectedOrder.loan_amount))}</p></div>
+                  <div className="bg-orange-50 px-4 py-3 rounded-xl border border-orange-100"><p className="text-[9px] uppercase font-black text-orange-600 mb-1">Balance Due</p><p className="font-bold text-orange-600">{formatCurrency(selectedOrder.balance_amount)}</p></div>
+                </div>
+
+                <div className="border border-border rounded-xl p-4 flex items-center justify-between">
+                   <div>
+                     <p className="text-[10px] items-center gap-1 font-bold text-muted-foreground uppercase tracking-widest flex"><CreditCard className="w-3 h-3" /> Payment Method</p>
+                     <p className="font-bold">{selectedOrder.payment_mode || 'Cash'}</p>
+                   </div>
+                   {selectedOrder.utr_number && (
+                     <div className="text-right">
+                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">UTR / Ref No.</p>
+                       <p className="font-mono font-bold text-primary">{selectedOrder.utr_number}</p>
+                     </div>
+                   )}
                 </div>
               </div>
 
               <div className="p-6 border-t border-border bg-muted/20 flex gap-3">
-                <button onClick={() => handlePrint(selectedOrder)} className="flex-1 erp-btn-secondary flex items-center justify-center gap-2"><Printer className="w-4 h-4" /> Print Document</button>
-                <button onClick={() => setShowViewModal(false)} className="px-6 py-2.5 bg-card hover:bg-muted font-bold rounded-xl transition-colors">Close</button>
+                <button onClick={() => handlePrint(selectedOrder)} className="flex-1 erp-btn flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-xl hover:bg-primary/90 transition-colors"><Printer className="w-4 h-4" /> Print Document</button>
+                <button onClick={() => setShowViewModal(false)} className="px-6 py-3 bg-card hover:bg-muted font-bold rounded-xl transition-colors border border-border">Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Ledger Drawer */}
+      <AnimatePresence>
+        {showLedgerDrawer && (
+          <div key="ledger-drawer-wrapper" className="fixed inset-0 z-[150] overflow-hidden">
+            <motion.div
+              key="ledger-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLedgerDrawer(false)}
+              className="absolute inset-0 bg-foreground/40 backdrop-blur-md shadow-2xl cursor-pointer"
+            />
+            <motion.div
+              key="ledger-drawer-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="absolute top-0 right-0 h-full w-full max-w-xl bg-card shadow-2xl flex flex-col"
+            >
+              <div className="p-6 border-b border-border flex justify-between items-center bg-primary text-primary-foreground shrink-0 shadow-lg relative z-10">
+                <div className="flex items-center gap-3">
+                   <div className="w-10 h-10 rounded-xl bg-primary-foreground/20 flex items-center justify-center border border-primary-foreground/10">
+                     <BookOpen className="w-5 h-5" />
+                   </div>
+                   <div>
+                    <h3 className="text-lg font-black uppercase tracking-tight">Vehicle Ledger</h3>
+                    <p className="text-xs opacity-75 font-bold tracking-widest">ORDER CODE: {drawerOrderCode || 'DRAFT'}</p>
+                   </div>
+                </div>
+                <button 
+                  onClick={() => setShowLedgerDrawer(false)} 
+                  className="p-2 hover:bg-primary-foreground/10 rounded-xl transition-colors"
+                >
+                  <X className="w-7 h-7" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-muted/5 custom-scrollbar">
+                {ledgerLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground">
+                    <div className="relative">
+                      <div className="w-12 h-12 border-4 border-primary/20 rounded-full animate-[spin_3s_linear_infinite]" />
+                      <div className="absolute inset-0 w-12 h-12 border-t-4 border-primary rounded-full animate-spin" />
+                    </div>
+                    <p className="font-bold tracking-widest text-[10px] uppercase text-primary">Fetching Financial History...</p>
+                  </div>
+                ) : filteredLedger.length > 0 ? (
+                  <div className="space-y-4">
+                     <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-muted p-5 rounded-2xl border border-border shadow-sm">
+                          <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Outstanding Balance</p>
+                          <p className="text-2xl font-black text-red-500 tabular-nums">{formatCurrency(filteredLedger[filteredLedger.length - 1]?.localBalance || 0)}</p>
+                        </div>
+                        <div className="bg-primary/5 border border-primary/10 p-5 rounded-2xl shadow-sm">
+                          <p className="text-[10px] font-black uppercase text-primary mb-1 tracking-widest">Entries</p>
+                          <p className="text-2xl font-black text-primary tabular-nums">{filteredLedger.length}</p>
+                        </div>
+                     </div>
+
+                     <div className="space-y-3">
+                        {filteredLedger.map((entry: any, index: number) => (
+                          <motion.div 
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                            key={entry.id || Math.random()} 
+                            className="p-5 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all relative overflow-hidden group border-l-4 border-l-transparent hover:border-l-primary"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                               <div>
+                                 <p className="text-[10px] font-black text-muted-foreground/60 uppercase mb-1">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                 <h4 className="font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{entry.description}</h4>
+                               </div>
+                               <div className="text-right">
+                                  <p className={`font-black text-base tabular-nums ${entry.debit > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                                    {entry.debit > 0 ? `+ ${formatCurrency(entry.debit)}` : `- ${formatCurrency(entry.credit)}`}
+                                  </p>
+                               </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center pt-3 border-t border-dashed border-border mt-3 group-hover:border-primary/20 transition-colors">
+                               <p className="text-[9px] font-bold text-muted-foreground uppercase italic tracking-tighter">Running Balance</p>
+                               <p className="font-black text-[13px] text-foreground tabular-nums opacity-80">{formatCurrency(entry.localBalance)}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                     </div>
+                  </div>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-5">
+                     <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center shadow-inner">
+                        <BookOpen className="w-10 h-10 text-muted-foreground/40" />
+                     </div>
+                     <div>
+                        <p className="font-black text-lg uppercase tracking-tight">Empty Statement</p>
+                        <p className="text-xs text-muted-foreground mt-2 px-8 leading-relaxed font-medium">No financial transactions found for order <span className="font-bold text-primary">{drawerOrderCode || 'DRAFT'}</span>.</p>
+                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-6 bg-card border-t border-border shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+                 <button 
+                   type="button"
+                   onClick={() => navigate('/ledger')}
+                   className="w-full py-4 bg-foreground text-background font-black uppercase tracking-widest text-[11px] rounded-2xl flex items-center justify-center gap-2 hover:bg-foreground/90 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
+                 >
+                   Open Full Customer Statement <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                 </button>
               </div>
             </motion.div>
           </div>
