@@ -10,6 +10,8 @@ export const SET_SALES_ORDERS = 'sales_orders/SET_SALES_ORDERS';
 export const ADD_SALES_ORDER = 'sales_orders/ADD_SALES_ORDER';
 export const UPDATE_SALES_ORDER = 'sales_orders/UPDATE_SALES_ORDER';
 export const DELETE_SALES_ORDER = 'sales_orders/DELETE_SALES_ORDER';
+export const RESEND_ORDER_EMAIL = 'sales_orders/RESEND_ORDER_EMAIL';
+export const PREVIEW_ORDER_EMAIL = 'sales_orders/PREVIEW_ORDER_EMAIL';
 
 export interface SalesOrderState {
   data: any[];
@@ -79,6 +81,20 @@ export const deleteSalesOrderAction = (id: string) => ({
   id,
 });
 
+export const resendOrderEmailAction = (companyCode: string, id: string, onSuccess?: () => void) => ({
+  type: RESEND_ORDER_EMAIL,
+  companyCode,
+  id,
+  onSuccess,
+});
+
+export const previewOrderEmailAction = (companyCode: string, id: string, onSuccess?: (preview: any) => void) => ({
+  type: PREVIEW_ORDER_EMAIL,
+  companyCode,
+  id,
+  onSuccess,
+});
+
 // ================================
 // SAGAS
 // ================================
@@ -126,9 +142,29 @@ function* deleteSalesOrderSaga(action: any): any {
   }
 }
 
+function* resendOrderEmailSaga(action: any): any {
+  try {
+    yield call(api.resendSalesOrderEmail, action.companyCode, action.id);
+    if (action.onSuccess) action.onSuccess();
+  } catch (error: any) {
+    console.error('Error resending order email:', error);
+  }
+}
+
+function* previewOrderEmailSaga(action: any): any {
+  try {
+    const response = yield call(api.previewSalesOrderEmail, action.companyCode, action.id);
+    if (action.onSuccess) action.onSuccess(response.data);
+  } catch (error: any) {
+    console.error('Error previewing order email:', error);
+  }
+}
+
 export function* watchSalesOrders() {
   yield takeLatest(GET_SALES_ORDERS, getSalesOrdersSaga);
   yield takeLatest(ADD_SALES_ORDER, addSalesOrderSaga);
   yield takeLatest(UPDATE_SALES_ORDER, updateSalesOrderSaga);
   yield takeLatest(DELETE_SALES_ORDER, deleteSalesOrderSaga);
+  yield takeLatest(RESEND_ORDER_EMAIL, resendOrderEmailSaga);
+  yield takeLatest(PREVIEW_ORDER_EMAIL, previewOrderEmailSaga);
 }

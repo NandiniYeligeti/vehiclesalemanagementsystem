@@ -8,7 +8,8 @@ import * as Yup from 'yup';
 import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
-import { addSalesOrderAction, getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
+import { addSalesOrderAction, getSalesOrdersAction, resendOrderEmailAction, previewOrderEmailAction } from '@/store/ducks/sales_orders.ducks';
+import EmailPreviewModal from '@/components/EmailPreviewModal';
 import { getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
 import { ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -48,6 +49,10 @@ const SalesOrderPage = () => {
   const [drawerOrderId, setDrawerOrderId] = useState<string | null>(null);
   const [drawerOrderCode, setDrawerOrderCode] = useState<string | null>(null);
   const [drawerCustomerId, setDrawerCustomerId] = useState<string | null>(null);
+  const [emailPreview, setEmailPreview] = useState<any>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [isEmailSending, setIsEmailSending] = useState(false);
+  const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
 
   const { data: customers = [] } = useSelector((state: RootState) => state.customers || { data: [] });
   const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons || { data: [] });
@@ -124,6 +129,26 @@ const SalesOrderPage = () => {
     setDrawerCustomerId(order.customer_id);
     dispatch(getCustomerLedgerAction(order.customer_id));
     setShowLedgerDrawer(true);
+  };
+
+  const handleOpenEmailPreview = (order: any) => {
+    const id = order.entity_id || order._id || order.id;
+    setCurrentEmailId(id);
+    dispatch(previewOrderEmailAction(companyCode, id, (preview: any) => {
+      setEmailPreview(preview);
+      setShowEmailModal(true);
+    }));
+  };
+
+  const handleConfirmSendEmail = () => {
+    if (!currentEmailId) return;
+    setIsEmailSending(true);
+    dispatch(resendOrderEmailAction(companyCode, currentEmailId, () => {
+      setIsEmailSending(false);
+      setShowEmailModal(false);
+      toast.success('Sales order email sent to customer!');
+      dispatch(getSalesOrdersAction(companyCode));
+    }));
   };
 
   const filteredLedger = useMemo(() => {
@@ -296,6 +321,7 @@ const SalesOrderPage = () => {
                     <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Vehicle</th>
                     <th className="text-right px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
                     <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Status</th>
                     <th className="text-right px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -341,6 +367,25 @@ const SalesOrderPage = () => {
                             {order.status || 'Pending'}
                           </button>
                         </td>
+                        <td className="px-6 py-4 text-center">
+                          {order.email_status ? (
+                            <div className="flex items-center justify-center gap-1.5">
+                              <div className={`w-1.5 h-1.5 rounded-full ${
+                                order.email_status === 'Sent' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
+                                order.email_status === 'Failed' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 
+                                'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]'}`} 
+                              />
+                              <span className={`text-[10px] font-bold ${
+                                order.email_status === 'Sent' ? 'text-green-500' : 
+                                order.email_status === 'Failed' ? 'text-red-500' : 
+                                'text-yellow-600'}`}>
+                                {order.email_status}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground/50">Pending</span>
+                          )}
+                        </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button 
@@ -355,8 +400,9 @@ const SalesOrderPage = () => {
                             >
                               <Printer className="w-4 h-4" />
                             </button>
-                            <button 
-                              className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all hover:scale-110 active:scale-95" title="Email Order"
+                             <button 
+                              onClick={() => handleOpenEmailPreview(order)}
+                              className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20 shadow-sm" title="Open Email"
                             >
                               <Mail className="w-4 h-4" />
                             </button>
@@ -1004,6 +1050,13 @@ const SalesOrderPage = () => {
           </div>
         )}
       </AnimatePresence>
+      <EmailPreviewModal 
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        previewData={emailPreview}
+        onSend={handleConfirmSendEmail}
+        isLoading={isEmailSending}
+      />
     </div>
   );
 };

@@ -4,11 +4,13 @@ import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail } from 'lucide-r
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { toast } from 'sonner';
 import * as Yup from 'yup';
 import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
-import { getPaymentsAction, addPaymentAction } from '@/store/ducks/payments.ducks';
+import { getPaymentsAction, addPaymentAction, resendPaymentEmailAction, previewPaymentEmailAction } from '@/store/ducks/payments.ducks';
+import EmailPreviewModal from '@/components/EmailPreviewModal';
 
 const paymentSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -41,6 +43,10 @@ const PaymentsPage = () => {
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [emailPreview, setEmailPreview] = useState<any>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [isEmailSending, setIsEmailSending] = useState(false);
+  const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
 
   const { data: payments = [], loading: paymentsLoading } = useSelector((state: RootState) => state.payments);
   const { data: customers = [] } = useSelector((state: RootState) => state.customers);
@@ -60,6 +66,26 @@ const PaymentsPage = () => {
       dispatch(getSalesOrdersAction(companyCode));
     }
   }, [dispatch, companyCode]);
+
+  const handleOpenEmailPreview = (payment: any) => {
+    const id = payment.entity_id || payment._id || payment.id;
+    setCurrentEmailId(id);
+    dispatch(previewPaymentEmailAction(companyCode, id, (preview: any) => {
+      setEmailPreview(preview);
+      setShowEmailModal(true);
+    }));
+  };
+
+  const handleConfirmSendEmail = () => {
+    if (!currentEmailId) return;
+    setIsEmailSending(true);
+    dispatch(resendPaymentEmailAction(companyCode, currentEmailId, () => {
+      setIsEmailSending(false);
+      setShowEmailModal(false);
+      toast.success('Payment receipt email sent to customer!');
+      dispatch(getPaymentsAction(companyCode));
+    }));
+  };
 
   const filtered = useMemo(() => {
     return (payments || []).filter(p =>
@@ -111,6 +137,7 @@ const PaymentsPage = () => {
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Mode</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Status</th>
                 <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -131,12 +158,31 @@ const PaymentsPage = () => {
                       Completed
                     </span>
                   </td>
+                  <td className="px-6 py-4 text-center">
+                    {p.email_status ? (
+                      <div className="flex items-center justify-center gap-1.5">
+                        <div className={`w-1.5 h-1.5 rounded-full ${
+                          p.email_status === 'Sent' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
+                          p.email_status === 'Failed' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]' : 
+                          'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]'}`} 
+                        />
+                        <span className={`text-[10px] font-bold ${
+                          p.email_status === 'Sent' ? 'text-green-500' : 
+                          p.email_status === 'Failed' ? 'text-red-500' : 
+                          'text-yellow-600'}`}>
+                          {p.email_status}
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/50 italic px-2">Ready</span>
+                    )}
+                  </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
                       <button title="View" className="p-1.5 hover:bg-muted rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"><Eye className="w-4 h-4" /></button>
+                      <button title="Mail" onClick={() => handleOpenEmailPreview(p)} className="p-1.5 hover:bg-muted rounded-lg text-blue-600 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"><Mail className="w-4 h-4" /></button>
                       <button title="Download" className="p-1.5 hover:bg-muted rounded-lg text-emerald-600 transition-colors hover:scale-110 active:scale-95"><Download className="w-4 h-4" /></button>
                       <button title="Print" className="p-1.5 hover:bg-muted rounded-lg text-amber-600 transition-colors hover:scale-110 active:scale-95"><Printer className="w-4 h-4" /></button>
-                      <button title="Mail" className="p-1.5 hover:bg-muted rounded-lg text-blue-600 transition-colors hover:scale-110 active:scale-95"><Mail className="w-4 h-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -311,6 +357,13 @@ const PaymentsPage = () => {
           </div>
         )}
       </AnimatePresence>
+      <EmailPreviewModal 
+        isOpen={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        previewData={emailPreview}
+        onSend={handleConfirmSendEmail}
+        isLoading={isEmailSending}
+      />
     </div>
   );
 };

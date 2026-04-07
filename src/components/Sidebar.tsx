@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
   Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift,
-  ChevronDown, Settings2
+  ChevronDown, Settings2, Mail
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -29,6 +29,7 @@ const allMenuItems = [
     children: [
       { id: 'users',       label: 'User Management',   icon: UserPlus,        roles: ['admin'] },
       { id: 'settings',    label: 'Settings',          icon: Settings,        roles: ['admin'] },
+      { id: 'email-config',label: 'Email Config',      icon: Mail,            roles: ['admin'] },
     ]
   },
 ];

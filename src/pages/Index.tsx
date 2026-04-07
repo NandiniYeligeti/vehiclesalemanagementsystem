@@ -14,6 +14,7 @@ import SettingsPage from '@/pages/SettingsPage';
 import UsersManagementPage from '@/pages/UsersManagementPage';
 import VehicleInventoryPage from '@/pages/VehicleInventoryPage';
 import IncentiveManagementPage from '@/pages/IncentiveManagementPage';
+import EmailSettingsPage from '@/pages/EmailSettingsPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'Dashboard',
@@ -29,6 +30,7 @@ const pageTitles: Record<string, string> = {
   reports: 'Reports',
   users: 'User Management',
   settings: 'Settings',
+  'email-config': 'Email Configuration',
 };
 
 const Index = () => {
@@ -49,6 +51,7 @@ const Index = () => {
       case 'reports': return <ReportsPage />;
       case 'users': return <UsersManagementPage />;
       case 'settings': return <SettingsPage />;
+      case 'email-config': return <EmailSettingsPage />;
       default: return <DashboardPage />;
     }
   };

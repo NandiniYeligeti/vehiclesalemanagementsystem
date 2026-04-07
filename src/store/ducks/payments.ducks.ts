@@ -11,6 +11,8 @@ export const ADD_PAYMENT = 'payments/ADD_PAYMENT';
 export const UPDATE_PAYMENT = 'payments/UPDATE_PAYMENT';
 export const DELETE_PAYMENT = 'payments/DELETE_PAYMENT';
 export const SET_ERROR = 'payments/SET_ERROR';
+export const RESEND_PAYMENT_EMAIL = 'payments/RESEND_PAYMENT_EMAIL';
+export const PREVIEW_PAYMENT_EMAIL = 'payments/PREVIEW_PAYMENT_EMAIL';
 
 export interface PaymentState {
   data: any[];
@@ -82,6 +84,20 @@ export const deletePaymentAction = (id: string) => ({
   id,
 });
 
+export const resendPaymentEmailAction = (companyCode: string, id: string, onSuccess?: () => void) => ({
+  type: RESEND_PAYMENT_EMAIL,
+  companyCode,
+  id,
+  onSuccess,
+});
+
+export const previewPaymentEmailAction = (companyCode: string, id: string, onSuccess?: (preview: any) => void) => ({
+  type: PREVIEW_PAYMENT_EMAIL,
+  companyCode,
+  id,
+  onSuccess,
+});
+
 // ================================
 // SAGAS
 // ================================
@@ -130,9 +146,29 @@ function* deletePaymentSaga(action: any): any {
   }
 }
 
+function* resendPaymentEmailSaga(action: any): any {
+  try {
+    yield call(api.resendPaymentEmail, action.companyCode, action.id);
+    if (action.onSuccess) action.onSuccess();
+  } catch (error: any) {
+    console.error('Error resending payment email:', error);
+  }
+}
+
+function* previewPaymentEmailSaga(action: any): any {
+  try {
+    const response = yield call(api.previewPaymentEmail, action.companyCode, action.id);
+    if (action.onSuccess) action.onSuccess(response.data);
+  } catch (error: any) {
+    console.error('Error previewing payment email:', error);
+  }
+}
+
 export function* watchPayments() {
   yield takeLatest(GET_PAYMENTS, getPaymentsSaga);
   yield takeLatest(ADD_PAYMENT, addPaymentSaga);
   yield takeLatest(UPDATE_PAYMENT, updatePaymentSaga);
   yield takeLatest(DELETE_PAYMENT, deletePaymentSaga);
+  yield takeLatest(RESEND_PAYMENT_EMAIL, resendPaymentEmailSaga);
+  yield takeLatest(PREVIEW_PAYMENT_EMAIL, previewPaymentEmailSaga);
 }

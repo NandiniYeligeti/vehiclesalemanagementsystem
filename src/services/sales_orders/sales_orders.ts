@@ -15,3 +15,13 @@ export const updateSalesOrder = async (companyCode: string, id: string, payload:
 export const deleteSalesOrder = async (companyCode: string, id: string) => {
   return await api.delete(`/sales-order/${companyCode}/${id}`);
 };
+
+export const resendSalesOrderEmail = async (companyCode: string, id: string) => {
+  return await api.post(`/sales-order/${companyCode}/${id}/send-email`);
+};
+
+export const previewSalesOrderEmail = async (companyCode: string, id: string) => {
+  return await api.get(`/sales-order/${companyCode}/${id}/preview-email`);
+};
+
+
