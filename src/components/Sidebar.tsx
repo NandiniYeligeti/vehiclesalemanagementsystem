@@ -126,7 +126,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
              {settings?.logo_url ? (
                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain" />
              ) : (
-               <Car className="w-6 h-6 text-primary-foreground" />
+               <img src="/logo.png" className="w-full h-full object-contain" alt="Logo" />
              )}
           </div>
           {!collapsed && (
@@ -136,7 +136,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
               className="ml-4 flex flex-col min-w-0"
             >
               <span className="text-base font-black text-[hsl(var(--sidebar-active))] tracking-tight truncate">
-                {settings?.company_name || 'AutoDesk'}
+                {settings?.company_name || 'DDR AutoPro'}
               </span>
               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] opacity-80"></span>
             </motion.div>

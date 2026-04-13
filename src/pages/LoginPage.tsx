@@ -120,9 +120,9 @@ export default function LoginPage() {
           {/* Company Logo */}
           <div className="flex justify-center -mb-2">
             <img
-              src="public/logo.png"
+              src="/logo.png"
               alt="Company Logo"
-              className="h-12 object-contain opacity-90 hover:opacity-100 transition-opacity"
+              className="h-14 object-contain opacity-100 transition-opacity"
             />
           </div>
 
