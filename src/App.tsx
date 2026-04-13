@@ -6,6 +6,7 @@ import { RootState } from "@/store/rootReducer";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
 import LoginPage from "./pages/LoginPage.tsx";
@@ -29,29 +30,29 @@ const ProtectedRoute = ({ children, allowedRoles }: { children: React.ReactNode,
 
 const AppContent = () => {
   return (
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/super-admin" element={
-            <ProtectedRoute allowedRoles={['super_admin']}>
-               <SuperAdminPage />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/" element={
-            <ProtectedRoute allowedRoles={['admin', 'user']}>
-              <Index />
-            </ProtectedRoute>
-          } />
-          {/* Customers route and others are nested inside Index usually, but if exposed directly: */}
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider defaultTheme="light" storageKey="vsms-ui-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/super-admin" element={
+              <ProtectedRoute allowedRoles={['super_admin']}>
+                 <SuperAdminPage />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/" element={
+              <ProtectedRoute allowedRoles={['admin', 'user']}>
+                <Index />
+              </ProtectedRoute>
+            } />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   );
 };
 

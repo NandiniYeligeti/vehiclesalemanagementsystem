@@ -114,33 +114,37 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
         className={`
           fixed lg:relative z-50 h-screen flex flex-col
           bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]
-          transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]
-          ${collapsed ? 'w-[72px]' : 'w-64'}
+          transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
+          ${collapsed ? 'w-[80px]' : 'w-72'}
           ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          border-r border-[hsl(var(--sidebar-border))]
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-4 border-b border-[hsl(var(--sidebar-border))]">
-          <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center overflow-hidden shrink-0">
+        <div className="h-20 flex items-center px-6 border-b border-[hsl(var(--sidebar-border))] shrink-0">
+          <div className="w-10 h-10 rounded-2xl bg-primary shadow-[0_0_20px_rgba(var(--primary),0.3)] flex items-center justify-center overflow-hidden shrink-0 group hover:rotate-6 transition-transform">
              {settings?.logo_url ? (
                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain" />
              ) : (
-               <Car className="w-5 h-5 text-primary" />
+               <Car className="w-6 h-6 text-primary-foreground" />
              )}
           </div>
           {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="ml-3 text-lg font-black text-[hsl(var(--sidebar-active))] tracking-tight truncate"
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="ml-4 flex flex-col min-w-0"
             >
-              {settings?.company_name || 'AutoDesk'}
-            </motion.span>
+              <span className="text-base font-black text-[hsl(var(--sidebar-active))] tracking-tight truncate">
+                {settings?.company_name || 'AutoDesk'}
+              </span>
+              <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] opacity-80"></span>
+            </motion.div>
           )}
         </div>
 
         {/* Menu */}
-        <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
+        <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto no-scrollbar">
           {menuItems.map((item) => {
             if (item.children && item.children.length > 0) {
               const isAnyChildActive = item.children.some((child: any) => activeTab === child.id);
@@ -153,17 +157,17 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
                       setSetupOpen(!setupOpen);
                     }}
                     className={`
-                      w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium
-                      transition-all duration-100
-                      ${isAnyChildActive ? 'text-[hsl(var(--sidebar-active))]' : 'text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))]'}
+                      w-full flex items-center justify-between px-4 py-3 rounded-2xl text-[13px] font-bold
+                      transition-all duration-200
+                      ${isAnyChildActive ? 'text-[hsl(var(--sidebar-active))] bg-[hsl(var(--sidebar-active-bg))] shadow-lg shadow-black/20' : 'text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))] hover:text-[hsl(var(--sidebar-active))]'}
                     `}
                   >
-                    <div className="flex items-center gap-3">
-                      <item.icon className={`w-5 h-5 shrink-0 ${isAnyChildActive ? 'text-primary' : ''}`} />
+                    <div className="flex items-center gap-4">
+                      <item.icon className={`w-5 h-5 shrink-0 ${isAnyChildActive ? 'text-primary' : 'opacity-60'}`} />
                       {!collapsed && <span>{item.label}</span>}
                     </div>
                     {!collapsed && (
-                      <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${setupOpen ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`w-4 h-4 transition-transform duration-300 opacity-40 ${setupOpen ? 'rotate-180' : ''}`} />
                     )}
                   </button>
 
@@ -173,7 +177,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden space-y-1 ml-4 border-l border-[hsl(var(--sidebar-border))] pl-2"
+                        className="overflow-hidden space-y-1 ml-6 border-l border-[hsl(var(--sidebar-border))] pl-4 mt-1"
                       >
                         {item.children.map((child: any) => {
                           const isChildActive = activeTab === child.id;
@@ -185,15 +189,15 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
                                 setMobileOpen(false);
                               }}
                               className={`
-                                w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
-                                transition-all duration-100
+                                w-full flex items-center gap-4 px-4 py-2.5 rounded-xl text-[12px] font-bold
+                                transition-all duration-200
                                 ${isChildActive
-                                  ? 'bg-[hsl(var(--sidebar-active-bg))] text-[hsl(var(--sidebar-active))]'
-                                  : 'hover:bg-[hsl(var(--sidebar-hover-bg))] text-[hsl(var(--sidebar-fg))]'
+                                  ? 'text-primary'
+                                  : 'text-[hsl(var(--sidebar-fg))] hover:text-primary'
                                 }
                               `}
                             >
-                              <child.icon className={`w-4 h-4 shrink-0 ${isChildActive ? 'text-primary' : ''}`} />
+                              <div className={`w-1.5 h-1.5 rounded-full transition-all ${isChildActive ? 'bg-primary scale-125' : 'bg-muted-foreground/30'}`} />
                               <span>{child.label}</span>
                             </button>
                           );
@@ -214,27 +218,44 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
                   setMobileOpen(false);
                 }}
                 className={`
-                  w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
-                  transition-all duration-100
+                  w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-[13px] font-bold
+                  transition-all duration-200 group
                   ${isActive
-                    ? 'bg-[hsl(var(--sidebar-active-bg))] text-[hsl(var(--sidebar-active))]'
-                    : 'hover:bg-[hsl(var(--sidebar-hover-bg))] text-[hsl(var(--sidebar-fg))]'
+                    ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                    : 'text-[hsl(var(--sidebar-fg))] hover:bg-[hsl(var(--sidebar-hover-bg))] hover:text-[hsl(var(--sidebar-active))]'
                   }
                 `}
               >
-                <item.icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-primary' : ''}`} />
+                <item.icon className={`w-5 h-5 shrink-0 transition-transform group-hover:scale-110 ${isActive ? 'text-primary-foreground' : 'opacity-60 group-hover:opacity-100 group-hover:text-primary'}`} />
                 {!collapsed && <span>{item.label}</span>}
               </button>
             );
           })}
         </nav>
 
+        {/* User Badge if not collapsed */}
+        {/* {!collapsed && (
+          <div className="px-4 py-6">
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black overflow-hidden ring-2 ring-primary/20">
+                   {(user?.username?.[0] || 'A').toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-bold truncate text-[hsl(var(--sidebar-active))]">{user?.username}</p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Session Active</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )} */}
+
         {/* Collapse toggle (desktop only) */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center h-12 border-t border-[hsl(var(--sidebar-border))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors"
+          className="hidden lg:flex items-center justify-center h-14 border-t border-[hsl(var(--sidebar-border))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors text-[hsl(var(--sidebar-fg))] hover:text-[hsl(var(--sidebar-active))]"
         >
-          <ChevronLeft className={`w-4 h-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
+          <ChevronLeft className={`w-5 h-5 transition-transform duration-500 ${collapsed ? 'rotate-180' : ''}`} />
         </button>
       </aside>
     </>

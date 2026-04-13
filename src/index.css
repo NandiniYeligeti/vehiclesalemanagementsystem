@@ -4,25 +4,25 @@
 
 @layer base {
   :root {
-    --background: 210 20% 97%;
-    --foreground: 215 25% 15%;
+    --background: 210 40% 98%;
+    --foreground: 224 71% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --card-foreground: 224 71% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
-    --primary: 239 70% 55%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 210 15% 94%;
-    --secondary-foreground: 215 25% 15%;
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 12% 50%;
-    --accent: 210 15% 94%;
-    --accent-foreground: 215 25% 15%;
+    --popover-foreground: 224 71% 4%;
+    --primary: 242 78% 60%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 224 71% 4%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 8% 46%;
+    --accent: 220 14% 96%;
+    --accent-foreground: 224 71% 4%;
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 239 70% 55%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 242 78% 60%;
     --radius: 0.75rem;
     --success: 152 60% 40%;
     --success-foreground: 0 0% 100%;
@@ -36,13 +36,34 @@
     --sidebar-active-bg: 0 0% 100% / 0.1;
     --sidebar-hover-bg: 0 0% 100% / 0.05;
     --sidebar-border: 0 0% 100% / 0.08;
-    --sidebar-background: 220 20% 10%;
-    --sidebar-foreground: 215 15% 70%;
-    --sidebar-primary: 239 70% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 100% / 0.1;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-ring: 239 70% 55%;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%;
+    --card: 224 71% 4%;
+    --card-foreground: 210 20% 98%;
+    --popover: 224 71% 4%;
+    --popover-foreground: 210 20% 98%;
+    --primary: 242 78% 60%;
+    --primary-foreground: 210 20% 98%;
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 210 20% 98%;
+    --muted: 215 28% 17%;
+    --muted-foreground: 217 10% 65%;
+    --accent: 215 28% 17%;
+    --accent-foreground: 210 20% 98%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 210 20% 98%;
+    --border: 215 28% 17%;
+    --input: 215 28% 17%;
+    --ring: 242 78% 60%;
+    --sidebar-bg: 224 71% 2%;
+    --sidebar-fg: 215 15% 70%;
+    --sidebar-active: 0 0% 100%;
+    --sidebar-active-bg: 242 78% 60% / 0.15;
+    --sidebar-hover-bg: 0 0% 100% / 0.05;
+    --sidebar-border: 0 0% 100% / 0.08;
   }
 
   * {
@@ -66,65 +87,91 @@
 
 @layer components {
   .erp-card {
-    @apply bg-card rounded-xl ring-1 ring-border shadow-[0_1px_3px_rgba(0,0,0,0.05)];
+    @apply bg-card rounded-2xl border border-border/50 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.07),0_4px_25px_-4px_rgba(0,0,0,0.04)] 
+           hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300;
+  }
+
+  .erp-card-glass {
+    @apply bg-card/70 backdrop-blur-md border border-white/20 shadow-xl;
   }
 
   .erp-section-title {
-    @apply text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4;
+    @apply text-xs font-bold text-muted-foreground uppercase tracking-[0.2em] mb-6;
   }
 
   .erp-stat-value {
-    @apply text-2xl font-bold tabular;
+    @apply text-2xl font-black tabular tracking-tight;
   }
 
   .erp-input {
-    @apply h-10 px-3 rounded-lg border border-input bg-card text-sm
-           focus:ring-2 focus:ring-primary/20 focus:border-primary
-           transition-all duration-100 outline-none w-full;
+    @apply h-11 px-4 rounded-xl border border-input bg-background text-sm
+           focus:ring-2 focus:ring-primary/10 focus:border-primary
+           transition-all duration-200 outline-none w-full shadow-sm placeholder:text-muted-foreground/50;
   }
 
   .erp-select {
-    @apply h-10 px-3 rounded-lg border border-input bg-card text-sm
-           focus:ring-2 focus:ring-primary/20 focus:border-primary
-           transition-all duration-100 outline-none w-full appearance-none;
+    @apply h-11 px-4 rounded-xl border border-input bg-background text-sm
+           focus:ring-2 focus:ring-primary/10 focus:border-primary
+           transition-all duration-200 outline-none w-full appearance-none shadow-sm;
   }
 
   .erp-label {
-    @apply text-xs font-medium text-muted-foreground mb-1.5 block;
+    @apply text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 block px-1;
   }
 
-  .status-available {
-    @apply bg-blue-100 text-blue-700;
-  }
-
-  .status-sold {
-    @apply bg-emerald-100 text-emerald-700;
-  }
-
-  .status-reserved {
-    @apply bg-amber-100 text-amber-700;
-  }
-
-  .status-delivered {
-    @apply bg-violet-100 text-violet-700;
+  .erp-btn-primary {
+    @apply px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-sm
+           shadow-[0_4px_14px_0_rgba(var(--primary),0.39)] hover:scale-[1.02] active:scale-[0.98]
+           transition-all duration-200 disabled:opacity-50 disabled:scale-100 flex items-center justify-center gap-2;
   }
 
   .status-badge {
-    @apply px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider inline-flex items-center;
+    @apply px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5;
+  }
+
+  .status-available { @apply bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400; }
+  .status-sold { @apply bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400; }
+  .status-reserved { @apply bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400; }
+  .status-delivered { @apply bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-400; }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-br from-primary to-primary/60;
+  }
+  
+  .glass-panel {
+    @apply bg-white/10 backdrop-blur-md border border-white/10 shadow-2xl;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
-/* Scrollbar styling */
+/* Custom transitions and global refinements */
+* {
+  @apply border-border/50;
+  transition-property: background-color, border-color, color, fill, stroke, box-shadow;
+  transition-duration: 200ms;
+}
+
+body {
+  @apply selection:bg-primary/20 selection:text-primary;
+}
+
+::selection {
+  @apply bg-primary/20 text-primary;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  @apply bg-transparent;
 }
 ::-webkit-scrollbar-thumb {
-  @apply bg-border rounded-full;
+  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
 }
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/30;
-}
+

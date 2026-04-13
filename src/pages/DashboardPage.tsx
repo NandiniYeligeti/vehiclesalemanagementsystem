@@ -10,7 +10,15 @@ import { RootState } from '@/store/rootReducer';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { api } from '@/services/api';
 
-const COLORS = ['hsl(239,70%,55%)', 'hsl(152,60%,40%)', 'hsl(38,92%,50%)', 'hsl(210,80%,55%)', 'hsl(280,60%,55%)', 'hsl(0,72%,55%)', 'hsl(180,60%,40%)'];
+const COLORS = [
+  'hsl(var(--primary))',
+  'hsl(var(--success))',
+  'hsl(var(--warning))',
+  'hsl(var(--info))',
+  'hsl(280, 75%, 60%)',
+  'hsl(340, 75%, 60%)',
+  'hsl(180, 75%, 60%)'
+];
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -129,20 +137,58 @@ const DashboardPage = () => {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="erp-card p-6 lg:col-span-2"
+          className="erp-card p-6 lg:col-span-2 overflow-hidden relative"
         >
-          <h3 className="erp-section-title">Monthly Sales Revenue</h3>
-          <ResponsiveContainer width="100%" height={280}>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h3 className="erp-section-title mb-1">Monthly Sales Revenue</h3>
+              <p className="text-xs text-muted-foreground">Revenue trends over the last 6 months</p>
+            </div>
+            <div className="flex items-center gap-2">
+               <span className="w-3 h-3 rounded-full bg-primary/20 border border-primary/50" />
+               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Revenue</span>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={300}>
             {monthlyData.length > 0 ? (
-              <BarChart data={monthlyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" />
-                <YAxis tick={{ fontSize: 12 }} stroke="hsl(215,12%,50%)" tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} />
-                <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                <Bar dataKey="revenue" fill="hsl(239,70%,55%)" radius={[6, 6, 0, 0]} />
+              <BarChart data={monthlyData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border) / 0.5)" />
+                <XAxis 
+                  dataKey="month" 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fontWeight: 600 }} 
+                  stroke="hsl(var(--muted-foreground))" 
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10, fontWeight: 600 }} 
+                  stroke="hsl(var(--muted-foreground))" 
+                  tickFormatter={(v) => `₹${(v / 100000).toFixed(0)}L`} 
+                />
+                <Tooltip 
+                  cursor={{ fill: 'hsl(var(--muted) / 0.3)' }}
+                  contentStyle={{ 
+                    backgroundColor: 'hsl(var(--card))', 
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)'
+                  }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                  labelStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', color: 'hsl(var(--muted-foreground))', marginBottom: '4px' }}
+                  formatter={(value: number) => [formatCurrency(value), 'Revenue']} 
+                />
+                <Bar 
+                  dataKey="revenue" 
+                  fill="hsl(var(--primary))" 
+                  radius={[6, 6, 0, 0]} 
+                  barSize={32}
+                />
               </BarChart>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">No data available</div>
+              <div className="h-full flex items-center justify-center text-sm text-muted-foreground font-medium italic">No tracking data available yet</div>
             )}
           </ResponsiveContainer>
         </motion.div>
