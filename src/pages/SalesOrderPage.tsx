@@ -45,6 +45,7 @@ const SalesOrderPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [showLedgerDrawer, setShowLedgerDrawer] = useState(false);
   const [drawerOrderId, setDrawerOrderId] = useState<string | null>(null);
   const [drawerOrderCode, setDrawerOrderCode] = useState<string | null>(null);
@@ -119,9 +120,16 @@ const SalesOrderPage = () => {
       const customer = customers.find(c => (c.entity_id || c._id || c.id) === order.customer_id);
       const vehicle = inventory.find(v => (v.entity_id || v._id || v.id) === order.vehicle_inventory_id);
       const searchStr = `${customer?.customer_name || ''} ${vehicle?.model || ''} ${order.sales_order_code || ''}`.toLowerCase();
-      return searchStr.includes(searchTerm.toLowerCase());
+      const matchesSearch = searchStr.includes(searchTerm.toLowerCase());
+      const matchesStatus = !statusFilter || order.payment_status === statusFilter || order.status === statusFilter;
+      return matchesSearch && matchesStatus;
     });
-  }, [salesOrders, customers, inventory, searchTerm]);
+  }, [salesOrders, customers, inventory, searchTerm, statusFilter]);
+
+  // Stats for cards
+  const fullyPaidCount = useMemo(() => salesOrders.filter(o => o.payment_status === 'Fully Paid' || o.balance_amount === 0).length, [salesOrders]);
+  const pendingCount = useMemo(() => salesOrders.filter(o => (o.balance_amount || 0) > 0).length, [salesOrders]);
+  const confirmedCount = useMemo(() => salesOrders.filter(o => o.status === 'Confirmed').length, [salesOrders]);
 
   const openLedgerDrawer = (order: any) => {
     setDrawerOrderId(order.entity_id || order._id || order.id);
@@ -297,6 +305,57 @@ const SalesOrderPage = () => {
 
       {activeTab === 'list' ? (
         <div className="space-y-4">
+          {/* Stat Cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'Fully Paid' ? null : 'Fully Paid')}
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+                statusFilter === 'Fully Paid' ? 'border-emerald-500' : 'border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-emerald-500" />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Fully Paid</span>
+              </div>
+              <p className="text-3xl font-black text-emerald-600">{fullyPaidCount}</p>
+              <p className="text-xs text-muted-foreground mt-1">completed orders</p>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter(statusFilter === 'Pending' ? null : 'Pending')}
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+                statusFilter === 'Pending' ? 'border-amber-500' : 'border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-amber-500" />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pending</span>
+              </div>
+              <p className="text-3xl font-black text-amber-600">{pendingCount}</p>
+              <p className="text-xs text-muted-foreground mt-1">balance due</p>
+            </button>
+
+            <button
+              onClick={() => setStatusFilter(null)}
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+                !statusFilter ? 'border-primary' : 'border-transparent'
+              }`}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">All Orders</span>
+              </div>
+              <p className="text-3xl font-black text-primary">{salesOrders.length}</p>
+              <p className="text-xs text-muted-foreground mt-1">total records</p>
+            </button>
+          </div>
+
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="relative w-full sm:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

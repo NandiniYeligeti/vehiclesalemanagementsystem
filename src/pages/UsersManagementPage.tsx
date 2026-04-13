@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 
 interface MenuPermission {
   menu_id: string;
+  can_view: boolean;
   can_add: boolean;
   can_edit: boolean;
   can_delete: boolean;
@@ -68,6 +69,7 @@ const UsersManagementPage = () => {
     username: '',
     email: '',
     password: '',
+    showrooms: [] as string[],
   });
   
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
@@ -106,7 +108,7 @@ const UsersManagementPage = () => {
       await createUserApi(companyCode, formData);
       toast.success('User created successfully!');
       setShowForm(false);
-      setFormData({ username: '', email: '', password: '' });
+      setFormData({ username: '', email: '', password: '', showrooms: [] });
       fetchUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || error.message || 'Failed to create user');
@@ -434,6 +436,18 @@ const UsersManagementPage = () => {
                   </div>
                 </div>
 
+                {/* Showroom Access */}
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
+                    Showroom Access <span className="text-muted-foreground/50 normal-case font-normal">(optional — leave blank for all)</span>
+                  </label>
+                  <div className="rounded-xl bg-muted/20 border border-border/60 p-3 space-y-2 max-h-32 overflow-y-auto">
+                    {([] as any[]).length === 0 ? (
+                      <p className="text-xs text-muted-foreground italic">Configure showrooms in Settings to restrict access</p>
+                    ) : null}
+                  </div>
+                </div>
+
                 {/* Info Box */}
                 <div className="rounded-xl bg-blue-500/5 border border-blue-500/10 p-4">
                   <div className="flex items-start gap-3">
@@ -502,6 +516,7 @@ const UsersManagementPage = () => {
                     <tr className="bg-muted/30">
                       <th className="text-left px-6 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Module Name</th>
                       <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Access</th>
+                      <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">View</th>
                       <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Add</th>
                       <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Edit</th>
                       <th className="text-center px-4 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Delete</th>
@@ -510,7 +525,7 @@ const UsersManagementPage = () => {
                   <tbody className="divide-y divide-border/50">
                     {allMenus.map(menu => {
                       const isAccessed = tempMenus.includes(menu.id);
-                      const perm = tempPermissions.find(p => p.menu_id === menu.id) || { menu_id: menu.id, can_add: false, can_edit: false, can_delete: false };
+                      const perm = tempPermissions.find(p => p.menu_id === menu.id) || { menu_id: menu.id, can_view: false, can_add: false, can_edit: false, can_delete: false };
                       
                       const togglePermission = (field: keyof Omit<MenuPermission, 'menu_id'>) => {
                         const newPerms = [...tempPermissions];
@@ -518,7 +533,7 @@ const UsersManagementPage = () => {
                         if (index > -1) {
                           newPerms[index] = { ...newPerms[index], [field]: !newPerms[index][field] };
                         } else {
-                          newPerms.push({ menu_id: menu.id, can_add: false, can_edit: false, can_delete: false, [field]: true });
+                          newPerms.push({ menu_id: menu.id, can_view: false, can_add: false, can_edit: false, can_delete: false, [field]: true });
                         }
                         setTempPermissions(newPerms);
                         
@@ -546,6 +561,20 @@ const UsersManagementPage = () => {
                               />
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isAccessed ? 'bg-primary border-primary' : 'border-border'}`}>
                                 {isAccessed && <Plus className="w-3.5 h-3.5 text-primary-foreground rotate-45" />}
+                              </div>
+                            </label>
+                          </td>
+                          {/* View column */}
+                          <td className="px-4 py-4 text-center">
+                            <label className={`flex items-center justify-center cursor-pointer ${!isAccessed ? 'pointer-events-none opacity-20' : ''}`}>
+                              <input
+                                type="checkbox"
+                                className="hidden"
+                                checked={perm.can_view}
+                                onChange={() => togglePermission('can_view')}
+                              />
+                              <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_view ? 'bg-sky-500 border-sky-500' : 'border-border'}`}>
+                                {perm.can_view && <Eye className="w-3.5 h-3.5 text-white" />}
                               </div>
                             </label>
                           </td>

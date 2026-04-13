@@ -85,9 +85,8 @@ export default function LoginPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center ${
-        theme !== "custom" ? themes[theme] : ""
-      } p-6 gap-4 transition-colors duration-500`}
+      className={`min-h-screen flex flex-col items-center justify-center ${theme !== "custom" ? themes[theme] : ""
+        } p-6 gap-4 transition-colors duration-500`}
       style={bgStyle}
     >
       <div className="w-full max-w-[850px] bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10 mx-auto">
@@ -97,9 +96,8 @@ export default function LoginPage() {
             <img
               key={i}
               src={img}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
-                i === slideIndex ? "opacity-100" : "opacity-0"
-              }`}
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === slideIndex ? "opacity-100" : "opacity-0"
+                }`}
             />
           ))}
 
@@ -110,9 +108,8 @@ export default function LoginPage() {
             {images.map((_, i) => (
               <div
                 key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                  i === slideIndex ? "bg-white" : "bg-white/40"
-                }`}
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === slideIndex ? "bg-white" : "bg-white/40"
+                  }`}
               />
             ))}
           </div>
@@ -123,14 +120,14 @@ export default function LoginPage() {
           {/* Company Logo */}
           <div className="flex justify-center -mb-2">
             <img
-              src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"
+              src="public/logo.png"
               alt="Company Logo"
               className="h-12 object-contain opacity-90 hover:opacity-100 transition-opacity"
             />
           </div>
 
           <h1 className="text-2xl tracking-tight font-semibold text-center text-white">
-            {showForgot ? "Forgot Password" : "SmartERP Login"}
+            {showForgot ? "Forgot Password" : "DDR AutoPro"}
           </h1>
 
           {showForgot ? (
@@ -202,10 +199,10 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              <button 
-                 type="submit"
-                 disabled={loading || !email || !password}
-                 className="w-full bg-[#1d4ed8] font-semibold py-3 flex justify-center items-center rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-[15px] tracking-wide"
+              <button
+                type="submit"
+                disabled={loading || !email || !password}
+                className="w-full bg-[#1d4ed8] font-semibold py-3 flex justify-center items-center rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-[15px] tracking-wide"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -219,53 +216,53 @@ export default function LoginPage() {
           {/* Premium Company Branding */}
           <div className="text-center text-xs text-gray-400 space-y-1 pt-4 mt-1">
             <div className="w-full h-px bg-white/10 mb-4"></div>
-            <p className="font-bold text-gray-200 text-sm tracking-wide">Rupesh Infotech Pvt. Ltd.</p>
+            {/* <p className="font-bold text-gray-200 text-sm tracking-wide">Rupesh Infotech Pvt. Ltd.</p>
             <p className="text-gray-400 text-xs">SmartERP Business Suite</p>
             <p className="pt-1 text-gray-400/80 flex items-center justify-center gap-1.5 font-medium">
                <span className="text-red-400 text-sm">📍</span> Mumbai, Maharashtra, India
-            </p>
-            <p className="text-[10px] text-gray-500/80 tracking-widest uppercase">© 2026 All Rights Reserved</p>
+            </p> */}
+            <p className="text-[10px] text-gray-500/80 tracking-widest uppercase">© 2026 DDR Management All Rights Reserved</p>
           </div>
         </div>
       </div>
 
       {/* Visual Theme Selector */}
-      <div className="mt-8 flex flex-col items-center gap-3">
+      {/* <div className="mt-8 flex flex-col items-center gap-3">
         <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Select Background Theme</p>
         <div className="flex items-center gap-3 bg-white/5 backdrop-blur-xl p-2.5 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-          <button 
-             onClick={() => setTheme('dark')} 
-             className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'dark' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-transparent'}`} 
-             style={{ background: 'linear-gradient(to bottom right, #030712, #111827)' }} 
-             title="Dark Slate"
+          <button
+            onClick={() => setTheme('dark')}
+            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'dark' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-transparent'}`}
+            style={{ background: 'linear-gradient(to bottom right, #030712, #111827)' }}
+            title="Dark Slate"
           />
-          <button 
-             onClick={() => setTheme('blue')} 
-             className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'blue' ? 'border-white scale-110 shadow-[0_0_15px_rgba(59,130,246,0.6)]' : 'border-transparent'}`} 
-             style={{ background: 'linear-gradient(to bottom right, #1e3a8a, #312e81)' }} 
-             title="Midnight Blue"
+          <button
+            onClick={() => setTheme('blue')}
+            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'blue' ? 'border-white scale-110 shadow-[0_0_15px_rgba(59,130,246,0.6)]' : 'border-transparent'}`}
+            style={{ background: 'linear-gradient(to bottom right, #1e3a8a, #312e81)' }}
+            title="Midnight Blue"
           />
-          <button 
-             onClick={() => setTheme('purple')} 
-             className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'purple' ? 'border-white scale-110 shadow-[0_0_15px_rgba(147,51,234,0.6)]' : 'border-transparent'}`} 
-             style={{ background: 'linear-gradient(to bottom right, #581c87, #2e1065)' }} 
-             title="Deep Purple"
+          <button
+            onClick={() => setTheme('purple')}
+            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'purple' ? 'border-white scale-110 shadow-[0_0_15px_rgba(147,51,234,0.6)]' : 'border-transparent'}`}
+            style={{ background: 'linear-gradient(to bottom right, #581c87, #2e1065)' }}
+            title="Deep Purple"
           />
           <div className="w-px h-5 bg-white/20 mx-1"></div>
-          
+
           <label className={`relative cursor-pointer w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 overflow-hidden shadow-inner flex items-center justify-center bg-[conic-gradient(red,yellow,lime,aqua,blue,fuchsia,red)] ${theme === 'custom' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,100,200,0.5)]' : 'border-transparent'}`} title="Pick Custom Color">
-             <input
-               type="color"
-               value={customColor}
-               onChange={(e) => {
-                 setCustomColor(e.target.value);
-                 setTheme("custom");
-               }}
-               className="absolute opacity-0 w-[200%] h-[200%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-             />
+            <input
+              type="color"
+              value={customColor}
+              onChange={(e) => {
+                setCustomColor(e.target.value);
+                setTheme("custom");
+              }}
+              className="absolute opacity-0 w-[200%] h-[200%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
+            />
           </label>
-        </div>
-      </div>
+        </div> */}
+      {/* </div> */}
     </div>
   );
 }

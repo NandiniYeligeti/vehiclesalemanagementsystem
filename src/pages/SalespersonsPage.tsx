@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, AlertTriangle, Loader2, Power } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { toast } from 'sonner';
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import { getMastersAction } from '@/store/ducks/company_masters.ducks';
+import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
 
 const SalespersonsPage = () => {
   const dispatch = useDispatch();
@@ -35,6 +36,7 @@ const SalespersonsPage = () => {
     (state: RootState) => state.salespersons || { data: [], loading: false, saving: false }
   );
   const { data: masters } = useSelector((state: RootState) => state.companyMasters);
+  const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders || { data: [] });
 
   const user = useSelector((state: RootState) => state.auth.user);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
@@ -43,6 +45,7 @@ const SalespersonsPage = () => {
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
+  const [deleteBlockedMsg, setDeleteBlockedMsg] = useState<string | null>(null);
 
   const [form, setForm] = useState<any>({
     full_name: '',
@@ -51,12 +54,15 @@ const SalespersonsPage = () => {
     showroom: '',
     branch: '',
     area: '',
+    is_inactive: false,
+    inactive_date: '',
   });
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getSalespersonsAction(companyCode));
       dispatch(getMastersAction(companyCode));
+      dispatch(getSalesOrdersAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -73,9 +79,12 @@ const SalespersonsPage = () => {
       toast.error('Full name is required');
       return;
     }
-
     if (!/^\d{10}$/.test(form.mobile_number)) {
       toast.error('Mobile number must be exactly 10 digits');
+      return;
+    }
+    if (!form.showroom) {
+      toast.error('Showroom is required');
       return;
     }
 
@@ -83,6 +92,7 @@ const SalespersonsPage = () => {
       ...form,
       company_id: companyCode,
       branch_id: form.branch || 'MAIN_BRANCH',
+      inactive_date: form.is_inactive && form.inactive_date ? new Date(form.inactive_date).toISOString() : null,
     };
 
     const id = form.entity_id || form._id || form.id;
@@ -109,6 +119,21 @@ const SalespersonsPage = () => {
     }
   };
 
+  const handleDeleteRequest = (item: any) => {
+    const id = item.entity_id || item._id || item.id;
+    // Check if any sales orders are linked to this salesperson
+    const linked = (salesOrders || []).filter(
+      (so: any) => so.salesperson_id === id
+    );
+    if (linked.length > 0) {
+      setDeleteBlockedMsg(
+        `Cannot delete "${item.full_name}" — ${linked.length} sales order(s) are linked to this salesperson.`
+      );
+      return;
+    }
+    setPersonToDelete(id);
+  };
+
   const confirmDelete = () => {
     if (personToDelete) {
       dispatch(deleteSalespersonAction(personToDelete, companyCode, () => {
@@ -121,6 +146,24 @@ const SalespersonsPage = () => {
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Blocked Delete Dialog */}
+      <AlertDialog open={!!deleteBlockedMsg} onOpenChange={() => setDeleteBlockedMsg(null)}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-xl">Cannot Delete</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm text-muted-foreground mt-2">
+              {deleteBlockedMsg}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center mt-6">
+            <AlertDialogCancel className="rounded-xl font-bold px-8">OK</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Custom Deletion Dialog */}
       <AlertDialog open={!!personToDelete} onOpenChange={() => setPersonToDelete(null)}>
         <AlertDialogContent className="rounded-3xl border-none shadow-2xl overflow-hidden p-8">
@@ -132,7 +175,7 @@ const SalespersonsPage = () => {
             <AlertDialogTitle className="text-center font-black text-2xl">Confirm Deletion</AlertDialogTitle>
             <AlertDialogDescription className="text-center text-muted-foreground font-medium text-sm mt-2">
               Are you sure you want to remove this salesperson from your team? 
-              This action is permanent and will remove all their performance tracking data.
+              This action is permanent.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="sm:justify-center gap-4 mt-8">
@@ -176,6 +219,8 @@ const SalespersonsPage = () => {
                 showroom: '',
                 branch: '',
                 area: '',
+                is_inactive: false,
+                inactive_date: '',
               });
               setIsEditing(false);
               setOpen(true);
@@ -208,7 +253,13 @@ const SalespersonsPage = () => {
                     </div>
                   </div>
                 </div>
-                <Badge className="bg-green-500/10 text-green-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest">ACTIVE</Badge>
+                {item.is_inactive ? (
+                  <Badge className="bg-red-500/10 text-red-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                    <Power className="w-2.5 h-2.5" /> INACTIVE
+                  </Badge>
+                ) : (
+                  <Badge className="bg-green-500/10 text-green-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest">ACTIVE</Badge>
+                )}
               </div>
 
               <div className="space-y-3 bg-muted/30 p-4 rounded-xl text-sm">
@@ -221,6 +272,12 @@ const SalespersonsPage = () => {
                        <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Area</p>
                        <p className="font-bold text-xs">{item.area || 'N/A'}</p>
                     </div>
+                    {item.is_inactive && item.inactive_date && (
+                      <div className="col-span-2 space-y-0.5 pt-1">
+                        <p className="text-[9px] font-black text-red-500 uppercase opacity-80">Inactive From</p>
+                        <p className="font-bold text-xs text-red-600">{new Date(item.inactive_date).toLocaleDateString('en-IN')}</p>
+                      </div>
+                    )}
                     <div className="sm:col-span-2 space-y-0.5 pt-1">
                        <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Support Email</p>
                        <p className="font-bold text-xs truncate">{item.email || 'N/A'}</p>
@@ -233,7 +290,10 @@ const SalespersonsPage = () => {
                   variant="outline"
                   className="flex-1 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary transition-all font-bold gap-2 h-10"
                   onClick={() => {
-                    setForm(item);
+                    setForm({
+                      ...item,
+                      inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                    });
                     setIsEditing(true);
                     setOpen(true);
                   }}
@@ -243,7 +303,7 @@ const SalespersonsPage = () => {
                 <Button
                   variant="outline"
                   className="rounded-xl border-border/60 hover:bg-destructive/5 hover:text-destructive transition-all font-bold h-10 px-3"
-                  onClick={() => setPersonToDelete(item.entity_id || item._id || item.id)}
+                  onClick={() => handleDeleteRequest(item)}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
@@ -267,12 +327,16 @@ const SalespersonsPage = () => {
             <DialogTitle className="text-xl font-black">
               {isEditing ? 'Edit Team Member' : 'New Salesperson'}
             </DialogTitle>
-            <p className="text-muted-foreground text-xs mt-1">Configure individual personnel details and assigned branch.</p>
+            <p className="text-muted-foreground text-xs mt-1">
+              Name, Mobile & Showroom are required.
+            </p>
           </DialogHeader>
 
           <div className="space-y-5">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
+              <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                Full Name <span className="text-destructive">*</span>
+              </label>
               <Input
                 placeholder="John Doe"
                 className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
@@ -283,7 +347,9 @@ const SalespersonsPage = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Mobile</label>
+                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                  Mobile <span className="text-destructive">*</span>
+                </label>
                 <Input
                   placeholder="10 digit number"
                   className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
@@ -304,7 +370,9 @@ const SalespersonsPage = () => {
 
             <div className="grid grid-cols-3 gap-3">
                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Showroom</label>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
+                    Showroom <span className="text-destructive">*</span>
+                  </label>
                   <select 
                     className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
                     value={form.showroom || ''}
@@ -336,6 +404,33 @@ const SalespersonsPage = () => {
                     {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                   </select>
                </div>
+            </div>
+
+            {/* Inactive Section */}
+            <div className="rounded-xl border border-border/60 p-4 space-y-3 bg-muted/10">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div 
+                  className={`w-10 h-5 rounded-full transition-all duration-300 relative ${form.is_inactive ? 'bg-red-500' : 'bg-muted'}`}
+                  onClick={() => setForm({ ...form, is_inactive: !form.is_inactive })}
+                >
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${form.is_inactive ? 'translate-x-5' : ''}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Mark as Inactive</p>
+                  <p className="text-[10px] text-muted-foreground">Inactive salespersons won't appear in new orders</p>
+                </div>
+              </label>
+              {form.is_inactive && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Date of Effect</label>
+                  <Input
+                    type="date"
+                    className="rounded-xl h-11 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                    value={form.inactive_date || ''}
+                    onChange={(e) => setForm({ ...form, inactive_date: e.target.value })}
+                  />
+                </div>
+              )}
             </div>
 
             <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>

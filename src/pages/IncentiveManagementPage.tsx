@@ -112,24 +112,23 @@ const IncentiveManagementPage = () => {
   };
 
   const handleDeleteIncentive = (id: string) => {
-    if (!window.confirm('Are you sure you want to remove this incentive record? This will clear all incentive data for this order.')) return;
+    if (!window.confirm('Are you sure you want to move this incentive back to Pending? The incentive data will be preserved.')) return;
     setIsProcessing(id);
     dispatch(updateSalesOrderAction(
       id,
       {
-        incentive_status: '',
-        incentive_amount: 0,
+        incentive_status: 'Pending',
         incentive_payment_method: '',
         incentive_reference_number: '',
         company_id: companyCode
       },
       () => {
         setIsProcessing(null);
-        toast.success('Incentive record removed');
+        toast.success('Incentive moved back to Pending');
       },
       () => {
         setIsProcessing(null);
-        toast.error('Failed to remove record');
+        toast.error('Failed to update status');
       }
     ));
   };

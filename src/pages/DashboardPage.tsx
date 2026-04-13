@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp, Database
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDispatch, useSelector } from 'react-redux';
 import { getDashboardStatsAction } from '@/store/ducks/dashboard.ducks';
 import { RootState } from '@/store/rootReducer';
+import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { api } from '@/services/api';
 
-const COLORS = ['hsl(239,70%,55%)', 'hsl(152,60%,40%)', 'hsl(38,92%,50%)', 'hsl(210,80%,55%)', 'hsl(280,60%,55%)'];
+const COLORS = ['hsl(239,70%,55%)', 'hsl(152,60%,40%)', 'hsl(38,92%,50%)', 'hsl(210,80%,55%)', 'hsl(280,60%,55%)', 'hsl(0,72%,55%)', 'hsl(180,60%,40%)'];
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
@@ -19,21 +20,20 @@ const DashboardPage = () => {
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const { stats, loading } = useSelector((state: RootState) => state.dashboard);
+  const rawInventory = useSelector((state: RootState) => state.vehicleInventory);
+  const inventory = Array.isArray(rawInventory?.data) ? rawInventory.data : [];
   const [isSeeding, setIsSeeding] = useState(false);
 
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
 
   useEffect(() => {
     if (!companyCode) return;
-    
-    // Initial fetch
     dispatch(getDashboardStatsAction(companyCode));
+    dispatch(getVehicleInventoryAction(companyCode));
 
-    // Live Data Polling: Fetch silently every 5 seconds
     const interval = setInterval(() => {
       dispatch(getDashboardStatsAction(companyCode));
     }, 5000);
-
     return () => clearInterval(interval);
   }, [dispatch, companyCode]);
 
@@ -51,6 +51,27 @@ const DashboardPage = () => {
   };
 
   const isDatabaseEmpty = !stats?.total_vehicles_in_stock && !stats?.total_customers && !stats?.total_sales_revenue;
+
+  // Compute brand-wise and model-wise available inventory from local state
+  const availableInventory = useMemo(() => inventory.filter((v: any) => v.status === 'Available'), [inventory]);
+
+  const modelAvailableData = useMemo(() => {
+    const map: Record<string, number> = {};
+    availableInventory.forEach((v: any) => {
+      const key = `${v.brand} ${v.model}`.trim() || 'Unknown';
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map).map(([model, count]) => ({ model, count })).sort((a, b) => b.count - a.count);
+  }, [availableInventory]);
+
+  const brandAvailableData = useMemo(() => {
+    const map: Record<string, number> = {};
+    availableInventory.forEach((v: any) => {
+      const key = v.brand || 'Unknown';
+      map[key] = (map[key] || 0) + 1;
+    });
+    return Object.entries(map).map(([brand, count]) => ({ brand, count })).sort((a, b) => b.count - a.count);
+  }, [availableInventory]);
 
   const statsCards = [
     { label: 'Vehicles in Stock', value: stats?.total_vehicles_in_stock || 0, icon: Car, color: 'text-info' },
@@ -102,7 +123,7 @@ const DashboardPage = () => {
         ))}
       </div>
 
-      {/* Charts */}
+      {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -159,11 +180,84 @@ const DashboardPage = () => {
         </motion.div>
       </div>
 
+      {/* Charts Row 2 — Available Stock by Model & Brand */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="erp-card p-6"
+        >
+          <h3 className="erp-section-title">Available Stock — By Model</h3>
+          <p className="text-xs text-muted-foreground mb-4">Current inventory available for sale, grouped by model</p>
+          {modelAvailableData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={modelAvailableData} layout="vertical" margin={{ left: 8, right: 16 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
+                <YAxis dataKey="model" type="category" tick={{ fontSize: 10 }} width={96} />
+                <Tooltip />
+                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="hsl(152,60%,40%)">
+                  {modelAvailableData.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">No available vehicles in stock</div>
+          )}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="erp-card p-6"
+        >
+          <h3 className="erp-section-title">Available Stock — By Brand</h3>
+          <p className="text-xs text-muted-foreground mb-4">Current inventory available for sale, grouped by brand</p>
+          {brandAvailableData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={brandAvailableData}
+                    dataKey="count"
+                    nameKey="brand"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    strokeWidth={2}
+                  >
+                    {brandAvailableData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                {brandAvailableData.map((item, i) => (
+                  <div key={item.brand} className="flex items-center gap-2 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-muted-foreground truncate">{item.brand}</span>
+                    <span className="ml-auto font-black tabular-nums">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">No available vehicles in stock</div>
+          )}
+        </motion.div>
+      </div>
+
       {/* Recent Sales */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
+        transition={{ delay: 0.55 }}
         className="erp-card"
       >
         <div className="p-4 border-b border-border">

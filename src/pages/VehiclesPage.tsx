@@ -10,6 +10,7 @@ import {
   getAccessoriesAction, addAccessoryAction, deleteAccessoryAction
 } from '@/store/ducks/vehicle_features.ducks';
 import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car } from 'lucide-react';
+import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -67,6 +68,11 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
   const [modelToDelete, setModelToDelete] = useState<string | null>(null);
   const [featureToDelete, setFeatureToDelete] = useState<{id: string, type: 'type' | 'category' | 'accessory'} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [blockDeleteMsg, setBlockDeleteMsg] = useState<string | null>(null);
+
+  // Also load inventory for usage checks
+  const rawInventoryState = useSelector((state: RootState) => state.vehicleInventory);
+  const inventory = Array.isArray(rawInventoryState?.data) ? rawInventoryState.data : [];
 
   // DEFENSIVE SELECTORS
   const rawModelsState = useSelector((state: RootState) => state.vehicleModels);
@@ -85,6 +91,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
       dispatch(getTypesAction(companyCode));
       dispatch(getCategoriesAction(companyCode));
       dispatch(getAccessoriesAction(companyCode));
+      dispatch(getVehicleInventoryAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -102,6 +109,13 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
   const handleConfirmDeleteModel = () => {
     if (modelToDelete) {
+      // Block if inventory has vehicles with this model_id
+      const usedInInventory = inventory.filter((v: any) => v.model_id === modelToDelete || v.vehicle_model_id === modelToDelete);
+      if (usedInInventory.length > 0) {
+        setModelToDelete(null);
+        setBlockDeleteMsg(`Cannot delete this model — ${usedInInventory.length} vehicle(s) in inventory are linked to it.`);
+        return;
+      }
       setIsDeleting(true);
       dispatch(deleteVehicleModelAction(modelToDelete, companyCode, () => {
         setIsDeleting(false);
@@ -116,8 +130,29 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
   const handleConfirmDeleteFeature = () => {
     if (featureToDelete) {
-      setIsDeleting(true);
       const { id, type } = featureToDelete;
+
+      // Block-delete checks
+      if (type === 'category') {
+        const linkedTypes = types.filter((t: any) => t.category_id === id);
+        const linkedModels = models.filter((m: any) => m.category_id === id);
+        if (linkedTypes.length > 0 || linkedModels.length > 0) {
+          setFeatureToDelete(null);
+          setBlockDeleteMsg(`Cannot delete this category — it has ${linkedTypes.length} type(s) and ${linkedModels.length} model(s) linked to it. Remove those first.`);
+          return;
+        }
+      }
+      if (type === 'type') {
+        const linkedModels = models.filter((m: any) => m.type_id === id);
+        const linkedAccessories = accessories.filter((a: any) => a.type_id === id);
+        if (linkedModels.length > 0 || linkedAccessories.length > 0) {
+          setFeatureToDelete(null);
+          setBlockDeleteMsg(`Cannot delete this type — it has ${linkedModels.length} model(s) and ${linkedAccessories.length} accessory(s) linked to it. Remove those first.`);
+          return;
+        }
+      }
+
+      setIsDeleting(true);
       const callback = (err?: any) => {
         setIsDeleting(false);
         setFeatureToDelete(null);
@@ -138,6 +173,23 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
   return (
     <div className="space-y-6">
+      {/* Block-Delete Dialog */}
+      <AlertDialog open={!!blockDeleteMsg} onOpenChange={() => setBlockDeleteMsg(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl p-8 max-w-sm">
+          <AlertDialogHeader>
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-amber-500" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-xl">Cannot Delete</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm text-muted-foreground mt-2">
+              {blockDeleteMsg}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center mt-6">
+            <AlertDialogCancel className="rounded-xl font-bold px-8">OK, Got It</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
         <button onClick={() => setTab('accessories')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'accessories' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>ACCESSORIES</button>
         <button onClick={() => setTab('models')} className={`px-4 py-2 rounded-md text-xs font-black tracking-widest transition-all ${tab === 'models' ? 'bg-primary text-primary-foreground shadow-lg' : 'text-muted-foreground hover:text-foreground'}`}>MODEL</button>

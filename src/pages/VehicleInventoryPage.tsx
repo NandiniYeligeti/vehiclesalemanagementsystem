@@ -6,7 +6,7 @@ import {
 } from '@/store/ducks/vehicle_inventory.ducks';
 import { getVehicleModelsAction } from '@/store/ducks/vehicle_models.ducks';
 import { getTypesAction, getCategoriesAction, getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
-import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, DollarSign, Fingerprint, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, Fingerprint, Eye, LayoutGrid, List, CheckCircle2, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -49,6 +49,8 @@ const VehicleInventoryPage = () => {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   // DEFENSIVE SELECTORS
   const rawInventoryState = useSelector((state: RootState) => state.vehicleInventory);
@@ -91,15 +93,23 @@ const VehicleInventoryPage = () => {
     }
   };
 
-  const filteredInventory = inventory.filter(item => 
-    (item.chassis_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.engine_number || '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.model || '').toLowerCase().includes(search.toLowerCase()) ||
-    (item.brand || '').toLowerCase().includes(search.toLowerCase())
-  );
+  const availableCount = inventory.filter(i => i.status === 'Available').length;
+  const soldCount = inventory.filter(i => i.status === 'Sold').length;
+  const totalCount = inventory.length;
+
+  const filteredInventory = inventory.filter(item => {
+    const matchesSearch =
+      (item.chassis_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.engine_number || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.model || '').toLowerCase().includes(search.toLowerCase()) ||
+      (item.brand || '').toLowerCase().includes(search.toLowerCase());
+    const matchesStatus = !statusFilter || item.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="space-y-6 pb-12">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
            <h2 className="text-2xl font-black">Vehicle Inventory</h2>
@@ -111,10 +121,73 @@ const VehicleInventoryPage = () => {
             <input type="text" placeholder="Search chassis, engine or model..." value={search} onChange={(e) => setSearch(e.target.value)}
               className="bg-transparent text-sm outline-none w-full sm:w-64 placeholder:text-muted-foreground/60" />
           </div>
+          {/* View Toggle */}
+          <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/60 gap-1">
+            <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="List View"><List className="w-3.5 h-3.5" /></button>
+            <button onClick={() => setViewMode('card')} className={`p-2 rounded-lg transition-all ${viewMode === 'card' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="Card View"><LayoutGrid className="w-3.5 h-3.5" /></button>
+          </div>
           <button onClick={() => { setEditingItem(null); setIsViewOnly(false); setShowForm(true); }} className="erp-button-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-primary/20 whitespace-nowrap">
             <Plus className="w-4 h-4" /> Add Vehicle
           </button>
         </div>
+      </div>
+
+      {/* Stat Cards */}
+      <div className="grid grid-cols-3 gap-4">
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'Available' ? null : 'Available')}
+          className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+            availableCount < 5 
+              ? 'border-red-500/40 bg-red-500/5 hover:border-red-500/60'
+              : statusFilter === 'Available' ? 'border-primary' : 'border-transparent'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+              availableCount < 5 ? 'bg-red-500/10' : 'bg-emerald-500/10'
+            }`}>
+              <CheckCircle2 className={`w-4 h-4 ${availableCount < 5 ? 'text-red-500' : 'text-emerald-500'}`} />
+            </div>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Available</span>
+            {availableCount < 5 && (
+              <span className="ml-auto text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-500">Low Stock</span>
+            )}
+          </div>
+          <p className={`text-3xl font-black ${availableCount < 5 ? 'text-red-500' : 'text-emerald-600'}`}>{availableCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">units ready to sell</p>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(statusFilter === 'Sold' ? null : 'Sold')}
+          className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+            statusFilter === 'Sold' ? 'border-primary' : 'border-transparent'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-blue-500" />
+            </div>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Sold</span>
+          </div>
+          <p className="text-3xl font-black text-blue-600">{soldCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">vehicles delivered</p>
+        </button>
+
+        <button
+          onClick={() => setStatusFilter(null)}
+          className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
+            !statusFilter ? 'border-primary' : 'border-transparent'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Car className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Total</span>
+          </div>
+          <p className="text-3xl font-black text-primary">{totalCount}</p>
+          <p className="text-xs text-muted-foreground mt-1">all vehicles</p>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">

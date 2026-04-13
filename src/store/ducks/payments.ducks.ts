@@ -79,9 +79,12 @@ export const updatePaymentAction = (id: string, payload: any, onSuccess?: () => 
   onError,
 });
 
-export const deletePaymentAction = (id: string) => ({
+export const deletePaymentAction = (id: string, companyCode: string, onSuccess?: () => void, onError?: () => void) => ({
   type: DELETE_PAYMENT,
   id,
+  companyCode,
+  onSuccess,
+  onError,
 });
 
 export const resendPaymentEmailAction = (companyCode: string, id: string, onSuccess?: () => void) => ({
@@ -138,11 +141,13 @@ function* updatePaymentSaga(action: any): any {
 
 function* deletePaymentSaga(action: any): any {
   try {
-    const companyCode = 'DEFAULT_COMPANY';
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
     yield call(api.deletePayment, companyCode, action.id);
     yield put(getPaymentsAction(companyCode));
+    if (action.onSuccess) action.onSuccess();
   } catch (error: any) {
     console.error('Error deleting payment:', error);
+    if (action.onError) action.onError();
   }
 }
 

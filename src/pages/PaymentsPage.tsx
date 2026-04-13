@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail } from 'lucide-react';
+import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail, Trash2, AlertTriangle } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -9,8 +9,18 @@ import * as Yup from 'yup';
 import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
-import { getPaymentsAction, addPaymentAction, resendPaymentEmailAction, previewPaymentEmailAction } from '@/store/ducks/payments.ducks';
+import { getPaymentsAction, addPaymentAction, deletePaymentAction, resendPaymentEmailAction, previewPaymentEmailAction } from '@/store/ducks/payments.ducks';
 import EmailPreviewModal from '@/components/EmailPreviewModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const paymentSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -47,8 +57,9 @@ const PaymentsPage = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
+  const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
-  const { data: payments = [], loading: paymentsLoading } = useSelector((state: RootState) => state.payments);
+  const { data: payments = [], loading: paymentsLoading, saving } = useSelector((state: RootState) => state.payments);
   const { data: customers = [] } = useSelector((state: RootState) => state.customers);
   const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons);
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders);
@@ -87,6 +98,43 @@ const PaymentsPage = () => {
     }));
   };
 
+  const handlePrint = (p: any) => {
+    const customer = customers.find(c => (c.entity_id || c._id || c.id) === p.customer_id);
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const content = `
+      <html><head><title>Payment Receipt - ${p.payment_code}</title>
+      <style>body{font-family:sans-serif;padding:40px;color:#333}h1{color:#2563eb}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}.total{font-size:20px;font-weight:bold;color:#2563eb}@media print{.no-print{display:none}}</style>
+      </head><body>
+      <h1>Payment Receipt</h1><p>${p.payment_code}</p>
+      <div class="row"><span>Customer</span><span>${customer?.customer_name || 'N/A'}</span></div>
+      <div class="row"><span>Invoice</span><span>${p.invoice_number}</span></div>
+      <div class="row"><span>Date</span><span>${formatDate(p.payment_date)}</span></div>
+      <div class="row"><span>Mode</span><span>${p.payment_mode}</span></div>
+      <div class="row"><span>Type</span><span>${p.payment_type}</span></div>
+      <div class="row total"><span>Amount Paid</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
+      <script>window.print();window.close();</script></body></html>
+    `;
+    printWindow.document.write(content);
+    printWindow.document.close();
+  };
+
+  const handleConfirmDelete = () => {
+    if (!paymentToDelete) return;
+    dispatch(deletePaymentAction(
+      paymentToDelete,
+      companyCode,
+      () => {
+        toast.success('Payment record deleted successfully');
+        setPaymentToDelete(null);
+      },
+      () => {
+        toast.error('Failed to delete payment');
+        setPaymentToDelete(null);
+      }
+    ));
+  };
+
   const filtered = useMemo(() => {
     return (payments || []).filter(p =>
       (p.payment_code || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -105,6 +153,31 @@ const PaymentsPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Delete Confirm Dialog */}
+      <AlertDialog open={!!paymentToDelete} onOpenChange={() => setPaymentToDelete(null)}>
+        <AlertDialogContent className="rounded-2xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center font-black text-xl">Delete Payment Record?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-sm font-medium">
+              This will permanently remove this payment entry. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center gap-3 mt-4">
+            <AlertDialogCancel className="rounded-xl font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="rounded-xl bg-destructive text-white hover:bg-destructive/90 font-bold shadow-lg border-none"
+              disabled={saving}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center h-10 px-4 rounded-xl bg-card border border-border gap-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
           <Search className="w-4 h-4 text-muted-foreground" />
@@ -137,13 +210,13 @@ const PaymentsPage = () => {
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Mode</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</th>
                 <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Status</th>
+                <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email</th>
                 <th className="px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((p) => (
-                <tr key={p._id || p.id} className="hover:bg-muted/30 transition-colors">
+                <tr key={p._id || p.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4 font-bold text-primary">{p.payment_code}</td>
                   <td className="px-6 py-4 font-medium text-foreground">{getCustomerName(p.customer_id)}</td>
                   <td className="px-6 py-4 font-mono text-xs">{p.invoice_number}</td>
@@ -178,23 +251,47 @@ const PaymentsPage = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button title="View" className="p-1.5 hover:bg-muted rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"><Eye className="w-4 h-4" /></button>
-                      <button title="Mail" onClick={() => handleOpenEmailPreview(p)} className="p-1.5 hover:bg-muted rounded-lg text-blue-600 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"><Mail className="w-4 h-4" /></button>
-                      <button title="Download" className="p-1.5 hover:bg-muted rounded-lg text-emerald-600 transition-colors hover:scale-110 active:scale-95"><Download className="w-4 h-4" /></button>
-                      <button title="Print" className="p-1.5 hover:bg-muted rounded-lg text-amber-600 transition-colors hover:scale-110 active:scale-95"><Printer className="w-4 h-4" /></button>
+                    {/* Same action buttons as Sales Order */}
+                    <div className="flex justify-end items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <button title="View" className="p-1.5 hover:bg-primary/10 rounded-lg text-primary transition-colors hover:scale-110 active:scale-95">
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
+                        title="Print"
+                        onClick={() => handlePrint(p)}
+                        className="p-1.5 hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors hover:scale-110 active:scale-95"
+                      >
+                        <Printer className="w-4 h-4" />
+                      </button>
+                      <button
+                        title="Send Email"
+                        onClick={() => handleOpenEmailPreview(p)}
+                        className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"
+                      >
+                        <Mail className="w-4 h-4" />
+                      </button>
+                      <button title="Download" className="p-1.5 hover:bg-emerald-500/10 rounded-lg text-emerald-500 transition-colors hover:scale-110 active:scale-95">
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        title="Delete"
+                        onClick={() => setPaymentToDelete(p.entity_id || p._id || p.id)}
+                        className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive transition-colors hover:scale-110 active:scale-95"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
               {!paymentsLoading && filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="text-center py-20 text-muted-foreground italic font-medium">No payment records found.</td>
+                  <td colSpan={10} className="text-center py-20 text-muted-foreground italic font-medium">No payment records found.</td>
                 </tr>
               )}
               {paymentsLoading && (
                 <tr>
-                  <td colSpan={9} className="text-center py-20 animate-pulse text-primary font-bold">Synchronizing financial ledger...</td>
+                  <td colSpan={10} className="text-center py-20 animate-pulse text-primary font-bold">Synchronizing financial ledger...</td>
                 </tr>
               )}
             </tbody>
@@ -245,7 +342,7 @@ const PaymentsPage = () => {
                     () => {
                       setSubmitting(false);
                       setShowForm(false);
-                      alert('Payment recorded successfully!');
+                      toast.success('Payment recorded successfully!');
                     },
                     () => setSubmitting(false)
                   ));
@@ -343,9 +440,7 @@ const PaymentsPage = () => {
                           {isSubmitting ? (
                             <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
-                            <>
-                              <Plus className="w-4 h-4" /> Save Receipt
-                            </>
+                            <><Plus className="w-4 h-4" /> Save Receipt</>
                           )}
                         </button>
                       </div>
