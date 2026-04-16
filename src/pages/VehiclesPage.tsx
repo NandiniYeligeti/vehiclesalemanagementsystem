@@ -9,7 +9,7 @@ import {
   getCategoriesAction, addCategoryAction, deleteCategoryAction,
   getAccessoriesAction, addAccessoryAction, deleteAccessoryAction
 } from '@/store/ducks/vehicle_features.ducks';
-import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Eye } from 'lucide-react';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -211,26 +211,39 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredModels.map((m) => (
-              <motion.div key={m.entity_id || m._id || m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group">
-                <div className="p-6 space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-xl font-black tracking-tight">{m.brand} {m.model}</h3>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">{m.variant} • {(m.fuel_type || []).join(', ')}</p>
-                    </div>
-                    <div className="p-2 rounded-xl bg-primary/5 text-primary">
+              <motion.div key={m.entity_id || m._id || m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group overflow-hidden border-t-[3px] border-t-primary">
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-primary/10 text-primary shrink-0">
                       <Car className="w-5 h-5" />
                     </div>
+                    <div>
+                      <h3 className="text-[15px] font-semibold text-foreground">{m.brand} {m.model}</h3>
+                      <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{m.variant} • {(m.fuel_type || []).join(', ')}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
-                    <div className="space-y-0.5">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase opacity-60">Base Price</p>
-                      <p className="text-lg font-black text-primary">₹{(m.base_price || 0).toLocaleString('en-IN')}</p>
+                  
+                  <div className="pt-2">
+                    <p className="text-2xl font-bold text-primary tracking-tight">₹{(m.base_price || 0).toLocaleString('en-IN')}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Base Price</p>
+                  </div>
+
+                  <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors">
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">View</span>
+                      </button>
+                      <button onClick={() => handleEditModel(m)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Edit</span>
+                      </button>
+                      <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Delete</span>
+                      </button>
                     </div>
-                    <div className="flex gap-1">
-                      <button onClick={() => handleEditModel(m)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all"><Edit2 className="w-4 h-4" /></button>
-                      <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-destructive transition-all"><Trash2 className="w-4 h-4" /></button>
-                    </div>
+                    <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
                   </div>
                 </div>
               </motion.div>

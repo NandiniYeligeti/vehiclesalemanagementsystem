@@ -190,11 +190,11 @@ const VehicleInventoryPage = () => {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-6">
+      <div className={`grid gap-6 ${viewMode === 'card' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
         {filteredInventory.map((item) => (
           <motion.div key={item.entity_id || item._id || item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group hover:border-primary/50 transition-all overflow-hidden border-none shadow-sm hover:shadow-xl">
              <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
-            <div className="p-6 flex flex-col md:flex-row gap-6">
+            <div className={`p-6 flex gap-6 ${viewMode === 'card' ? 'flex-col' : 'flex-col md:flex-row'}`}>
               <div className="flex-1 space-y-4">
                 <div className="flex items-start justify-between">
                   <div>
@@ -214,7 +214,7 @@ const VehicleInventoryPage = () => {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className={`grid gap-4 ${viewMode === 'card' ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1"><Fingerprint className="w-2.5 h-2.5" /> Chassis/VIN</p>
                     <p className="text-xs font-mono font-bold tracking-tight text-[#0f172a]">{item.chassis_number}</p>
@@ -227,8 +227,8 @@ const VehicleInventoryPage = () => {
                     <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1"><Calendar className="w-2.5 h-2.5" /> Purchase Date</p>
                     <p className="text-xs font-bold text-[#0f172a]">{formatDate(item.purchase_date)}</p>
                   </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1 justify-end"> Base Price</p>
+                  <div className={`space-y-1 ${viewMode === 'card' ? '' : 'text-right'}`}>
+                    <p className={`text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1 ${viewMode === 'card' ? '' : 'justify-end'}`}> Base Price</p>
                     <p className="text-sm font-black text-[#0f172a]">₹{(item.base_price || 0).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
@@ -246,8 +246,8 @@ const VehicleInventoryPage = () => {
                 )}
               </div>
 
-              <div className="md:w-52 flex flex-col justify-between border-l border-border/40 md:pl-6 gap-4">
-                <div className="text-right">
+              <div className={`flex flex-col justify-between border-border/40 gap-4 ${viewMode === 'card' ? 'w-full pt-4 border-t' : 'md:w-52 md:border-l md:pl-6'}`}>
+                <div className={`${viewMode === 'card' ? 'flex justify-between items-end' : 'text-right'}`}>
                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Offered Price</p>
                   <p className="text-2xl font-black text-primary">₹{(item.selling_price || item.total_price || 0).toLocaleString('en-IN')}</p>
                 </div>

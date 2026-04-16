@@ -412,10 +412,21 @@ const PaymentsPage = () => {
                             {['Down Payment', 'Balance Payment', 'Accessories', 'Full Payment'].map(t => <option key={t} value={t}>{t}</option>)}
                           </Field>
                         </div>
-                        <div>
-                          <label className="erp-label">Reference Number</label>
-                          <Field name="reference_number" className="erp-input h-10 font-mono" placeholder="UTR / Check No" />
-                        </div>
+                        {values.payment_mode !== 'Cash' && (
+                          <div>
+                            <label className="erp-label">
+                              {values.payment_mode === 'Cheque' ? 'Cheque Number' : 
+                               values.payment_mode === 'UPI' ? 'UPI No' : 
+                               values.payment_mode === 'Bank Transfer' ? 'Bank UTR No' : 
+                               'Reference Number'}
+                            </label>
+                            <Field name="reference_number" className="erp-input h-10 font-mono" placeholder={
+                               values.payment_mode === 'Cheque' ? 'Enter Check No' : 
+                               values.payment_mode === 'UPI' ? 'Enter UPI No' : 
+                               'UTR / Ref No'
+                            } />
+                          </div>
+                        )}
                         <div>
                           <label className="erp-label">Collected By</label>
                           <Field as="select" name="collected_by" className="erp-select h-10">

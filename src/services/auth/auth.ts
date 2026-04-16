@@ -36,3 +36,9 @@ export const updateUserMenusApi = async (userId: string, menus: string[], permis
   const response = await api.put(`/users/${userId}/menus`, { menus, permissions });
   return response.data;
 };
+
+export const updatePasswordApi = async (userId: string, password: string) => {
+  const response = await api.put(`/users/${userId}/password`, { password });
+  return response.data;
+};
+

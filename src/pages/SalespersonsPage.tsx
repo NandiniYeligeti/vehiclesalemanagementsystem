@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit, AlertTriangle, Loader2, Power } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { toast } from 'sonner';
@@ -232,63 +232,59 @@ const SalespersonsPage = () => {
       </div>
 
       {/* LIST */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {filtered.map((item: any) => (
-          <Card key={item.entity_id || item._id || item.id} className="rounded-2xl shadow-sm hover:shadow-xl transition-all border-none erp-card overflow-hidden group">
-            <CardContent className="p-6 space-y-4">
+          <div key={item.entity_id || item._id || item.id} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
+            {/* Top primary bar */}
+            <div className="h-1 w-full bg-primary" />
+            
+            <div className="p-4 space-y-3.5">
+              {/* Header */}
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-bold">
-                    {item.full_name?.[0]?.toUpperCase()}
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center border border-primary/10 shrink-0">
+                     <span className="font-bold text-[15px] text-primary">{item.full_name?.[0]?.toUpperCase()}</span>
                   </div>
-                  <div>
-                    <h3 className="font-bold text-lg leading-none">{item.full_name}</h3>
-                    <div className="flex items-center gap-1.5 mt-1.5">
-                      <Badge className="bg-primary/5 text-primary border-none px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter">
-                         {item.showroom || 'No Showroom'}
-                      </Badge>
-                      <Badge className="bg-muted text-muted-foreground border-none px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter">
-                         {item.branch || 'No Branch'}
-                      </Badge>
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-[15px] leading-none text-foreground">{item.full_name}</h3>
+                    <p className="text-[12px] font-semibold text-primary leading-none">{item.showroom || 'No Showroom'}</p>
+                    <div className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-medium leading-none">
+                      {item.branch || 'No Branch'}
                     </div>
                   </div>
                 </div>
+                {/* Active Tag */}
                 {item.is_inactive ? (
-                  <Badge className="bg-red-500/10 text-red-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                    <Power className="w-2.5 h-2.5" /> INACTIVE
-                  </Badge>
+                  <div className="bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                    Inactive
+                  </div>
                 ) : (
-                  <Badge className="bg-green-500/10 text-green-600 border-none px-2 rounded-lg text-[10px] font-black uppercase tracking-widest">ACTIVE</Badge>
+                  <div className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                    Active
+                  </div>
                 )}
               </div>
 
-              <div className="space-y-3 bg-muted/30 p-4 rounded-xl text-sm">
-                 <div className="grid grid-cols-2 gap-y-2">
-                    <div className="space-y-0.5">
-                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Mobile</p>
-                       <p className="font-bold text-xs">{item.mobile_number}</p>
-                    </div>
-                    <div className="space-y-0.5">
-                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Area</p>
-                       <p className="font-bold text-xs">{item.area || 'N/A'}</p>
-                    </div>
-                    {item.is_inactive && item.inactive_date && (
-                      <div className="col-span-2 space-y-0.5 pt-1">
-                        <p className="text-[9px] font-black text-red-500 uppercase opacity-80">Inactive From</p>
-                        <p className="font-bold text-xs text-red-600">{new Date(item.inactive_date).toLocaleDateString('en-IN')}</p>
-                      </div>
-                    )}
-                    <div className="sm:col-span-2 space-y-0.5 pt-1">
-                       <p className="text-[9px] font-black text-muted-foreground uppercase opacity-60">Support Email</p>
-                       <p className="font-bold text-xs truncate">{item.email || 'N/A'}</p>
-                    </div>
-                 </div>
+              {/* Info Rows */}
+              <div className="space-y-1.5 pt-0.5">
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <Phone className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[12px] font-medium text-muted-foreground">{item.mobile_number || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <MapPin className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[12px] font-medium text-muted-foreground">{item.area || 'N/A'}</span>
+                </div>
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <Mail className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-[12px] font-medium text-muted-foreground truncate">{item.email || 'N/A'}</span>
+                </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1 rounded-xl border-border/60 hover:bg-primary/5 hover:text-primary transition-all font-bold gap-2 h-10"
+              <div className="pt-3.5 border-t border-border/40 flex justify-between gap-3">
+                <button
+                  className="flex items-center justify-center gap-1.5 flex-1 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 transition-all shadow-sm"
                   onClick={() => {
                     setForm({
                       ...item,
@@ -298,18 +294,17 @@ const SalespersonsPage = () => {
                     setOpen(true);
                   }}
                 >
-                  <Edit className="w-3.5 h-3.5" /> Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  className="rounded-xl border-border/60 hover:bg-destructive/5 hover:text-destructive transition-all font-bold h-10 px-3"
+                  <Edit2 className="w-3.5 h-3.5" /> <span className="text-xs">Edit</span>
+                </button>
+                <button
+                  className="flex items-center justify-center gap-1.5 flex-1 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold py-2 transition-all shadow-sm"
                   onClick={() => handleDeleteRequest(item)}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                  <Trash2 className="w-3.5 h-3.5" /> <span className="text-xs">Delete</span>
+                </button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
@@ -410,14 +405,14 @@ const SalespersonsPage = () => {
             <div className="rounded-xl border border-border/60 p-4 space-y-3 bg-muted/10">
               <label className="flex items-center gap-3 cursor-pointer group">
                 <div 
-                  className={`w-10 h-5 rounded-full transition-all duration-300 relative ${form.is_inactive ? 'bg-red-500' : 'bg-muted'}`}
+                  className={`w-10 h-5 rounded-full transition-all duration-300 relative ${form.is_inactive ? 'bg-red-500' : 'bg-emerald-500'}`}
                   onClick={() => setForm({ ...form, is_inactive: !form.is_inactive })}
                 >
-                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${form.is_inactive ? 'translate-x-5' : ''}`} />
+                  <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${form.is_inactive ? 'translate-x-[20px]' : ''}`} />
                 </div>
                 <div>
-                  <p className="text-sm font-bold">Mark as Inactive</p>
-                  <p className="text-[10px] text-muted-foreground">Inactive salespersons won't appear in new orders</p>
+                  <p className={`text-sm font-bold ${form.is_inactive ? 'text-red-500' : 'text-emerald-500'}`}>{form.is_inactive ? 'Inactive' : 'Active'}</p>
+                  <p className="text-[10px] text-muted-foreground">{form.is_inactive ? "Inactive salespersons won't appear in new orders" : "Salesperson is active and available"}</p>
                 </div>
               </label>
               {form.is_inactive && (

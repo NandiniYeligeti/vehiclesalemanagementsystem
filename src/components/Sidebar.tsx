@@ -121,7 +121,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
         `}
       >
         {/* Logo */}
-        <div className="h-20 flex items-center px-6 border-b border-[hsl(var(--sidebar-border))] shrink-0">
+        <div className="relative h-20 flex items-center px-6 border-b border-[hsl(var(--sidebar-border))] shrink-0">
           <div className="w-10 h-10 rounded-2xl bg-primary shadow-[0_0_20px_rgba(var(--primary),0.3)] flex items-center justify-center overflow-hidden shrink-0 group hover:rotate-6 transition-transform">
              {settings?.logo_url ? (
                <img src={settings.logo_url} alt="Logo" className="w-full h-full object-contain" />
@@ -141,6 +141,14 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
               <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em] opacity-80"></span>
             </motion.div>
           )}
+
+          {/* Collapse toggle (desktop only) mapped to Top Right */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="hidden lg:flex absolute top-1/2 -right-3 -translate-y-1/2 w-6 h-6 items-center justify-center bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))] hover:text-primary hover:bg-[hsl(var(--sidebar-hover-bg))] rounded-full border border-[hsl(var(--sidebar-border))] shadow-md transition-all hover:scale-110 z-50"
+          >
+            <ChevronLeft className={`w-4 h-4 transition-transform duration-500 ${collapsed ? 'rotate-180' : ''}`} />
+          </button>
         </div>
 
         {/* Menu */}
@@ -232,31 +240,6 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
             );
           })}
         </nav>
-
-        {/* User Badge if not collapsed */}
-        {/* {!collapsed && (
-          <div className="px-4 py-6">
-            <div className="p-4 rounded-2xl bg-white/5 border border-white/5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-black overflow-hidden ring-2 ring-primary/20">
-                   {(user?.username?.[0] || 'A').toUpperCase()}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-xs font-bold truncate text-[hsl(var(--sidebar-active))]">{user?.username}</p>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground opacity-60">Session Active</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )} */}
-
-        {/* Collapse toggle (desktop only) */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex items-center justify-center h-14 border-t border-[hsl(var(--sidebar-border))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors text-[hsl(var(--sidebar-fg))] hover:text-[hsl(var(--sidebar-active))]"
-        >
-          <ChevronLeft className={`w-5 h-5 transition-transform duration-500 ${collapsed ? 'rotate-180' : ''}`} />
-        </button>
       </aside>
     </>
   );

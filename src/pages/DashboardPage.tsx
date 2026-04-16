@@ -113,20 +113,20 @@ const DashboardPage = () => {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="erp-card p-4"
+            className="erp-card p-5"
           >
             <div className="flex items-center gap-2 mb-2">
               <stat.icon className={`w-4 h-4 ${stat.color}`} />
-              <span className="text-xs text-muted-foreground font-medium">{stat.label}</span>
+              <span className="text-sm text-muted-foreground font-semibold">{stat.label}</span>
             </div>
-            <p className="erp-stat-value">{stat.value}</p>
+            <p className="text-3xl font-black mt-1 text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{stat.value}</p>
           </motion.div>
         ))}
       </div>
