@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bell, Search, User, LogOut, ChevronDown, Shield, Sun, Moon } from 'lucide-react';
+import { Settings2, UserPlus, Settings, Mail, Search, User, LogOut, ChevronDown, Shield, Sun, Moon } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { RootState } from '@/store/rootReducer';
@@ -9,21 +9,27 @@ import { useTheme } from '@/components/ThemeProvider';
 
 interface TopNavProps {
   title: string;
+  onTabChange?: (tab: string) => void;
 }
 
-const TopNav = ({ title }: TopNavProps) => {
+const TopNav = ({ title, onTabChange }: TopNavProps) => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
   const { theme, setTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
+      }
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
+        setSettingsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -47,7 +53,7 @@ const TopNav = ({ title }: TopNavProps) => {
     try {
       setIsUpdating(true);
       const { updatePasswordApi } = await import('@/services/auth/auth');
-      const userId = user?.id || user?._id || user?.entity_id;
+      const userId = user?.id;
       if (!userId) {
         throw new Error("Unable to identify user ID.");
       }
@@ -101,11 +107,50 @@ const TopNav = ({ title }: TopNavProps) => {
 
           <div className="w-px h-6 bg-border/60 mx-1 hidden sm:block"></div>
 
-          {/* Notifications */}
-          <button className="relative w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition-all active:scale-90 group">
-            <Bell className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-            <span className="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary ring-2 ring-card" />
-          </button>
+          {/* Settings / Setup Dropdown */}
+          {user?.role === 'admin' && (
+            <div className="relative" ref={settingsRef}>
+              <button 
+                onClick={() => setSettingsOpen(!settingsOpen)}
+                className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-90 group ${settingsOpen ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground'}`}
+              >
+                <Settings2 className={`w-5 h-5 transition-transform duration-300 ${settingsOpen ? 'rotate-90 text-primary' : 'group-hover:text-primary'}`} />
+              </button>
+
+              <AnimatePresence>
+                {settingsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 8, scale: 0.95 }}
+                    className="absolute right-0 mt-3 w-56 bg-card/90 backdrop-blur-2xl rounded-2xl ring-1 ring-border shadow-2xl overflow-hidden z-50 border border-white/5 p-1.5 space-y-0.5"
+                  >
+                    <div className="px-3 py-2 mb-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">System Setup</p>
+                    </div>
+                    
+                    {[
+                      { id: 'users', label: 'User Management', icon: UserPlus },
+                      { id: 'settings', label: 'Company Settings', icon: Settings },
+                      { id: 'email-config', label: 'Email Configuration', icon: Mail },
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          onTabChange?.(item.id);
+                          setSettingsOpen(false);
+                        }}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-muted-foreground hover:bg-primary/5 hover:text-primary transition-all group text-left"
+                      >
+                        <item.icon className="w-4 h-4 transition-transform group-hover:scale-110" />
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* User Dropdown */}
           <div className="relative" ref={dropdownRef}>

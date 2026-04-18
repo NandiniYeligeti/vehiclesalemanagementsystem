@@ -60,7 +60,7 @@ const Index = () => {
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopNav title={pageTitles[activeTab] || 'Dashboard'} />
+        <TopNav title={pageTitles[activeTab] || 'Dashboard'} onTabChange={setActiveTab} />
         <main className="flex-1 overflow-y-auto p-6 lg:p-8">
           {renderPage()}
         </main>
