@@ -281,35 +281,37 @@ const LoansPage = () => {
       </div>
 
       {/* Controllers: Tabs & Filters */}
-      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        <Tabs value={tab} onValueChange={setTab} className="w-full lg:w-auto">
-          <TabsList className="bg-muted/30 p-1 h-12 rounded-2xl border border-border/50">
-            {["All", "Applied", "Approved", "Disbursed", "Rejected"].map((t) => (
-              <TabsTrigger 
-                key={t} 
-                value={t} 
-                className="rounded-xl px-6 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg active:scale-95 transition-all"
-              >
-                {t}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      <div className="flex flex-col xl:flex-row gap-4 items-start xl:items-center justify-between">
+        <div className="overflow-x-auto w-full xl:w-auto pb-2 xl:pb-0 hide-scrollbar">
+          <Tabs value={tab} onValueChange={setTab} className="w-full">
+            <TabsList className="bg-muted/30 p-1 h-12 rounded-2xl border border-border/50 inline-flex min-w-max">
+              {["All", "Applied", "Approved", "Disbursed", "Rejected"].map((t) => (
+                <TabsTrigger 
+                  key={t} 
+                  value={t} 
+                  className="rounded-xl px-4 sm:px-6 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg active:scale-95 transition-all"
+                >
+                  {t}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
-        <div className="flex items-center flex-wrap gap-3 w-full lg:w-auto">
-          <div className="relative group flex-1 lg:w-64 min-w-[200px]">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+          <div className="relative group w-full sm:w-64">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
             <Input 
               placeholder="Search Customer / Bank..." 
               value={search} 
               onChange={(e) => setSearch(e.target.value)} 
-              className="h-12 pl-10 pr-4 rounded-2xl bg-muted/20 border-border/50 focus:ring-primary/10 transition-all font-medium text-sm" 
+              className="h-12 pl-10 pr-4 rounded-2xl bg-muted/20 border-border/50 focus:ring-primary/10 transition-all font-medium text-sm w-full" 
             />
           </div>
-          <div className="flex items-center gap-2">
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-12 w-40 rounded-2xl bg-muted/20 border-border/50 font-bold text-xs" />
-            <span className="text-muted-foreground text-xs font-black">TO</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-12 w-40 rounded-2xl bg-muted/20 border-border/50 font-bold text-xs" />
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-12 w-full sm:w-36 rounded-2xl bg-muted/20 border-border/50 font-bold text-xs" />
+            <span className="text-muted-foreground text-[10px] font-black">TO</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-12 w-full sm:w-36 rounded-2xl bg-muted/20 border-border/50 font-bold text-xs" />
           </div>
         </div>
       </div>

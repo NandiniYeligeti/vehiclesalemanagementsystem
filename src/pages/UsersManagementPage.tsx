@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { Plus, X, User, Mail, KeyRound, Loader2, Trash2, Users, Eye, EyeOff, Shield } from 'lucide-react';
 import { RootState } from '@/store/rootReducer';
-import { createUserApi, getUsersApi, deleteUserApi, updateUserMenusApi } from '@/services/auth/auth';
+import { createUserApi, getUsersApi, deleteUserApi, updateUserMenusApi, updatePasswordApi } from '@/services/auth/auth';
+import { useDispatch } from 'react-redux';
+import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 import { toast } from 'sonner';
 
 interface MenuPermission {
@@ -23,6 +25,9 @@ interface UserRecord {
   company_name: string;
   menus: string[];
   permissions: MenuPermission[];
+  branches?: string[];
+  showrooms?: string[];
+  areas?: string[];
   created_at: string;
 }
 
@@ -55,8 +60,10 @@ import {
 import { AlertTriangle } from 'lucide-react';
 
 const UsersManagementPage = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || sessionStorage.getItem('companyCode') || '';
+  const { data: masters } = useSelector((state: RootState) => state.companyMasters);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -70,12 +77,20 @@ const UsersManagementPage = () => {
     email: '',
     password: '',
     showrooms: [] as string[],
+    branches: [] as string[],
+    areas: [] as string[],
   });
   
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+  const [selectedUserForPassword, setSelectedUserForPassword] = useState<UserRecord | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
   const [updatingMenus, setUpdatingMenus] = useState(false);
   const [tempMenus, setTempMenus] = useState<string[]>([]);
   const [tempPermissions, setTempPermissions] = useState<MenuPermission[]>([]);
+  const [tempBranches, setTempBranches] = useState<string[]>([]);
+  const [tempShowrooms, setTempShowrooms] = useState<string[]>([]);
+  const [tempAreas, setTempAreas] = useState<string[]>([]);
   
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
 
@@ -94,8 +109,11 @@ const UsersManagementPage = () => {
   };
 
   useEffect(() => {
-    if (companyCode) fetchUsers();
-  }, [companyCode]);
+    if (companyCode) {
+      fetchUsers();
+      dispatch(getMastersAction(companyCode));
+    }
+  }, [companyCode, dispatch]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +126,7 @@ const UsersManagementPage = () => {
       await createUserApi(companyCode, formData);
       toast.success('User created successfully!');
       setShowForm(false);
-      setFormData({ username: '', email: '', password: '', showrooms: [] });
+      setFormData({ username: '', email: '', password: '', showrooms: [], branches: [], areas: [] });
       fetchUsers();
     } catch (error: any) {
       toast.error(error.response?.data?.error || error.message || 'Failed to create user');
@@ -130,6 +148,27 @@ const UsersManagementPage = () => {
       setUserToDelete(null);
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedUserForPassword || !newPassword) return;
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters long');
+      return;
+    }
+    
+    try {
+      setUpdatingPassword(true);
+      await updatePasswordApi(selectedUserForPassword.id, newPassword);
+      toast.success('Password updated successfully!');
+      setSelectedUserForPassword(null);
+      setNewPassword('');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || error.message || 'Failed to update password');
+    } finally {
+      setUpdatingPassword(false);
     }
   };
 
@@ -283,9 +322,22 @@ const UsersManagementPage = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => {
+                          setSelectedUserForPassword(u);
+                          setNewPassword('');
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        Password
+                      </button>
+                      <button
+                        onClick={() => {
                           setSelectedUser(u);
                           setTempMenus(u.menus || []);
                           setTempPermissions(u.permissions || []);
+                          setTempBranches(u.branches || []);
+                          setTempShowrooms(u.showrooms || []);
+                          setTempAreas(u.areas || []);
                         }}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
                       >
@@ -436,16 +488,45 @@ const UsersManagementPage = () => {
                   </div>
                 </div>
 
-                {/* Showroom Access */}
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
-                    Showroom Access <span className="text-muted-foreground/50 normal-case font-normal">(optional — leave blank for all)</span>
-                  </label>
-                  <div className="rounded-xl bg-muted/20 border border-border/60 p-3 space-y-2 max-h-32 overflow-y-auto">
-                    {([] as any[]).length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Configure showrooms in Settings to restrict access</p>
-                    ) : null}
-                  </div>
+                {/* Organizational Access */}
+                <div className="space-y-4">
+                  {[
+                    { label: 'Branch Access', key: 'branches', type: 'Branch' },
+                    { label: 'Showroom Access', key: 'showrooms', type: 'Showroom' },
+                    { label: 'Area Access', key: 'areas', type: 'Area' },
+                  ].map((field) => {
+                    const items = (masters || []).filter((m) => m.type === field.type);
+                    return (
+                      <div key={field.key}>
+                        <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
+                          {field.label} <span className="text-muted-foreground/50 normal-case font-normal">(optional — leave blank for all)</span>
+                        </label>
+                        <div className="rounded-xl bg-muted/20 border border-border/60 p-3 space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+                          {items.length === 0 ? (
+                            <p className="text-xs text-muted-foreground italic">Configure {field.type.toLowerCase()}s in Settings to restrict access</p>
+                          ) : (
+                            items.map((item) => (
+                              <label key={item.id || item.entity_id} className="flex items-center gap-3 cursor-pointer group">
+                                <input
+                                  type="checkbox"
+                                  className="w-4 h-4 rounded border-border text-primary focus:ring-primary/20"
+                                  checked={(formData as any)[field.key].includes(item.name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setFormData({ ...formData, [field.key]: [...(formData as any)[field.key], item.name] });
+                                    } else {
+                                      setFormData({ ...formData, [field.key]: (formData as any)[field.key].filter((n: string) => n !== item.name) });
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm font-medium group-hover:text-foreground transition-colors">{item.name}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Info Box */}
@@ -510,6 +591,40 @@ const UsersManagementPage = () => {
                 <button onClick={() => setSelectedUser(null)} className="p-2 hover:bg-muted rounded-xl transition-colors"><X className="w-5 h-5" /></button>
               </div>
               
+              <div className="p-6 border-b border-border bg-muted/5 grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {[
+                    { label: 'Branches', state: tempBranches, setState: setTempBranches, type: 'Branch' },
+                    { label: 'Showrooms', state: tempShowrooms, setState: setTempShowrooms, type: 'Showroom' },
+                    { label: 'Areas', state: tempAreas, setState: setTempAreas, type: 'Area' },
+                  ].map((field) => {
+                    const items = (masters || []).filter((m) => m.type === field.type);
+                    return (
+                      <div key={field.label}>
+                        <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block mb-3">{field.label}</label>
+                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                          {items.length === 0 ? (
+                            <p className="text-[10px] text-muted-foreground italic">No {field.type.toLowerCase()}s configured in Settings.</p>
+                          ) : (
+                            items.map((item) => (
+                              <label key={item.id || item.entity_id} className="flex items-center gap-2.5 cursor-pointer group hover:bg-muted/30 p-1.5 rounded-lg transition-colors">
+                                <input
+                                  type="checkbox"
+                                  className="w-3.5 h-3.5 rounded border-border text-primary focus:ring-primary/20"
+                                  checked={field.state.includes(item.name)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) field.setState([...field.state, item.name]);
+                                    else field.setState(field.state.filter((n) => n !== item.name));
+                                  }}
+                                />
+                                <span className="text-xs font-bold group-hover:text-foreground transition-colors truncate">{item.name}</span>
+                              </label>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
               <div className="p-0 overflow-y-auto flex-1">
                 <table className="w-full text-sm border-collapse">
                   <thead className="sticky top-0 bg-card z-10 shadow-sm border-b border-border">
@@ -635,7 +750,7 @@ const UsersManagementPage = () => {
                   onClick={async () => {
                     try {
                       setUpdatingMenus(true);
-                      await updateUserMenusApi(selectedUser.id, tempMenus, tempPermissions);
+                      await updateUserMenusApi(selectedUser.id, tempMenus, tempPermissions, tempBranches, tempShowrooms, tempAreas);
                       toast.success('Permissions updated successfully!');
                       setSelectedUser(null);
                       fetchUsers();
@@ -651,6 +766,72 @@ const UsersManagementPage = () => {
                   {updatingMenus ? <Loader2 className="w-5 h-5 animate-spin" /> : "Save Permissions"}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {selectedUserForPassword && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-card rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col border border-border"
+            >
+              <div className="p-6 border-b border-border bg-muted/20 flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-bold">Reset Password</h3>
+                  <p className="text-xs text-muted-foreground mt-1">For user: <span className="font-bold">{selectedUserForPassword.username}</span></p>
+                </div>
+                <button onClick={() => setSelectedUserForPassword(null)} className="p-2 hover:bg-muted rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+
+              <form onSubmit={handleUpdatePassword} className="p-6 space-y-6">
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      required
+                      minLength={6}
+                      className="w-full h-11 pl-10 pr-12 rounded-xl bg-muted/20 border border-border/60 hover:border-border transition-all focus:ring-2 focus:ring-emerald-500/20 outline-none text-sm font-medium focus:border-emerald-500/50"
+                      placeholder="Min 6 characters"
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUserForPassword(null)}
+                    className="px-6 py-2.5 rounded-xl font-bold hover:bg-muted transition-colors text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={updatingPassword}
+                    className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/20 hover:bg-emerald-500 active:scale-[0.98] transition-all disabled:opacity-50 text-sm"
+                  >
+                    {updatingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : "Update Password"}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </div>
         )}

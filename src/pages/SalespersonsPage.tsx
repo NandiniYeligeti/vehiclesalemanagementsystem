@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail, Eye } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { toast } from 'sonner';
@@ -282,26 +282,35 @@ const SalespersonsPage = () => {
                 </div>
               </div>
 
-              <div className="pt-3.5 border-t border-border/40 flex justify-between gap-3">
-                <button
-                  className="flex items-center justify-center gap-1.5 flex-1 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-2 transition-all shadow-sm"
-                  onClick={() => {
-                    setForm({
-                      ...item,
-                      inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
-                    });
-                    setIsEditing(true);
-                    setOpen(true);
-                  }}
-                >
-                  <Edit2 className="w-3.5 h-3.5" /> <span className="text-xs">Edit</span>
-                </button>
-                <button
-                  className="flex items-center justify-center gap-1.5 flex-1 rounded-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground font-bold py-2 transition-all shadow-sm"
-                  onClick={() => handleDeleteRequest(item)}
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> <span className="text-xs">Delete</span>
-                </button>
+              <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors">
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">View</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setForm({
+                        ...item,
+                        inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                      });
+                      setIsEditing(true);
+                      setOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">Edit</span>
+                  </button>
+                  <button
+                    onClick={() => handleDeleteRequest(item)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">Delete</span>
+                  </button>
+                </div>
+                <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
               </div>
             </div>
           </div>

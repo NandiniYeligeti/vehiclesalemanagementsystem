@@ -93,8 +93,8 @@ const VehicleInventoryPage = () => {
     }
   };
 
-  const availableCount = inventory.filter(i => i.status === 'Available').length;
-  const soldCount = inventory.filter(i => i.status === 'Sold').length;
+  const availableCount = inventory.filter(i => (i.status || '').toLowerCase() === 'available').length;
+  const soldCount = inventory.filter(i => (i.status || '').toLowerCase() === 'sold').length;
   const totalCount = inventory.length;
 
   const filteredInventory = inventory.filter(item => {
@@ -103,7 +103,7 @@ const VehicleInventoryPage = () => {
       (item.engine_number || '').toLowerCase().includes(search.toLowerCase()) ||
       (item.model || '').toLowerCase().includes(search.toLowerCase()) ||
       (item.brand || '').toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = !statusFilter || item.status === statusFilter;
+    const matchesStatus = !statusFilter || (item.status || '').toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
 
@@ -207,8 +207,8 @@ const VehicleInventoryPage = () => {
                     <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter opacity-80">{item.variant} • {item.fuel_type}</p>
                   </div>
                   <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    item.status === 'Available' ? 'bg-emerald-500/10 text-emerald-600' :
-                    item.status === 'Sold' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                    (item.status || '').toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-600' :
+                    (item.status || '').toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
                   }`}>
                     {item.status}
                   </div>
@@ -255,16 +255,16 @@ const VehicleInventoryPage = () => {
                   <button 
                     onClick={() => { 
                       setEditingItem(item); 
-                      setIsViewOnly(item.status !== 'Available');
+                      setIsViewOnly((item.status || '').toLowerCase() !== 'available');
                       setShowForm(true); 
                     }} 
                     className={`flex-1 h-10 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ring-1 ${
-                      item.status === 'Available' ? 'bg-primary/5 text-primary hover:bg-primary hover:text-white ring-primary/20' : 'bg-muted/40 text-muted-foreground ring-border hover:bg-muted'
+                      (item.status || '').toLowerCase() === 'available' ? 'bg-primary/5 text-primary hover:bg-primary hover:text-white ring-primary/20' : 'bg-muted/40 text-muted-foreground ring-border hover:bg-muted'
                     }`}
                   >
-                    {item.status === 'Available' ? <><Edit2 className="w-3.5 h-3.5" /> Edit</> : <><Eye className="w-3.5 h-3.5" /> View</>}
+                    {(item.status || '').toLowerCase() === 'available' ? <><Edit2 className="w-3.5 h-3.5" /> Edit</> : <><Eye className="w-3.5 h-3.5" /> View</>}
                   </button>
-                  {item.status === 'Available' && (
+                  {(item.status || '').toLowerCase() === 'available' && (
                     <button onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)} className="h-10 w-10 rounded-xl bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-all ring-1 ring-destructive/20 flex items-center justify-center">
                       <Trash2 className="w-4 h-4" />
                     </button>

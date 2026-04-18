@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Monitor } from "lucide-react";
 import { loginAction } from '@/store/ducks/auth.duck';
 import { RootState } from '@/store/rootReducer';
+import { forgotPasswordApi } from "@/services/auth/auth";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const dispatch = useDispatch();
@@ -81,6 +83,20 @@ export default function LoginPage() {
     }));
   };
 
+  const handleForgot = async () => {
+    if (!email) {
+      toast.error("Please enter your registered email address");
+      return;
+    }
+    try {
+      const res = await forgotPasswordApi(email);
+      toast.success(res.message || "Password sent to your email!");
+      setShowForgot(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to send reset email");
+    }
+  };
+
   const bgStyle = theme === "custom" ? { backgroundColor: customColor } : {};
 
   return (
@@ -139,8 +155,11 @@ export default function LoginPage() {
                 className="w-full p-3 rounded-lg bg-[#27272a] border border-[#3f3f46] outline-none focus:border-blue-500 focus:bg-[#27272a] transition-colors text-white placeholder:text-gray-400"
               />
 
-              <button className="w-full bg-[#2563eb] font-semibold py-3 rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/10 active:scale-[0.98]">
-                Send Reset Link
+              <button 
+                onClick={handleForgot}
+                className="w-full bg-[#2563eb] font-semibold py-3 rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/10 active:scale-[0.98]"
+              >
+                Send Password
               </button>
 
               <button

@@ -32,13 +32,18 @@ export const deleteUserApi = async (companyCode: string, userId: string) => {
   return response.data;
 };
 
-export const updateUserMenusApi = async (userId: string, menus: string[], permissions: any[]) => {
-  const response = await api.put(`/users/${userId}/menus`, { menus, permissions });
+export const updateUserMenusApi = async (userId: string, menus: string[], permissions: any[], branches: string[] = [], showrooms: string[] = [], areas: string[] = []) => {
+  const response = await api.put(`/users/${userId}/menus`, { menus, permissions, branches, showrooms, areas });
   return response.data;
 };
 
 export const updatePasswordApi = async (userId: string, password: string) => {
   const response = await api.put(`/users/${userId}/password`, { password });
+  return response.data;
+};
+
+export const forgotPasswordApi = async (email: string) => {
+  const response = await api.post("/forgot-password", { email });
   return response.data;
 };
 
