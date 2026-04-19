@@ -6,7 +6,8 @@ import {
 } from '@/store/ducks/vehicle_inventory.ducks';
 import { getVehicleModelsAction } from '@/store/ducks/vehicle_models.ducks';
 import { getTypesAction, getCategoriesAction, getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
-import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, Fingerprint, Eye, LayoutGrid, List, CheckCircle2, TrendingUp } from 'lucide-react';
+import { getMastersAction } from '@/store/ducks/company_masters.ducks';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Calendar, Fingerprint, Eye, LayoutGrid, List, CheckCircle2, TrendingUp, Store } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
@@ -35,8 +36,6 @@ const formatDate = (dateString: string) => {
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
   } catch (e) { return dateString; }
 };
-
-import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 
 const VehicleInventoryPage = () => {
   const dispatch = useDispatch();
@@ -192,84 +191,106 @@ const VehicleInventoryPage = () => {
 
       <div className={`grid gap-6 ${viewMode === 'card' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
         {filteredInventory.map((item) => (
-          <motion.div key={item.entity_id || item._id || item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group hover:border-primary/50 transition-all overflow-hidden border-none shadow-sm hover:shadow-xl">
-             <div className="absolute top-0 left-0 w-1.5 h-full bg-primary/20 group-hover:bg-primary transition-colors" />
-            <div className={`p-6 flex gap-6 ${viewMode === 'card' ? 'flex-col' : 'flex-col md:flex-row'}`}>
-              <div className="flex-1 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                       <h3 className="text-xl font-black tracking-tight">{item.brand} {item.model}</h3>
-                       <Badge className="bg-primary/5 text-primary border-none px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest leading-none">
-                         {item.showroom || 'No Showroom'}
-                       </Badge>
-                    </div>
-                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-tighter opacity-80">{item.variant} • {item.fuel_type}</p>
+          <motion.div key={item.entity_id || item._id || item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
+            {/* Top primary bar */}
+            <div className="h-1 w-full bg-primary" />
+            
+            <div className={`p-4 space-y-4 ${viewMode === 'list' ? 'flex flex-col md:flex-row md:items-center md:gap-6' : ''}`}>
+              {/* Header section */}
+              <div className={`flex justify-between items-start ${viewMode === 'list' ? 'md:w-72' : ''}`}>
+                <div className="flex items-center gap-3">
+                  {/* Avatar / Icon */}
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center border border-primary/10 shrink-0">
+                     <Car className="w-5 h-5 text-primary" />
                   </div>
-                  <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                    (item.status || '').toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-600' :
-                    (item.status || '').toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
-                  }`}>
-                    {item.status}
-                  </div>
-                </div>
-
-                <div className={`grid gap-4 ${viewMode === 'card' ? 'grid-cols-2' : 'grid-cols-2 lg:grid-cols-4'}`}>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1"><Fingerprint className="w-2.5 h-2.5" /> Chassis/VIN</p>
-                    <p className="text-xs font-mono font-bold tracking-tight text-[#0f172a]">{item.chassis_number}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1">Engine Number</p>
-                    <p className="text-xs font-mono font-bold tracking-tight text-[#0f172a]">{item.engine_number}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1"><Calendar className="w-2.5 h-2.5" /> Purchase Date</p>
-                    <p className="text-xs font-bold text-[#0f172a]">{formatDate(item.purchase_date)}</p>
-                  </div>
-                  <div className={`space-y-1 ${viewMode === 'card' ? '' : 'text-right'}`}>
-                    <p className={`text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1 ${viewMode === 'card' ? '' : 'justify-end'}`}> Base Price</p>
-                    <p className="text-sm font-black text-[#0f172a]">₹{(item.base_price || 0).toLocaleString('en-IN')}</p>
-                  </div>
-                </div>
-
-                {Array.isArray(item.accessories) && item.accessories.length > 0 && (
-                  <div className="pt-3 border-t border-border/40">
-                    <p className="text-[9px] font-black text-muted-foreground uppercase mb-2 tracking-widest opacity-60">Installed Accessories</p>
-                    <div className="flex flex-wrap gap-2">
-                      {item.accessories.map((accId: string) => {
-                        const acc = accessories.find(a => (a.entity_id || a._id || a.id) === accId);
-                        return acc ? <span key={accId} className="px-2 py-1 rounded-md bg-muted/60 text-[9px] font-black uppercase tracking-tighter text-muted-foreground ring-1 ring-border/50">{acc.name}</span> : null;
-                      })}
+                  <div className="space-y-0.5">
+                    <h3 className="font-bold text-[15px] leading-none text-foreground">{item.brand} {item.model}</h3>
+                    <p className="text-[12px] font-bold text-primary leading-none uppercase tracking-tight mt-1">{item.variant || 'Standard'}</p>
+                    <div className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-medium leading-none mt-1">
+                      {item.showroom || 'No Showroom'}
                     </div>
                   </div>
-                )}
+                </div>
+                {/* Status Badge */}
+                <div className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  (item.status || '').toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-600' :
+                  (item.status || '').toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-600' : 'bg-amber-500/10 text-amber-600'
+                }`}>
+                  {item.status}
+                </div>
               </div>
 
-              <div className={`flex flex-col justify-between border-border/40 gap-4 ${viewMode === 'card' ? 'w-full pt-4 border-t' : 'md:w-52 md:border-l md:pl-6'}`}>
-                <div className={`${viewMode === 'card' ? 'flex justify-between items-end' : 'text-right'}`}>
-                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Offered Price</p>
-                  <p className="text-2xl font-black text-primary">₹{(item.selling_price || item.total_price || 0).toLocaleString('en-IN')}</p>
+              {/* Info Rows / Grid */}
+              <div className={`flex-1 grid gap-2 ${viewMode === 'list' ? 'md:grid-cols-4' : 'grid-cols-1 md:grid-cols-2'}`}>
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <Fingerprint className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-0.5">Chassis</span>
+                    <span className="text-[11px] font-bold text-[#0f172a] font-mono">{item.chassis_number || 'N/A'}</span>
+                  </div>
                 </div>
-                <div className="flex gap-2 justify-end">
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-0.5">Purchase</span>
+                    <span className="text-[11px] font-bold text-[#0f172a]">{formatDate(item.purchase_date)}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <Store className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-0.5">Fuel Type</span>
+                    <span className="text-[11px] font-bold text-[#0f172a]">{item.fuel_type || 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                  <TrendingUp className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase leading-none mb-0.5">Price</span>
+                    <span className="text-[12px] font-black text-primary">₹{(item.selling_price || item.total_price || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className={`pt-4 border-t border-border/50 flex items-center justify-between ${viewMode === 'list' ? 'md:border-t-0 md:pt-0 md:w-48' : ''}`}>
+                <div className="flex items-center gap-2">
                   <button 
                     onClick={() => { 
                       setEditingItem(item); 
-                      setIsViewOnly((item.status || '').toLowerCase() !== 'available');
+                      setIsViewOnly(true);
                       setShowForm(true); 
                     }} 
-                    className={`flex-1 h-10 px-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest ring-1 ${
-                      (item.status || '').toLowerCase() === 'available' ? 'bg-primary/5 text-primary hover:bg-primary hover:text-white ring-primary/20' : 'bg-muted/40 text-muted-foreground ring-border hover:bg-muted'
-                    }`}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
                   >
-                    {(item.status || '').toLowerCase() === 'available' ? <><Edit2 className="w-3.5 h-3.5" /> Edit</> : <><Eye className="w-3.5 h-3.5" /> View</>}
+                    <Eye className="w-3.5 h-3.5" />
+                    <span className="text-xs font-semibold">View</span>
                   </button>
+
                   {(item.status || '').toLowerCase() === 'available' && (
-                    <button onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)} className="h-10 w-10 rounded-xl bg-destructive/5 text-destructive hover:bg-destructive hover:text-white transition-all ring-1 ring-destructive/20 flex items-center justify-center">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <>
+                      <button
+                        onClick={() => { 
+                          setEditingItem(item); 
+                          setIsViewOnly(false);
+                          setShowForm(true); 
+                        }} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Delete</span>
+                      </button>
+                    </>
                   )}
                 </div>
+                {viewMode === 'card' && <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>}
               </div>
             </div>
           </motion.div>

@@ -72,7 +72,7 @@ const TopNav = ({ title, onTabChange }: TopNavProps) => {
 
   return (
     <>
-      <header className="h-20 bg-card/70 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-6 lg:px-10 shrink-0 sticky top-0 z-40">
+      <header className="h-20 bg-card/70 backdrop-blur-xl border-b border-border/50 flex items-center justify-between px-6 lg:px-10 shrink-0 sticky top-0 z-40 print:hidden">
         <div className="flex flex-col">
           <h1 className="text-xl font-black text-foreground pl-12 lg:pl-0 tracking-tight">{title}</h1>
           <div className="hidden lg:flex items-center gap-1 pl-0">

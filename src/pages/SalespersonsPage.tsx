@@ -44,6 +44,7 @@ const SalespersonsPage = () => {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
   const [deleteBlockedMsg, setDeleteBlockedMsg] = useState<string | null>(null);
 
@@ -223,6 +224,7 @@ const SalespersonsPage = () => {
                 inactive_date: '',
               });
               setIsEditing(false);
+              setIsViewOnly(false);
               setOpen(true);
             }}
           >
@@ -284,7 +286,18 @@ const SalespersonsPage = () => {
 
               <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors">
+                  <button 
+                    onClick={() => {
+                      setForm({
+                        ...item,
+                        inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                      });
+                      setIsEditing(false);
+                      setIsViewOnly(true);
+                      setOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                  >
                     <Eye className="w-3.5 h-3.5" />
                     <span className="text-xs font-semibold">View</span>
                   </button>
@@ -295,6 +308,7 @@ const SalespersonsPage = () => {
                         inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
                       });
                       setIsEditing(true);
+                      setIsViewOnly(false);
                       setOpen(true);
                     }}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
@@ -329,10 +343,10 @@ const SalespersonsPage = () => {
           <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
           <DialogHeader className="mb-6">
             <DialogTitle className="text-xl font-black">
-              {isEditing ? 'Edit Team Member' : 'New Salesperson'}
+              {isViewOnly ? 'Salesperson Details' : (isEditing ? 'Edit Team Member' : 'New Salesperson')}
             </DialogTitle>
             <p className="text-muted-foreground text-xs mt-1">
-              Name, Mobile & Showroom are required.
+              {isViewOnly ? 'Full profile details' : 'Name, Mobile & Showroom are required.'}
             </p>
           </DialogHeader>
 
@@ -343,7 +357,8 @@ const SalespersonsPage = () => {
               </label>
               <Input
                 placeholder="John Doe"
-                className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                disabled={isViewOnly}
+                className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-70 disabled:cursor-default"
                 value={form.full_name || ''}
                 onChange={(e) => setForm({ ...form, full_name: e.target.value })}
               />
@@ -356,7 +371,8 @@ const SalespersonsPage = () => {
                 </label>
                 <Input
                   placeholder="10 digit number"
-                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                  disabled={isViewOnly}
+                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-70 disabled:cursor-default"
                   value={form.mobile_number || ''}
                   onChange={(e) => setForm({ ...form, mobile_number: e.target.value })}
                 />
@@ -365,7 +381,8 @@ const SalespersonsPage = () => {
                 <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Email Address</label>
                 <Input
                   placeholder="john@example.com"
-                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                  disabled={isViewOnly}
+                  className="rounded-xl h-12 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-70 disabled:cursor-default"
                   value={form.email || ''}
                   onChange={(e) => setForm({ ...form, email: e.target.value })}
                 />
@@ -378,8 +395,9 @@ const SalespersonsPage = () => {
                     Showroom <span className="text-destructive">*</span>
                   </label>
                   <select 
-                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold disabled:opacity-70 disabled:cursor-default"
                     value={form.showroom || ''}
+                    disabled={isViewOnly}
                     onChange={(e) => setForm({ ...form, showroom: e.target.value })}
                   >
                     <option value="">Select</option>
@@ -389,8 +407,9 @@ const SalespersonsPage = () => {
                <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Branch</label>
                   <select 
-                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold disabled:opacity-70 disabled:cursor-default"
                     value={form.branch || ''}
+                    disabled={isViewOnly}
                     onChange={(e) => setForm({ ...form, branch: e.target.value })}
                   >
                     <option value="">Select</option>
@@ -400,8 +419,9 @@ const SalespersonsPage = () => {
                <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Area</label>
                   <select 
-                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold"
+                    className="w-full rounded-xl h-12 bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 px-3 text-xs font-bold disabled:opacity-70 disabled:cursor-default"
                     value={form.area || ''}
+                    disabled={isViewOnly}
                     onChange={(e) => setForm({ ...form, area: e.target.value })}
                   >
                     <option value="">Select</option>
@@ -412,10 +432,10 @@ const SalespersonsPage = () => {
 
             {/* Inactive Section */}
             <div className="rounded-xl border border-border/60 p-4 space-y-3 bg-muted/10">
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <label className={`flex items-center gap-3 group ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
                 <div 
-                  className={`w-10 h-5 rounded-full transition-all duration-300 relative ${form.is_inactive ? 'bg-red-500' : 'bg-emerald-500'}`}
-                  onClick={() => setForm({ ...form, is_inactive: !form.is_inactive })}
+                  className={`w-10 h-5 rounded-full transition-all duration-300 relative ${form.is_inactive ? 'bg-red-500' : 'bg-emerald-500'} ${isViewOnly ? 'opacity-70' : ''}`}
+                  onClick={() => !isViewOnly && setForm({ ...form, is_inactive: !form.is_inactive })}
                 >
                   <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform duration-300 ${form.is_inactive ? 'translate-x-[20px]' : ''}`} />
                 </div>
@@ -429,7 +449,8 @@ const SalespersonsPage = () => {
                   <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Date of Effect</label>
                   <Input
                     type="date"
-                    className="rounded-xl h-11 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                    disabled={isViewOnly}
+                    className="rounded-xl h-11 bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary/20 disabled:opacity-70 disabled:cursor-default"
                     value={form.inactive_date || ''}
                     onChange={(e) => setForm({ ...form, inactive_date: e.target.value })}
                   />
@@ -437,9 +458,15 @@ const SalespersonsPage = () => {
               )}
             </div>
 
-            <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>
-              {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isEditing ? 'Update Profile' : 'Confirm Registration')}
-            </Button>
+            {isViewOnly ? (
+              <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={() => setOpen(false)}>
+                Close Details
+              </Button>
+            ) : (
+              <Button className="w-full h-12 mt-4 rounded-xl font-black text-sm uppercase tracking-widest shadow-lg shadow-primary/20" onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : (isEditing ? 'Update Profile' : 'Confirm Registration')}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

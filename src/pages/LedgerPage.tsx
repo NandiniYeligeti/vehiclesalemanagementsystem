@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCustomersAction, getCustomerLedgerAction } from '@/store/ducks/customers.ducks';
 import { RootState } from '@/store/rootReducer';
-import { CarFront } from 'lucide-react';
+import { CarFront, Download, Printer } from 'lucide-react';
+import { toast } from 'sonner';
+
 
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('en-IN', {
@@ -106,14 +108,56 @@ const LedgerPage = () => {
     ? vehiclesArray 
     : vehiclesArray.filter(v => v.vehicle_id === selectedVehicleId);
 
+  const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportExcel = () => {
+    if (!ledger || ledger.length === 0) {
+      toast.error('No ledger data to export');
+      return;
+    }
+
+    const headers = ['Date', 'Vehicle', 'Description', 'Debit', 'Credit', 'Balance'];
+    const rows = ledger.map((item: any) => [
+      formatDate(item.date),
+      item.vehicle_name || 'N/A',
+      item.description || '',
+      item.debit || 0,
+      item.credit || 0,
+      item.localBalance || 0
+    ]);
+
+    const customerName = customers.find((c: any) => (c.entity_id || c._id || c.id) === selectedCustomerId)?.customer_name || 'Customer';
+    downloadCSV(`${customerName}_Ledger`, headers, rows);
+    toast.success('Ledger data exported to Excel');
+  };
+
+  const handleExportPDF = () => {
+    window.print();
+  };
+
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-4 py-6 font-sans">
-      <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Customer Ledger</h1>
+    <div className="space-y-6 text-foreground">
+      <h1 className="text-2xl font-bold tracking-tight">Customer Ledger</h1>
 
       {/* Top Controls */}
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 erp-card p-4">
         <select 
-          className="w-full sm:w-[40%] h-10 px-3 border border-slate-200 rounded-md text-sm outline-none focus:border-blue-500 transition-colors"
+          className="w-full sm:w-[40%] h-11 px-4 border border-border rounded-xl text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all bg-muted/30 text-foreground font-semibold"
           value={selectedCustomerId} 
           onChange={(e) => {
             setSelectedCustomerId(e.target.value);
@@ -129,7 +173,7 @@ const LedgerPage = () => {
         </select>
 
         <select 
-          className="w-full sm:w-[30%] h-10 px-3 border border-slate-200 rounded-md text-sm outline-none focus:border-blue-500 transition-colors bg-white text-slate-800 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207l5%205%205-5z%22%20fill%3D%22%2394a3b8%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center]"
+          className="w-full sm:w-[30%] h-10 px-3 border border-border rounded-md text-sm outline-none focus:border-primary transition-colors bg-background text-foreground appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207l5%205%205-5z%22%20fill%3D%22%2394a3b8%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:right_10px_center]"
           value={selectedVehicleId}
           onChange={(e) => setSelectedVehicleId(e.target.value)}
         >
@@ -144,45 +188,40 @@ const LedgerPage = () => {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500 mb-1">Total Purchase</p>
-          <h2 className="text-2xl font-bold text-slate-900">{formatCurrency(totalPurchase)}</h2>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <p className="text-sm font-medium text-muted-foreground mb-1">Total Purchase</p>
+          <h2 className="text-2xl font-bold text-foreground">{formatCurrency(totalPurchase)}</h2>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500 mb-1">Total Paid</p>
-          <h2 className="text-2xl font-bold text-emerald-600">{formatCurrency(totalPaid)}</h2>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <p className="text-sm font-medium text-muted-foreground mb-1">Total Paid</p>
+          <h2 className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalPaid)}</h2>
         </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500 mb-1">Outstanding</p>
-          <h2 className="text-2xl font-bold text-red-600">{formatCurrency(totalOutstanding)}</h2>
+        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+          <p className="text-sm font-medium text-muted-foreground mb-1">Outstanding</p>
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-400">{formatCurrency(totalOutstanding)}</h2>
         </div>
       </div>
 
       {/* Loader */}
       {ledgerLoading && (
         <div className="flex justify-center py-10">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-800"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       )}
 
       {/* Vehicle Groups */}
       {!ledgerLoading && displayedVehicles.length === 0 && (
-         <div className="text-center py-20 text-slate-500 bg-white rounded-lg border border-slate-200">
+         <div className="text-center py-20 text-muted-foreground bg-card rounded-xl border border-border">
             No ledger entries found for this customer.
          </div>
       )}
 
       {!ledgerLoading && displayedVehicles.map(group => (
-        <motion.div 
-           initial={{ opacity: 0, y: 10 }} 
-           animate={{ opacity: 1, y: 0 }} 
-           key={group.vehicle_id} 
-           className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden"
-        >
-          <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
-            <CarFront className="w-5 h-5 text-red-500 fill-red-100" />
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card overflow-hidden" key={group.vehicle_id}>
+          <div className="px-5 py-4 border-b border-border bg-muted/20 flex items-center gap-2">
+            <CarFront className="w-5 h-5 text-red-500 fill-red-100 dark:fill-red-900/30" />
             <div className="flex flex-col">
-              <h3 className="font-bold text-slate-800">{group.vehicle_name}</h3>
+              <h3 className="font-bold text-foreground">{group.vehicle_name}</h3>
               {group.sales_order_code && (
                 <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">{group.sales_order_code}</span>
               )}
@@ -192,30 +231,30 @@ const LedgerPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-slate-100 bg-white">
-                  <th className="px-5 py-3 font-semibold text-slate-800">Date</th>
-                  <th className="px-5 py-3 font-semibold text-slate-800">Description</th>
-                  <th className="px-5 py-3 font-semibold text-slate-800">Debit</th>
-                  <th className="px-5 py-3 font-semibold text-slate-800">Credit</th>
-                  <th className="px-5 py-3 font-semibold text-slate-800">Balance</th>
+                <tr className="border-b border-border bg-muted/50">
+                  <th className="px-5 py-3 font-semibold text-foreground">Date</th>
+                  <th className="px-5 py-3 font-semibold text-foreground">Description</th>
+                  <th className="px-5 py-3 font-semibold text-foreground">Debit</th>
+                  <th className="px-5 py-3 font-semibold text-foreground">Credit</th>
+                  <th className="px-5 py-3 font-semibold text-foreground">Balance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 text-slate-600">
+              <tbody className="divide-y divide-border text-foreground/80">
                 {group.items.map((entry: any) => (
-                  <tr key={entry.id || Math.random()}>
+                  <tr key={entry.id || Math.random()} className="hover:bg-muted/10 transition-colors">
                     <td className="px-5 py-3">{formatDate(entry.date)}</td>
-                    <td className="px-5 py-3">{entry.description}</td>
-                    <td className="px-5 py-3 text-red-500">
+                    <td className="px-5 py-3 font-medium">{entry.description}</td>
+                    <td className="px-5 py-3 text-red-600 dark:text-red-400 font-medium">
                       {entry.description === 'Discount Allowed' 
                         ? formatCurrency(entry.credit) 
                         : (entry.debit > 0 ? formatCurrency(entry.debit) : '-')}
                     </td>
-                    <td className="px-5 py-3 text-emerald-600">
+                    <td className="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-medium">
                       {entry.description === 'Discount Allowed' 
                         ? '-' 
                         : (entry.credit > 0 ? formatCurrency(entry.credit) : '-')}
                     </td>
-                    <td className="px-5 py-3 font-medium text-slate-800">{formatCurrency(entry.localBalance)}</td>
+                    <td className="px-5 py-3 font-black text-foreground">{formatCurrency(entry.localBalance)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -223,19 +262,25 @@ const LedgerPage = () => {
           </div>
 
           {/* Card Footer */}
-          <div className="px-5 py-4 border-t border-slate-100 flex justify-end">
-            <h4 className="font-bold text-slate-800">Outstanding: {formatCurrency(group.outstanding)}</h4>
+          <div className="px-5 py-4 border-t border-border bg-muted/10 flex justify-end">
+            <h4 className="font-black text-foreground">Outstanding: {formatCurrency(group.outstanding)}</h4>
           </div>
         </motion.div>
       ))}
 
       {/* Bottom Buttons */}
-      <div className="flex items-center gap-3 pt-4">
-        <button className="h-10 px-6 bg-[#070F2B] hover:bg-[#1B1A55] text-white text-sm font-semibold rounded-md shadow transition-colors">
-          Export PDF
+      <div className="flex items-center gap-3 pt-4 print:hidden">
+        <button 
+          onClick={handleExportPDF}
+          className="h-11 px-6 bg-primary text-primary-foreground text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+        >
+          <Printer className="w-4 h-4" /> Export Document (PDF)
         </button>
-        <button className="h-10 px-6 bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-sm font-semibold rounded-md shadow-sm transition-colors">
-          Export Excel
+        <button 
+          onClick={handleExportExcel}
+          className="h-11 px-6 erp-card hover:bg-muted text-foreground text-sm font-bold rounded-xl shadow-sm transition-all flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" /> Export Data (Excel)
         </button>
       </div>
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Printer, X, Loader2, Eye, Download, Mail, Trash2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -53,6 +53,8 @@ const PaymentsPage = () => {
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [showViewModal, setShowViewModal] = useState(false);
   const [emailPreview, setEmailPreview] = useState<any>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
@@ -102,18 +104,71 @@ const PaymentsPage = () => {
     const customer = customers.find(c => (c.entity_id || c._id || c.id) === p.customer_id);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
     const content = `
-      <html><head><title>Payment Receipt - ${p.payment_code}</title>
-      <style>body{font-family:sans-serif;padding:40px;color:#333}h1{color:#2563eb}.row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}.total{font-size:20px;font-weight:bold;color:#2563eb}@media print{.no-print{display:none}}</style>
-      </head><body>
-      <h1>Payment Receipt</h1><p>${p.payment_code}</p>
-      <div class="row"><span>Customer</span><span>${customer?.customer_name || 'N/A'}</span></div>
-      <div class="row"><span>Invoice</span><span>${p.invoice_number}</span></div>
-      <div class="row"><span>Date</span><span>${formatDate(p.payment_date)}</span></div>
-      <div class="row"><span>Mode</span><span>${p.payment_mode}</span></div>
-      <div class="row"><span>Type</span><span>${p.payment_type}</span></div>
-      <div class="row total"><span>Amount Paid</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
-      <script>window.print();window.close();</script></body></html>
+      <html>
+        <head>
+          <title>Payment Receipt - ${p.payment_code}</title>
+          <style>
+            body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
+            .receipt-container { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 40px; border-radius: 8px; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+            .company-info h1 { margin: 0; color: #2563eb; font-size: 24px; }
+            .receipt-info { text-align: right; }
+            .section-title { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 30px; }
+            .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f9f9f9; }
+            .total-row { display: flex; justify-content: space-between; padding: 15px 0; margin-top: 20px; border-top: 2px solid #eee; font-size: 20px; font-weight: bold; color: #2563eb; }
+            @media print { .no-print { display: none; } body { padding: 0; } .receipt-container { border: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="receipt-container">
+            <div class="header">
+              <div class="company-info">
+                <h1>${user?.company_name || 'VEHICLE ERP'}</h1>
+                <p>${companyCode} | Payment Receipt</p>
+              </div>
+              <div class="receipt-info">
+                <h2>RECEIPT</h2>
+                <p><strong>No:</strong> ${p.payment_code}</p>
+                <p><strong>Date:</strong> ${formatDate(p.payment_date)}</p>
+              </div>
+            </div>
+
+            <div class="grid">
+              <div>
+                <div class="section-title">Customer Details</div>
+                <p><strong>${customer?.customer_name || 'N/A'}</strong></p>
+                <p>${customer?.mobile_number || ''}</p>
+                <p>${customer?.email || ''}</p>
+              </div>
+              <div>
+                <div class="section-title">Reference Details</div>
+                <p><strong>Invoice/SO:</strong> ${p.invoice_number}</p>
+                <p><strong>Category:</strong> ${p.payment_type}</p>
+                <p><strong>Mode:</strong> ${p.payment_mode}</p>
+                ${p.reference_number ? `<p><strong>Ref No:</strong> ${p.reference_number}</p>` : ''}
+              </div>
+            </div>
+
+            <div style="margin-top: 40px;">
+              <div class="section-title">Payment Summary</div>
+              <div class="row"><span>Description</span><span>Amount</span></div>
+              <div class="row"><span>${p.payment_type} Credit</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
+              <div class="total-row"><span>Total Amount Received</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
+            </div>
+
+            <div style="margin-top: 80px; display: flex; justify-content: space-between;">
+              <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px; font-size: 12px;">Customer Signature</div>
+              <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px; font-size: 12px;">Authorized Signatory</div>
+            </div>
+
+            <p style="margin-top: 50px; font-size: 10px; color: #999; text-align: center;">This is a computer-generated receipt and does not require a physical signature.</p>
+          </div>
+          <script>window.print();window.close();</script>
+        </body>
+      </html>
     `;
     printWindow.document.write(content);
     printWindow.document.close();
@@ -251,32 +306,32 @@ const PaymentsPage = () => {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right">
-                    {/* Same action buttons as Sales Order */}
                     <div className="flex justify-end items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <button title="View" className="p-1.5 hover:bg-primary/10 rounded-lg text-primary transition-colors hover:scale-110 active:scale-95">
+                      <button 
+                        title="View" 
+                        onClick={() => { setSelectedPayment(p); setShowViewModal(true); }}
+                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button
                         title="Print"
                         onClick={() => handlePrint(p)}
-                        className="p-1.5 hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors hover:scale-110 active:scale-95"
+                        className="p-2 hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors hover:scale-110 active:scale-95"
                       >
                         <Printer className="w-4 h-4" />
                       </button>
                       <button
                         title="Send Email"
                         onClick={() => handleOpenEmailPreview(p)}
-                        className="p-1.5 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"
+                        className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"
                       >
                         <Mail className="w-4 h-4" />
                       </button>
-                      <button title="Download" className="p-1.5 hover:bg-emerald-500/10 rounded-lg text-emerald-500 transition-colors hover:scale-110 active:scale-95">
-                        <Download className="w-4 h-4" />
-                      </button>
-                      <button
-                        title="Delete"
+                      <button 
+                        title="Delete" 
                         onClick={() => setPaymentToDelete(p.entity_id || p._id || p.id)}
-                        className="p-1.5 hover:bg-destructive/10 rounded-lg text-destructive transition-colors hover:scale-110 active:scale-95"
+                        className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors hover:scale-110 active:scale-95"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -463,6 +518,101 @@ const PaymentsPage = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* View Payment Modal */}
+      <AnimatePresence>
+        {showViewModal && selectedPayment && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden flex flex-col border border-border">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-muted/20">
+                <div>
+                  <h3 className="text-xl font-bold">Payment Details: {selectedPayment.payment_code}</h3>
+                  <p className="text-sm text-muted-foreground">{formatDate(selectedPayment.payment_date)}</p>
+                </div>
+                <button onClick={() => setShowViewModal(false)} className="p-2 hover:bg-muted rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="p-6 overflow-y-auto space-y-8">
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-2">Customer</h4>
+                    <p className="font-bold text-lg">{getCustomerName(selectedPayment.customer_id)}</p>
+                    <p className="text-sm text-muted-foreground">ID: {selectedPayment.customer_id?.slice(-8).toUpperCase()}</p>
+                  </div>
+                  <div>
+                    <h4 className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-2">Reference</h4>
+                    <p className="font-bold">{selectedPayment.invoice_number || 'N/A'}</p>
+                    <p className="text-sm text-muted-foreground">Type: {selectedPayment.payment_type}</p>
+                  </div>
+                </div>
+
+                <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 shadow-inner">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-sm font-medium text-muted-foreground">Payment Amount</span>
+                    <span className="text-2xl font-black text-primary tabular-nums">{formatCurrency(selectedPayment.payment_amount)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-primary/10">
+                    <div>
+                      <p className="text-[9px] uppercase font-black text-primary/60 mb-1">Mode</p>
+                      <p className="font-bold">{selectedPayment.payment_mode}</p>
+                    </div>
+                    <div>
+                      <p className="text-[9px] uppercase font-black text-primary/60 mb-1">Status</p>
+                      <p className="font-bold text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> COMPLETED</p>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedPayment.reference_number && (
+                  <div className="p-4 rounded-xl border border-dashed border-border bg-muted/5">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1">Transaction Reference No.</p>
+                    <p className="font-mono font-bold text-foreground tracking-tight">{selectedPayment.reference_number}</p>
+                  </div>
+                )}
+
+                {selectedPayment.remarks && (
+                  <div>
+                    <h4 className="text-[10px] uppercase font-black text-muted-foreground tracking-widest mb-2">Remarks</h4>
+                    <p className="text-sm text-muted-foreground italic bg-muted/20 p-3 rounded-lg border border-border/50">"{selectedPayment.remarks}"</p>
+                  </div>
+                )}
+
+                <div className="pt-4 border-t border-border flex justify-between items-center">
+                  <div>
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Collected By</p>
+                    <p className="text-sm font-bold flex items-center gap-2">
+                      {salespersons.find(s => (s.entity_id || s._id || s.id) === selectedPayment.collected_by)?.full_name || 'System Operator'}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Email Status</p>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${selectedPayment.email_status === 'Sent' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                      {selectedPayment.email_status || 'NOT SENT'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-border bg-muted/20 flex gap-3">
+                <button 
+                  onClick={() => handlePrint(selectedPayment)} 
+                  className="flex-1 erp-btn flex items-center justify-center gap-2 bg-primary text-primary-foreground py-3 rounded-xl hover:bg-primary/90 transition-all font-bold shadow-lg shadow-primary/20"
+                >
+                  <Printer className="w-4 h-4" /> Print Receipt
+                </button>
+                <button 
+                  onClick={() => handleOpenEmailPreview(selectedPayment)} 
+                  className="flex-1 erp-btn flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-500/20"
+                >
+                  <Mail className="w-4 h-4" /> Send Email
+                </button>
+                <button onClick={() => setShowViewModal(false)} className="px-6 py-3 bg-card hover:bg-muted font-bold rounded-xl transition-colors border border-border">Close</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <EmailPreviewModal 
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}

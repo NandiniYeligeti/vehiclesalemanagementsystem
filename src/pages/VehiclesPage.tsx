@@ -65,6 +65,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
   const [featureType, setFeatureType] = useState<'type' | 'category' | 'accessory'>('type');
 
   const [editingModel, setEditingModel] = useState<any>(null);
+  const [isViewOnly, setIsViewOnly] = useState(false);
   const [modelToDelete, setModelToDelete] = useState<string | null>(null);
   const [featureToDelete, setFeatureToDelete] = useState<{id: string, type: 'type' | 'category' | 'accessory'} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -169,6 +170,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
     setShowModelForm(false);
     setShowFeatureForm(false);
     setEditingModel(null);
+    setIsViewOnly(false);
   };
 
   return (
@@ -230,11 +232,18 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
                   <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors">
+                      <button 
+                        onClick={() => {
+                          setEditingModel(m);
+                          setIsViewOnly(true);
+                          setShowModelForm(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                      >
                         <Eye className="w-3.5 h-3.5" />
                         <span className="text-xs font-semibold">View</span>
                       </button>
-                      <button onClick={() => handleEditModel(m)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                      <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
                         <Edit2 className="w-3.5 h-3.5" />
                         <span className="text-xs font-semibold">Edit</span>
                       </button>
@@ -305,7 +314,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-border">
               <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
-                <h3 className="text-lg font-bold">{editingModel ? 'Edit Vehicle Model' : 'New Vehicle Model'}</h3>
+                <h3 className="text-lg font-bold">{isViewOnly ? 'Vehicle Model Details' : (editingModel ? 'Edit Vehicle Model' : 'New Vehicle Model')}</h3>
                 <button onClick={handleCloseForms} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
               <Formik
@@ -351,27 +360,27 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-1">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Brand Name</label>
-                        <Field name="brand" className="erp-input h-11 rounded-xl" placeholder="e.g., Tata" />
+                        <Field name="brand" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., Tata" />
                         <ErrorMessage name="brand" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                       <div className="col-span-1">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Name</label>
-                        <Field name="model" className="erp-input h-11 rounded-xl" placeholder="e.g., Nexon" />
+                        <Field name="model" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., Nexon" />
                         <ErrorMessage name="model" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div className="col-span-1">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Variant</label>
-                        <Field name="variant" className="erp-input h-11 rounded-xl" placeholder="e.g., XZ+" />
+                        <Field name="variant" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., XZ+" />
                         <ErrorMessage name="variant" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
                       <div className="col-span-1">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type (Multi Select)</label>
                         <div className="grid grid-cols-3 gap-2 border border-border/40 p-3 rounded-xl bg-muted/10">
                           {['Petrol', 'Diesel', 'Cng', 'Electric', 'Hybrid', 'Lpg'].map(f => (
-                            <label key={f} className="flex items-center gap-2 text-[11px] font-medium cursor-pointer">
-                              <Field type="checkbox" name="fuel_type" value={f} className="w-4 h-4 rounded border-border" />
+                            <label key={f} className={`flex items-center gap-2 text-[11px] font-medium ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
+                              <Field type="checkbox" name="fuel_type" value={f} disabled={isViewOnly} className="w-4 h-4 rounded border-border disabled:opacity-70" />
                               {f}
                             </label>
                           ))}
@@ -382,7 +391,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
-                        <Field as="select" name="category_id" className="erp-select h-11 rounded-xl" onChange={(e: any) => {
+                        <Field as="select" name="category_id" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" onChange={(e: any) => {
                           setFieldValue('category_id', e.target.value);
                           setFieldValue('type_id', '');
                         }}>
@@ -393,7 +402,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
-                        <Field as="select" name="type_id" className="erp-select h-11 rounded-xl" disabled={!values.category_id}>
+                        <Field as="select" name="type_id" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" disabled={!values.category_id}>
                           <option value="">Select Type</option>
                           {types.filter((t: any) => t.category_id === values.category_id).map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
                         </Field>
@@ -402,12 +411,12 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Code (Unique)</label>
-                      <Field name="model_code" className="erp-input h-11 rounded-xl" placeholder="e.g. NXN-001" />
+                      <Field name="model_code" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g. NXN-001" />
                       <ErrorMessage name="model_code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                     </div>
                     <div>
                       <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Base Price (₹)</label>
-                      <Field type="number" name="base_price" className="erp-input h-11 rounded-xl" />
+                      <Field type="number" name="base_price" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" />
                       <ErrorMessage name="base_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                     </div>
 
@@ -415,35 +424,37 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                       <div className="flex items-center gap-6">
                         <label className="text-[10px] font-bold text-muted-foreground uppercase block px-1">Incentive Type</label>
                         <div className="flex gap-4">
-                          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
-                            <Field type="radio" name="incentive_type" value="fixed" className="w-4 h-4" /> Fixed
+                          <label className={`flex items-center gap-2 text-sm font-bold ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
+                            <Field type="radio" name="incentive_type" value="fixed" disabled={isViewOnly} className="w-4 h-4 disabled:opacity-70" /> Fixed
                           </label>
-                          <label className="flex items-center gap-2 text-sm font-bold cursor-pointer">
-                            <Field type="radio" name="incentive_type" value="percentage" className="w-4 h-4" /> Percentage
+                          <label className={`flex items-center gap-2 text-sm font-bold ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
+                            <Field type="radio" name="incentive_type" value="percentage" disabled={isViewOnly} className="w-4 h-4 disabled:opacity-70" /> Percentage
                           </label>
                         </div>
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Incentive Value (₹)</label>
-                        <Field type="number" name="incentive_value" className="erp-input h-11 rounded-xl" placeholder="Enter amount" />
+                        <Field type="number" name="incentive_value" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter amount" />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Catalog</label>
-                        <Field name="colors" className="erp-input h-11 rounded-xl" placeholder="Enter colors (e.g. Red, White, Black)" />
+                        <Field name="colors" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter colors (e.g. Red, White, Black)" />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Count</label>
-                        <Field type="number" name="color_count" className="erp-input h-11 rounded-xl" placeholder="Enter total colors" />
+                        <Field type="number" name="color_count" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter total colors" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-3 pt-4">
-                      <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">Discard</button>
-                      <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all tracking-tight">
-                        {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingModel ? 'Update Model' : 'Save Model')}
-                      </button>
+                      <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">{isViewOnly ? 'Close' : 'Discard'}</button>
+                      {!isViewOnly && (
+                        <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all tracking-tight">
+                          {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingModel ? 'Update Model' : 'Save Model')}
+                        </button>
+                      )}
                     </div>
                   </Form>
                 )}

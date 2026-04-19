@@ -85,7 +85,7 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:relative z-50 h-screen flex flex-col
+          fixed lg:relative z-50 h-screen flex flex-col print:hidden
           bg-[hsl(var(--sidebar-bg))] text-[hsl(var(--sidebar-fg))]
           transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]
           ${collapsed ? 'w-[80px]' : 'w-72'}
