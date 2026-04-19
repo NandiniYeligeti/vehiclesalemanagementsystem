@@ -8,6 +8,7 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { getCompanySettingsAction } from '@/store/ducks/company.ducks';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const allMenuItems = [
   { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard, roles: ['admin', 'user'] },
@@ -47,13 +48,20 @@ const Sidebar = ({ activeTab, onTabChange }: SidebarProps) => {
     }
   }, [dispatch, companyCode, settings?.company_id]);
 
+  const { hasPermission } = usePermissions();
+
   // Filter items the current role is allowed to see
   const menuItems = allMenuItems.filter((item) => {
-    const isRoleAllowed = item.roles.includes(role) || role === 'super_admin';
+    // Super Admin sees everything
+    if (role === 'super_admin') return true;
+    
+    // Check if role is allowed generally
+    const isRoleAllowed = item.roles.includes(role);
     if (!isRoleAllowed) return false;
 
+    // For users, check specific view permission
     if (role === 'user') {
-       return (user?.menus || []).includes(item.id);
+      return hasPermission(item.id, 'view');
     }
 
     return true;

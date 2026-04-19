@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
+import { usePermissions } from '@/hooks/usePermissions';
 
 const categoryValidationSchema = Yup.object().shape({
   code: Yup.string().required('Category code is required'),
@@ -55,8 +56,9 @@ const featureValidationSchema = Yup.object().shape({
 
 const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'accessories' | 'categories' | 'types' }) => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { hasPermission } = usePermissions();
 
   const [tab, setTab] = useState<'models' | 'accessories' | 'categories' | 'types'>(initialTab || 'models');
   const [search, setSearch] = useState('');
@@ -207,9 +209,11 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
               <input type="text" placeholder="Search models..." value={search} onChange={(e) => setSearch(e.target.value)}
                 className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground" />
             </div>
-            <button onClick={() => setShowModelForm(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight">
-              <Plus className="w-4 h-4" /> Add Model
-            </button>
+            {hasPermission('vehicles', 'add') && (
+              <button onClick={() => setShowModelForm(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight font-bold">
+                <Plus className="w-4 h-4" /> Add Model
+              </button>
+            )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredModels.map((m) => (
@@ -232,25 +236,31 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
                   <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <button 
-                        onClick={() => {
-                          setEditingModel(m);
-                          setIsViewOnly(true);
-                          setShowModelForm(true);
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">View</span>
-                      </button>
-                      <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">Edit</span>
-                      </button>
-                      <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors">
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">Delete</span>
-                      </button>
+                      {hasPermission('vehicles', 'view') && (
+                        <button 
+                          onClick={() => {
+                            setEditingModel(m);
+                            setIsViewOnly(true);
+                            setShowModelForm(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span className="text-xs font-semibold">View</span>
+                        </button>
+                      )}
+                      {hasPermission('vehicles', 'edit') && (
+                        <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span className="text-xs font-semibold">Edit</span>
+                        </button>
+                      )}
+                      {hasPermission('vehicles', 'delete') && (
+                        <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors">
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-xs font-semibold">Delete</span>
+                        </button>
+                      )}
                     </div>
                     <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
                   </div>
@@ -263,16 +273,31 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
       {tab === 'accessories' && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-bold">Manage Accessories</h3>
-            <button onClick={() => { setFeatureType('accessory'); setShowFeatureForm(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20"><Plus className="w-4 h-4" /> New Accessory</button>
-          </div>
+            <h3 className="text-lg font-bold">Manage {tab === 'accessories' ? 'Accessories' : tab === 'types' ? 'Types' : 'Categories'}</h3>
+            {hasPermission('vehicles', 'add') && (
+              <button 
+                onClick={() => { setFeatureType(tab === 'accessories' ? 'accessory' : tab === 'types' ? 'type' : 'category'); setShowFeatureForm(true); }} 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 font-bold"
+              >
+                <Plus className="w-4 h-4" /> New {tab.slice(0,-1)}
+              </button>
+            )}
           <div className="erp-card overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-muted/50 border-b border-border"><tr><th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Name</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Price (₹)</th><th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-20">Actions</th></tr></thead>
               <tbody>
                 {accessories.map((a: any) => (
-                  <tr key={a.entity_id || a._id || a.id} className="border-b border-border hover:bg-muted/30 transition-colors"><td className="py-4 px-6 font-bold">{a.name}</td><td className="py-4 px-6 text-right font-black">₹{(a.price || 0).toLocaleString()}</td><td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: a.entity_id || a._id || a.id!, type: 'accessory'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td></tr>
+                  <tr key={a.entity_id || a._id || a.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                    <td className="py-4 px-6 font-bold">{a.name}</td>
+                    <td className="py-4 px-6 text-right font-black">₹{(a.price || 0).toLocaleString()}</td>
+                    <td className="py-4 px-6 text-right">
+                      {hasPermission('vehicles', 'delete') && (
+                        <button onClick={() => setFeatureToDelete({id: a.entity_id || a._id || a.id!, type: 'accessory'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -284,7 +309,14 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
         <div className="space-y-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-bold capitalize">Manage {tab}</h3>
-            <button onClick={() => { setFeatureType(tab === 'categories' ? 'category' : 'type'); setShowFeatureForm(true); }} className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20"><Plus className="w-4 h-4" /> New {tab.slice(0,-1)}</button>
+            {hasPermission('vehicles', 'add') && (
+              <button 
+                onClick={() => { setFeatureType(tab === 'categories' ? 'category' : 'type'); setShowFeatureForm(true); }} 
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 font-bold"
+              >
+                <Plus className="w-4 h-4" /> New {tab.slice(0,-1)}
+              </button>
+            )}
           </div>
           <div className="erp-card overflow-hidden">
             <table className="w-full text-sm">
@@ -300,7 +332,13 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
                   <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                     {tab === 'categories' && <td className="py-4 px-6 font-mono text-xs text-primary">{item.code}</td>}
                     <td className="py-4 px-6 font-bold">{item.name}</td>
-                    <td className="py-4 px-6 text-right"><button onClick={() => setFeatureToDelete({id: item.entity_id || item._id || item.id!, type: tab === 'categories' ? 'category' : 'type'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"><Trash2 className="w-4 h-4" /></button></td>
+                    <td className="py-4 px-6 text-right">
+                      {hasPermission('vehicles', 'delete') && (
+                        <button onClick={() => setFeatureToDelete({id: item.entity_id || item._id || item.id!, type: tab === 'categories' ? 'category' : 'type'})} className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

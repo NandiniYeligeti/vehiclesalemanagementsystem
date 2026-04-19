@@ -110,7 +110,7 @@ const TopNav = ({ title, onTabChange }: TopNavProps) => {
           {/* Settings / Setup Dropdown */}
           {user?.role === 'admin' && (
             <div className="relative" ref={settingsRef}>
-              <button 
+              <button
                 onClick={() => setSettingsOpen(!settingsOpen)}
                 className={`w-10 h-10 flex items-center justify-center rounded-xl transition-all active:scale-90 group ${settingsOpen ? 'bg-primary/10 text-primary' : 'hover:bg-muted text-muted-foreground'}`}
               >
@@ -128,10 +128,10 @@ const TopNav = ({ title, onTabChange }: TopNavProps) => {
                     <div className="px-3 py-2 mb-1">
                       <p className="text-[10px] font-black uppercase tracking-widest text-primary/60">System Setup</p>
                     </div>
-                    
+
                     {[
-                      { id: 'users', label: 'User Management', icon: UserPlus },
                       { id: 'settings', label: 'Company Settings', icon: Settings },
+                      { id: 'users', label: 'User Management', icon: UserPlus },
                       { id: 'email-config', label: 'Email Configuration', icon: Mail },
                     ].map((item) => (
                       <button

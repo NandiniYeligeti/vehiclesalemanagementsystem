@@ -21,6 +21,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { usePermissions } from '@/hooks/usePermissions';
 
 const paymentSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -48,8 +49,9 @@ const formatDate = (dateString: string) => {
 
 const PaymentsPage = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { hasPermission, getFilteredData } = usePermissions();
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -62,8 +64,13 @@ const PaymentsPage = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
   const { data: payments = [], loading: paymentsLoading, saving } = useSelector((state: RootState) => state.payments);
-  const { data: customers = [] } = useSelector((state: RootState) => state.customers);
-  const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons);
+  
+  const rawCustomers = useSelector((state: RootState) => state.customers?.data || []);
+  const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
+
+  const rawSalespersons = useSelector((state: RootState) => state.salespersons?.data || []);
+  const salespersons = useMemo(() => getFilteredData(rawSalespersons, 'branch'), [rawSalespersons, getFilteredData]);
+
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders);
 
   const getCustomerName = (customerId: string) => {
@@ -244,12 +251,14 @@ const PaymentsPage = () => {
             className="bg-transparent text-sm outline-none w-48 placeholder:text-muted-foreground font-medium" 
           />
         </div>
-        <button 
-          onClick={() => setShowForm(true)} 
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all"
-        >
-          <Plus className="w-4 h-4" /> Record Payment
-        </button>
+        {hasPermission('payments', 'add') && (
+          <button 
+            onClick={() => setShowForm(true)} 
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 transition-all font-bold"
+          >
+            <Plus className="w-4 h-4" /> Record Payment
+          </button>
+        )}
       </div>
 
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card overflow-hidden">
@@ -307,34 +316,42 @@ const PaymentsPage = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        title="View" 
-                        onClick={() => { setSelectedPayment(p); setShowViewModal(true); }}
-                        className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        title="Print"
-                        onClick={() => handlePrint(p)}
-                        className="p-2 hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors hover:scale-110 active:scale-95"
-                      >
-                        <Printer className="w-4 h-4" />
-                      </button>
-                      <button
-                        title="Send Email"
-                        onClick={() => handleOpenEmailPreview(p)}
-                        className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"
-                      >
-                        <Mail className="w-4 h-4" />
-                      </button>
-                      <button 
-                        title="Delete" 
-                        onClick={() => setPaymentToDelete(p.entity_id || p._id || p.id)}
-                        className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors hover:scale-110 active:scale-95"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {hasPermission('payments', 'view') && (
+                        <button 
+                          title="View" 
+                          onClick={() => { setSelectedPayment(p); setShowViewModal(true); }}
+                          className="p-2 hover:bg-primary/10 rounded-lg text-primary transition-colors hover:scale-110 active:scale-95"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('payments', 'view') && (
+                        <button
+                          title="Print"
+                          onClick={() => handlePrint(p)}
+                          className="p-2 hover:bg-orange-500/10 rounded-lg text-orange-500 transition-colors hover:scale-110 active:scale-95"
+                        >
+                          <Printer className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('payments', 'edit') && (
+                        <button
+                          title="Send Email"
+                          onClick={() => handleOpenEmailPreview(p)}
+                          className="p-2 hover:bg-blue-500/10 rounded-lg text-blue-500 transition-colors hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20"
+                        >
+                          <Mail className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('payments', 'delete') && (
+                        <button 
+                          title="Delete" 
+                          onClick={() => setPaymentToDelete(p.entity_id || p._id || p.id)}
+                          className="p-2 hover:bg-destructive/10 rounded-lg text-destructive transition-colors hover:scale-110 active:scale-95"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

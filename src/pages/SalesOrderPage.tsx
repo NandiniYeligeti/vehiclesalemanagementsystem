@@ -14,6 +14,7 @@ import { getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
 import { ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const salesOrderSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -38,8 +39,9 @@ const salesOrderSchema = Yup.object().shape({
 const SalesOrderPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { hasPermission, getFilteredData } = usePermissions();
 
   const [activeTab, setActiveTab] = useState<'create' | 'list'>('list');
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -55,9 +57,15 @@ const SalesOrderPage = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
 
-  const { data: customers = [] } = useSelector((state: RootState) => state.customers || { data: [] });
-  const { data: salespersons = [] } = useSelector((state: RootState) => state.salespersons || { data: [] });
-  const { data: inventory = [] } = useSelector((state: RootState) => state.vehicleInventory || { data: [] });
+  const rawCustomers = useSelector((state: RootState) => state.customers?.data || []);
+  const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
+
+  const rawSalespersons = useSelector((state: RootState) => state.salespersons?.data || []);
+  const salespersons = useMemo(() => getFilteredData(rawSalespersons, 'branch'), [rawSalespersons, getFilteredData]);
+
+  const rawInventory = useSelector((state: RootState) => state.vehicleInventory?.data || []);
+  const inventory = useMemo(() => getFilteredData(rawInventory, 'showroom'), [rawInventory, getFilteredData]);
+
   const { data: salesOrders = [], loading: ordersLoading } = useSelector((state: RootState) => state.salesOrders || { data: [], loading: false });
   const { accessories = [] } = useSelector((state: RootState) => state.vehicleFeatures || { accessories: [] });
   const { ledger, ledgerLoading } = useSelector((state: RootState) => state.customers);
@@ -295,12 +303,14 @@ const SalesOrderPage = () => {
         >
           <List className="w-4 h-4" /> Order History
         </button>
-        <button
-          onClick={() => setActiveTab('create')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:bg-card/50'}`}
-        >
-          <Plus className="w-4 h-4" /> Create New Order
-        </button>
+        {hasPermission('sales', 'add') && (
+          <button
+            onClick={() => setActiveTab('create')}
+            className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground hover:bg-card/50'}`}
+          >
+            <Plus className="w-4 h-4" /> Create New Order
+          </button>
+        )}
       </div>
 
       {activeTab === 'list' ? (

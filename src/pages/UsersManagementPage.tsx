@@ -57,13 +57,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const UsersManagementPage = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || sessionStorage.getItem('companyCode') || '';
   const { data: masters } = useSelector((state: RootState) => state.companyMasters);
+  const { hasPermission, getFilteredMasters } = usePermissions();
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -99,7 +101,11 @@ const UsersManagementPage = () => {
     try {
       setLoading(true);
       const data = await getUsersApi(companyCode);
-      setUsers(data || []);
+      const mapped = (data || []).map((u: any) => ({
+        ...u,
+        id: u.id || u._id // Support both id and _id
+      }));
+      setUsers(mapped);
     } catch (e: any) {
       console.error(e);
       toast.error('Failed to fetch users');
@@ -211,12 +217,14 @@ const UsersManagementPage = () => {
             Create and manage user accounts for your company.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Add New User
-        </button>
+        {hasPermission('users', 'add') && (
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Add New User
+          </button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -320,42 +328,48 @@ const UsersManagementPage = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedUserForPassword(u);
-                          setNewPassword('');
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all"
-                      >
-                        <KeyRound className="w-3.5 h-3.5" />
-                        Password
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedUser(u);
-                          setTempMenus(u.menus || []);
-                          setTempPermissions(u.permissions || []);
-                          setTempBranches(u.branches || []);
-                          setTempShowrooms(u.showrooms || []);
-                          setTempAreas(u.areas || []);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
-                      >
-                        <Shield className="w-3.5 h-3.5" />
-                        Rights
-                      </button>
-                      <button
-                        onClick={() => setUserToDelete(u.id)}
-                        disabled={deletingId === u.id}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
-                      >
-                        {deletingId === u.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-3.5 h-3.5" />
-                        )}
-                        Delete
-                      </button>
+                      {hasPermission('users', 'edit') && (
+                        <button
+                          onClick={() => {
+                            setSelectedUserForPassword(u);
+                            setNewPassword('');
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-600 hover:bg-emerald-500/10 transition-all"
+                        >
+                          <KeyRound className="w-3.5 h-3.5" />
+                          Password
+                        </button>
+                      )}
+                      {hasPermission('users', 'edit') && (
+                        <button
+                          onClick={() => {
+                            setSelectedUser(u);
+                            setTempMenus(u.menus || []);
+                            setTempPermissions(u.permissions || []);
+                            setTempBranches(u.branches || []);
+                            setTempShowrooms(u.showrooms || []);
+                            setTempAreas(u.areas || []);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-primary hover:bg-primary/10 transition-all"
+                        >
+                          <Shield className="w-3.5 h-3.5" />
+                          Rights
+                        </button>
+                      )}
+                      {hasPermission('users', 'delete') && (
+                        <button
+                          onClick={() => setUserToDelete(u.id)}
+                          disabled={deletingId === u.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 transition-all disabled:opacity-50"
+                        >
+                          {deletingId === u.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                          Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </motion.tr>
@@ -491,11 +505,11 @@ const UsersManagementPage = () => {
                 {/* Organizational Access */}
                 <div className="space-y-4">
                   {[
-                    { label: 'Branch Access', key: 'branches', type: 'Branch' },
-                    { label: 'Showroom Access', key: 'showrooms', type: 'Showroom' },
-                    { label: 'Area Access', key: 'areas', type: 'Area' },
+                    { label: 'Branch Access', key: 'branches', type: 'Branch' as const },
+                    { label: 'Showroom Access', key: 'showrooms', type: 'Showroom' as const },
+                    { label: 'Area Access', key: 'areas', type: 'Area' as const },
                   ].map((field) => {
-                    const items = (masters || []).filter((m) => m.type === field.type);
+                    const items = getFilteredMasters((masters || []).filter((m) => m.type === field.type), field.type);
                     return (
                       <div key={field.key}>
                         <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">
@@ -593,11 +607,11 @@ const UsersManagementPage = () => {
               
               <div className="p-6 border-b border-border bg-muted/5 grid grid-cols-1 md:grid-cols-3 gap-6">
                   {[
-                    { label: 'Branches', state: tempBranches, setState: setTempBranches, type: 'Branch' },
-                    { label: 'Showrooms', state: tempShowrooms, setState: setTempShowrooms, type: 'Showroom' },
-                    { label: 'Areas', state: tempAreas, setState: setTempAreas, type: 'Area' },
+                    { label: 'Branches', state: tempBranches, setState: setTempBranches, type: 'Branch' as const },
+                    { label: 'Showrooms', state: tempShowrooms, setState: setTempShowrooms, type: 'Showroom' as const },
+                    { label: 'Areas', state: tempAreas, setState: setTempAreas, type: 'Area' as const },
                   ].map((field) => {
-                    const items = (masters || []).filter((m) => m.type === field.type);
+                    const items = getFilteredMasters((masters || []).filter((m) => m.type === field.type), field.type);
                     return (
                       <div key={field.label}>
                         <label className="text-xs font-black text-muted-foreground uppercase tracking-widest block mb-3">{field.label}</label>
@@ -646,9 +660,18 @@ const UsersManagementPage = () => {
                         const newPerms = [...tempPermissions];
                         const index = newPerms.findIndex(p => p.menu_id === menu.id);
                         if (index > -1) {
-                          newPerms[index] = { ...newPerms[index], [field]: !newPerms[index][field] };
+                          // Ensure all fields are initialized even when updating
+                          newPerms[index] = { 
+                            can_view: false, can_add: false, can_edit: false, can_delete: false,
+                            ...newPerms[index], 
+                            [field]: !newPerms[index][field] 
+                          };
                         } else {
-                          newPerms.push({ menu_id: menu.id, can_view: false, can_add: false, can_edit: false, can_delete: false, [field]: true });
+                          newPerms.push({ 
+                            menu_id: menu.id, 
+                            can_view: false, can_add: false, can_edit: false, can_delete: false, 
+                            [field]: true 
+                          });
                         }
                         setTempPermissions(newPerms);
                         
@@ -685,7 +708,7 @@ const UsersManagementPage = () => {
                               <input
                                 type="checkbox"
                                 className="hidden"
-                                checked={perm.can_view}
+                                checked={!!perm.can_view}
                                 onChange={() => togglePermission('can_view')}
                               />
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_view ? 'bg-sky-500 border-sky-500' : 'border-border'}`}>
@@ -698,7 +721,7 @@ const UsersManagementPage = () => {
                               <input
                                 type="checkbox"
                                 className="hidden"
-                                checked={perm.can_add}
+                                checked={!!perm.can_add}
                                 onChange={() => togglePermission('can_add')}
                               />
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_add ? 'bg-emerald-500 border-emerald-500' : 'border-border'}`}>
@@ -711,7 +734,7 @@ const UsersManagementPage = () => {
                               <input
                                 type="checkbox"
                                 className="hidden"
-                                checked={perm.can_edit}
+                                checked={!!perm.can_edit}
                                 onChange={() => togglePermission('can_edit')}
                               />
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_edit ? 'bg-blue-500 border-blue-500' : 'border-border'}`}>
@@ -724,7 +747,7 @@ const UsersManagementPage = () => {
                               <input
                                 type="checkbox"
                                 className="hidden"
-                                checked={perm.can_delete}
+                                checked={!!perm.can_delete}
                                 onChange={() => togglePermission('can_delete')}
                               />
                               <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${perm.can_delete ? 'bg-destructive border-destructive' : 'border-border'}`}>

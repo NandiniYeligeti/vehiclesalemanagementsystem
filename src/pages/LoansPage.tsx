@@ -31,6 +31,7 @@ import {
 import { getLoansAction, addLoanAction, updateLoanAction, deleteLoanAction, Loan } from "@/store/ducks/loans.ducks";
 import { getSalesOrdersAction } from "@/store/ducks/sales_orders.ducks";
 import { getBanksAction } from "@/store/ducks/bank_master.ducks";
+import { usePermissions } from "@/hooks/usePermissions";
 
 
 const statusColors: Record<string, string> = {
@@ -44,9 +45,14 @@ const LoansPage = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || sessionStorage.getItem('companyCode') || '';
+  const { hasPermission, getFilteredData } = usePermissions();
 
-  const { data: loans, loading, saving } = useSelector((state: RootState) => state.loans);
-  const { data: salesOrders } = useSelector((state: RootState) => state.salesOrders);
+  const { data: rawLoans, loading, saving } = useSelector((state: RootState) => state.loans);
+  const loans = useMemo(() => getFilteredData(rawLoans || [], 'branch'), [rawLoans, getFilteredData]);
+
+  const { data: rawSalesOrders } = useSelector((state: RootState) => state.salesOrders);
+  const salesOrders = useMemo(() => getFilteredData(rawSalesOrders || [], 'branch'), [rawSalesOrders, getFilteredData]);
+
   const { data: bankMasters = [] } = useSelector((state: RootState) => state.bankMaster);
 
   // Filter States
@@ -252,9 +258,11 @@ const LoansPage = () => {
             <Landmark className="w-3 h-3" /> Credit Portfolio Management
           </p>
         </div>
-        <Button onClick={openCreate} className="h-11 px-6 rounded-xl font-bold gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
-          <Plus className="w-4 h-4" /> Apply Loan
-        </Button>
+        {hasPermission('loans', 'add') && (
+          <Button onClick={openCreate} className="h-11 px-6 rounded-xl font-bold gap-2 shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all">
+            <Plus className="w-4 h-4" /> Apply Loan
+          </Button>
+        )}
       </div>
 
       {/* Stats Overview */}
@@ -384,15 +392,21 @@ const LoansPage = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => openView(row)} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => openEdit(row)} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-emerald-500/10 hover:text-emerald-500 transition-all">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => setLoanToDelete(row.entity_id || row._id || '')} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-all">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {hasPermission('loans', 'view') && (
+                          <button onClick={() => openView(row)} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-primary/10 hover:text-primary transition-all">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission('loans', 'edit') && (
+                          <button onClick={() => openEdit(row)} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-emerald-500/10 hover:text-emerald-500 transition-all">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission('loans', 'delete') && (
+                          <button onClick={() => setLoanToDelete(row.entity_id || row._id || '')} className="w-9 h-9 rounded-xl bg-muted/50 flex items-center justify-center hover:bg-destructive/10 hover:text-destructive transition-all">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

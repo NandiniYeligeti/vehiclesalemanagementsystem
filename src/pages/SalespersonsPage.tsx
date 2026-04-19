@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail, Eye } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -29,17 +29,20 @@ import {
 
 import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const SalespersonsPage = () => {
   const dispatch = useDispatch();
-  const { data: salespersons, loading, saving } = useSelector(
-    (state: RootState) => state.salespersons || { data: [], loading: false, saving: false }
-  );
+  const { user } = useSelector((state: RootState) => state.auth);
+  const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { hasPermission, getFilteredMasters, getFilteredData } = usePermissions();
   const { data: masters } = useSelector((state: RootState) => state.companyMasters);
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders || { data: [] });
 
-  const user = useSelector((state: RootState) => state.auth.user);
-  const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { data: rawSalespersons, loading, saving } = useSelector(
+    (state: RootState) => state.salespersons || { data: [], loading: false, saving: false }
+  );
+  const salespersons = useMemo(() => getFilteredData(rawSalespersons || [], 'branch'), [rawSalespersons, getFilteredData]);
 
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
@@ -67,9 +70,9 @@ const SalespersonsPage = () => {
     }
   }, [dispatch, companyCode]);
 
-  const showrooms = (masters || []).filter(m => m.type === 'Showroom');
-  const branches = (masters || []).filter(m => m.type === 'Branch');
-  const areas = (masters || []).filter(m => m.type === 'Area');
+  const showrooms = getFilteredMasters((masters || []).filter(m => m.type === 'Showroom'), 'Showroom');
+  const branches = getFilteredMasters((masters || []).filter(m => m.type === 'Branch'), 'Branch');
+  const areas = getFilteredMasters((masters || []).filter(m => m.type === 'Area'), 'Area');
 
   const filtered = (salespersons || []).filter((d: any) =>
     (d.full_name || '').toLowerCase().includes(search.toLowerCase())
@@ -210,26 +213,28 @@ const SalespersonsPage = () => {
             />
           </div>
 
-          <Button
-            className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
-            onClick={() => {
-              setForm({
-                full_name: '',
-                mobile_number: '',
-                email: '',
-                showroom: '',
-                branch: '',
-                area: '',
-                is_inactive: false,
-                inactive_date: '',
-              });
-              setIsEditing(false);
-              setIsViewOnly(false);
-              setOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-1" /> Add Member
-          </Button>
+          {hasPermission('salespersons', 'add') && (
+            <Button
+              className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
+              onClick={() => {
+                setForm({
+                  full_name: '',
+                  mobile_number: '',
+                  email: '',
+                  showroom: '',
+                  branch: '',
+                  area: '',
+                  is_inactive: false,
+                  inactive_date: '',
+                });
+                setIsEditing(false);
+                setIsViewOnly(false);
+                setOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Member
+            </Button>
+          )}
         </div>
       </div>
 
@@ -286,43 +291,49 @@ const SalespersonsPage = () => {
 
               <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => {
-                      setForm({
-                        ...item,
-                        inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
-                      });
-                      setIsEditing(false);
-                      setIsViewOnly(true);
-                      setOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">View</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setForm({
-                        ...item,
-                        inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
-                      });
-                      setIsEditing(true);
-                      setIsViewOnly(false);
-                      setOpen(true);
-                    }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                  >
-                    <Edit2 className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">Edit</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteRequest(item)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">Delete</span>
-                  </button>
+                  {hasPermission('salespersons', 'view') && (
+                    <button 
+                      onClick={() => {
+                        setForm({
+                          ...item,
+                          inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                        });
+                        setIsEditing(false);
+                        setIsViewOnly(true);
+                        setOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span className="text-xs font-semibold">View</span>
+                    </button>
+                  )}
+                  {hasPermission('salespersons', 'edit') && (
+                    <button
+                      onClick={() => {
+                        setForm({
+                          ...item,
+                          inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                        });
+                        setIsEditing(true);
+                        setIsViewOnly(false);
+                        setOpen(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                      <span className="text-xs font-semibold">Edit</span>
+                    </button>
+                  )}
+                  {hasPermission('salespersons', 'delete') && (
+                    <button
+                      onClick={() => handleDeleteRequest(item)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span className="text-xs font-semibold">Delete</span>
+                    </button>
+                  )}
                 </div>
                 <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
               </div>

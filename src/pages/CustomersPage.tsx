@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Edit2, Trash2, Eye, X, Upload, AlertTriangle, Loader2, LayoutGrid, List, Store, Phone, MapPin, Mail } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { getMastersAction } from '@/store/ducks/company_masters.ducks';
+import { usePermissions } from '@/hooks/usePermissions';
 
 // Only name & mobile are required; everything else optional
 const validationSchema = Yup.object().shape({
@@ -57,9 +58,10 @@ const CustomersPage = () => {
   const dispatch = useDispatch();
   const { data: customers, loading, saving } = useSelector((state: RootState) => state.customers);
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders || { data: [] });
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
   const { data: masters } = useSelector((state: RootState) => state.companyMasters);
+  const { hasPermission, getFilteredMasters, getFilteredData } = usePermissions();
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -71,7 +73,7 @@ const CustomersPage = () => {
   const [customerToDelete, setCustomerToDelete] = useState<string | null>(null);
   const [deleteBlockedMsg, setDeleteBlockedMsg] = useState<string | null>(null);
 
-  const showrooms = (masters || []).filter(m => m.type === 'Showroom');
+  const showrooms = getFilteredMasters((masters || []).filter(m => m.type === 'Showroom'), 'Showroom');
 
   useEffect(() => {
     if (companyCode) {
@@ -82,7 +84,8 @@ const CustomersPage = () => {
   }, [dispatch, companyCode]);
 
   // Sort newest first then filter
-  const filtered = [...customers]
+  const rawData = useMemo(() => getFilteredData(customers || [], 'showroom'), [customers, getFilteredData]);
+  const filtered = [...rawData]
     .sort((a, b) => {
       const dateA = new Date(a.createdDate || a.created_at || 0).getTime();
       const dateB = new Date(b.createdDate || b.created_at || 0).getTime();
@@ -226,15 +229,17 @@ const CustomersPage = () => {
             </button>
           </div>
 
-          <Button
-            className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
-            onClick={() => {
-              setShowForm(true);
-              setProfileMode('add');
-            }}
-          >
-            <Plus className="w-4 h-4 mr-1" /> Add Customer
-          </Button>
+          {hasPermission('customers', 'add') && (
+            <Button
+              className="h-11 rounded-xl px-6 font-bold shadow-lg shadow-primary/20"
+              onClick={() => {
+                setShowForm(true);
+                setProfileMode('add');
+              }}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Customer
+            </Button>
+          )}
         </div>
       </div>
 
@@ -283,18 +288,24 @@ const CustomersPage = () => {
                     <td className="px-6 py-4 text-muted-foreground tabular-nums text-xs">{(c.createdDate || c.created_at)?.split('T')[0] || '—'}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => { setSelectedCustomer(c); setProfileMode('view'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => { setSelectedCustomer(c); setProfileMode('edit'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteRequest(c)}
-                          className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {hasPermission('customers', 'view') && (
+                          <button onClick={() => { setSelectedCustomer(c); setProfileMode('view'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
+                            <Eye className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission('customers', 'edit') && (
+                          <button onClick={() => { setSelectedCustomer(c); setProfileMode('edit'); }} className="p-2 rounded-lg hover:bg-muted text-muted-foreground hover:text-primary transition-all">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {hasPermission('customers', 'delete') && (
+                          <button 
+                            onClick={() => handleDeleteRequest(c)}
+                            className="p-2 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -361,27 +372,33 @@ const CustomersPage = () => {
 
                 <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => { setSelectedCustomer(c); setProfileMode('view'); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">View</span>
-                    </button>
-                    <button
-                      onClick={() => { setSelectedCustomer(c); setProfileMode('edit'); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">Edit</span>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteRequest(c)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">Delete</span>
-                    </button>
+                    {hasPermission('customers', 'view') && (
+                      <button 
+                        onClick={() => { setSelectedCustomer(c); setProfileMode('view'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">View</span>
+                      </button>
+                    )}
+                    {hasPermission('customers', 'edit') && (
+                      <button
+                        onClick={() => { setSelectedCustomer(c); setProfileMode('edit'); }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Edit</span>
+                      </button>
+                    )}
+                    {hasPermission('customers', 'delete') && (
+                      <button
+                        onClick={() => handleDeleteRequest(c)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Delete</span>
+                      </button>
+                    )}
                   </div>
                   <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
                 </div>

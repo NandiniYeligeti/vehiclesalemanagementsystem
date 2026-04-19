@@ -5,6 +5,7 @@ import { getCustomersAction, getCustomerLedgerAction } from '@/store/ducks/custo
 import { RootState } from '@/store/rootReducer';
 import { CarFront, Download, Printer } from 'lucide-react';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 
 const formatCurrency = (amount: number) => {
@@ -21,8 +22,11 @@ const LedgerPage = () => {
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedVehicleId, setSelectedVehicleId] = useState('all');
 
-  const { data: customers, ledger, ledgerLoading, loading } = useSelector((state: RootState) => state.customers);
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { data: rawCustomers, ledger, ledgerLoading, loading } = useSelector((state: RootState) => state.customers);
+  const { user } = useSelector((state: RootState) => state.auth);
+  const { getFilteredData } = usePermissions();
+
+  const customers = useMemo(() => getFilteredData(rawCustomers || [], 'showroom'), [rawCustomers, getFilteredData]);
   
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
 

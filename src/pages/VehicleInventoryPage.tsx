@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { 
@@ -16,6 +16,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle 
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
+import { usePermissions } from '@/hooks/usePermissions';
 
 const inventoryValidationSchema = Yup.object().shape({
   vehicle_model_id: Yup.string().required('Model is required'),
@@ -39,8 +40,9 @@ const formatDate = (dateString: string) => {
 
 const VehicleInventoryPage = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { hasPermission, getFilteredData, getFilteredMasters } = usePermissions();
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -53,7 +55,8 @@ const VehicleInventoryPage = () => {
 
   // DEFENSIVE SELECTORS
   const rawInventoryState = useSelector((state: RootState) => state.vehicleInventory);
-  const inventory = Array.isArray(rawInventoryState?.data) ? rawInventoryState.data : [];
+  const rawInventory = Array.isArray(rawInventoryState?.data) ? rawInventoryState.data : [];
+  const inventory = useMemo(() => getFilteredData(rawInventory, 'showroom'), [rawInventory, getFilteredData]);
   const inventoryLoading = !!rawInventoryState?.loading;
 
   const rawModelsState = useSelector((state: RootState) => state.vehicleModels);
@@ -65,7 +68,7 @@ const VehicleInventoryPage = () => {
   const accessories = Array.isArray(rawFeaturesState?.accessories) ? rawFeaturesState.accessories : [];
 
   const { data: masters } = useSelector((state: RootState) => state.companyMasters);
-  const showrooms = (masters || []).filter(m => m.type === 'Showroom');
+  const showrooms = getFilteredMasters((masters || []).filter(m => m.type === 'Showroom'), 'Showroom');
 
   useEffect(() => {
     if (companyCode) {
@@ -125,9 +128,11 @@ const VehicleInventoryPage = () => {
             <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="List View"><List className="w-3.5 h-3.5" /></button>
             <button onClick={() => setViewMode('card')} className={`p-2 rounded-lg transition-all ${viewMode === 'card' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="Card View"><LayoutGrid className="w-3.5 h-3.5" /></button>
           </div>
-          <button onClick={() => { setEditingItem(null); setIsViewOnly(false); setShowForm(true); }} className="erp-button-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-primary/20 whitespace-nowrap">
-            <Plus className="w-4 h-4" /> Add Vehicle
-          </button>
+          {hasPermission('vehicle-inventory', 'add') && (
+            <button onClick={() => { setEditingItem(null); setIsViewOnly(false); setShowForm(true); }} className="erp-button-primary h-11 px-6 flex items-center gap-2 shadow-lg shadow-primary/20 whitespace-nowrap">
+              <Plus className="w-4 h-4" /> Add Vehicle
+            </button>
+          )}
         </div>
       </div>
 
@@ -254,42 +259,48 @@ const VehicleInventoryPage = () => {
 
               {/* Action Buttons */}
               <div className={`pt-4 border-t border-border/50 flex items-center justify-between ${viewMode === 'list' ? 'md:border-t-0 md:pt-0 md:w-48' : ''}`}>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => { 
-                      setEditingItem(item); 
-                      setIsViewOnly(true);
-                      setShowForm(true); 
-                    }} 
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span className="text-xs font-semibold">View</span>
-                  </button>
-
-                  {(item.status || '').toLowerCase() === 'available' && (
-                    <>
-                      <button
+                  <div className="flex items-center gap-2">
+                    {hasPermission('vehicle-inventory', 'view') && (
+                      <button 
                         onClick={() => { 
                           setEditingItem(item); 
-                          setIsViewOnly(false);
+                          setIsViewOnly(true);
                           setShowForm(true); 
                         }} 
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">Edit</span>
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">View</span>
                       </button>
-                      <button
-                        onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-semibold">Delete</span>
-                      </button>
-                    </>
-                  )}
-                </div>
+                    )}
+  
+                    {(item.status || '').toLowerCase() === 'available' && (
+                      <>
+                        {hasPermission('vehicle-inventory', 'edit') && (
+                          <button
+                            onClick={() => { 
+                              setEditingItem(item); 
+                              setIsViewOnly(false);
+                              setShowForm(true); 
+                            }} 
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">Edit</span>
+                          </button>
+                        )}
+                        {hasPermission('vehicle-inventory', 'delete') && (
+                          <button
+                            onClick={() => setItemToDelete(item.entity_id || item._id || item.id!)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">Delete</span>
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
                 {viewMode === 'card' && <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>}
               </div>
             </div>

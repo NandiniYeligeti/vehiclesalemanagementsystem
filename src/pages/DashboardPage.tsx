@@ -9,6 +9,7 @@ import { getDashboardStatsAction } from '@/store/ducks/dashboard.ducks';
 import { RootState } from '@/store/rootReducer';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { api } from '@/services/api';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const COLORS = [
   'hsl(var(--primary))',
@@ -26,10 +27,12 @@ const formatCurrency = (amount: number) => {
 
 const DashboardPage = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const { stats, loading } = useSelector((state: RootState) => state.dashboard);
   const rawInventory = useSelector((state: RootState) => state.vehicleInventory);
-  const inventory = Array.isArray(rawInventory?.data) ? rawInventory.data : [];
+  const { getFilteredData } = usePermissions();
+
+  const inventory = useMemo(() => getFilteredData(rawInventory?.data || [], 'showroom'), [rawInventory?.data, getFilteredData]);
   const [isSeeding, setIsSeeding] = useState(false);
 
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';

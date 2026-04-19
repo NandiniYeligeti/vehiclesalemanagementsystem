@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useMemo } from 'react';
 import { RootState } from '@/store/rootReducer';
 import { getSalesOrdersAction, updateSalesOrderAction } from '@/store/ducks/sales_orders.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
@@ -7,11 +8,13 @@ import { Search, Loader2, Edit2, CheckCircle2, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field } from 'formik';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const IncentiveManagementPage = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { getFilteredData } = usePermissions();
 
   const [tab, setTab] = useState<'Pending' | 'Paid' | 'History'>('Pending');
   const [search, setSearch] = useState('');
@@ -19,12 +22,12 @@ const IncentiveManagementPage = () => {
   const [payingIncentive, setPayingIncentive] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
 
-  const rawSalesOrders = useSelector((state: RootState) => state.salesOrders?.data);
-  const salesOrders = Array.isArray(rawSalesOrders) ? rawSalesOrders : [];
+  const rawSalesOrders = useSelector((state: RootState) => state.salesOrders?.data || []);
+  const salesOrders = useMemo(() => getFilteredData(rawSalesOrders, 'branch'), [rawSalesOrders, getFilteredData]);
   const loading = useSelector((state: RootState) => state.salesOrders?.loading);
 
-  const rawSalespersons = useSelector((state: RootState) => state.salespersons?.data);
-  const salespersons = Array.isArray(rawSalespersons) ? rawSalespersons : [];
+  const rawSalespersons = useSelector((state: RootState) => state.salespersons?.data || []);
+  const salespersons = useMemo(() => getFilteredData(rawSalespersons, 'branch'), [rawSalespersons, getFilteredData]);
 
   useEffect(() => {
     if (companyCode) {

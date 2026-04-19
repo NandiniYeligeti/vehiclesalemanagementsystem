@@ -8,6 +8,14 @@ import { SagaIterator } from "redux-saga";
 // STATE & TYPES
 // ================================
 
+export interface MenuPermission {
+  menu_id: string;
+  can_view: boolean;
+  can_add: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+}
+
 export interface User {
   id: string;
   username: string;
@@ -16,6 +24,10 @@ export interface User {
   CompanyCode: string;
   company_name: string;
   menus: string[];
+  permissions: MenuPermission[];
+  branches: string[];
+  showrooms: string[];
+  areas: string[];
 }
 
 interface AuthState {
@@ -68,6 +80,10 @@ const authSlice = createSlice({
         CompanyCode: incomingUser.company_code, // DashboardPage mapping dependency backwards compatibility
         company_name: incomingUser.company_name,
         menus: incomingUser.menus || [],
+        permissions: incomingUser.permissions || [],
+        branches: incomingUser.branches || [],
+        showrooms: incomingUser.showrooms || [],
+        areas: incomingUser.areas || [],
       };
       state.isAuthenticated = true;
       sessionStorage.setItem("accessToken", action.payload.token);
@@ -93,6 +109,10 @@ const authSlice = createSlice({
         CompanyCode: company.company_code,
         company_name: company.company_name,
         menus: company.menus || [],
+        permissions: company.permissions || [],
+        branches: company.branches || [],
+        showrooms: company.showrooms || [],
+        areas: company.areas || [],
       };
       state.isAuthenticated = true;
       state.impersonating = true;

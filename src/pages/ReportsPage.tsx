@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { FileDown, BarChart3, Loader2, Calendar, Filter } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useMemo } from 'react';
 import { RootState } from '@/store/rootReducer';
 import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
@@ -9,6 +10,7 @@ import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks
 import { getPaymentsAction } from '@/store/ducks/payments.ducks';
 import { getLoansAction } from '@/store/ducks/loans.ducks';
 import { toast } from 'sonner';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const reportTypes = [
   { id: 'sales', name: 'Sales Report', description: 'Complete sales data with vehicle and customer details' },
@@ -20,8 +22,9 @@ const reportTypes = [
 
 const ReportsPage = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state: RootState) => state.auth.user);
+  const { user } = useSelector((state: RootState) => state.auth);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { getFilteredData } = usePermissions();
 
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -29,11 +32,20 @@ const ReportsPage = () => {
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
 
-  const customers = useSelector((state: RootState) => state.customers.data) || [];
-  const salesOrders = useSelector((state: RootState) => state.salesOrders?.data) || [];
-  const inventory = useSelector((state: RootState) => state.vehicleInventory.data) || [];
-  const payments = useSelector((state: RootState) => state.payments.data) || [];
-  const loans = useSelector((state: RootState) => state.loans.data) || [];
+  const rawCustomers = useSelector((state: RootState) => state.customers.data) || [];
+  const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
+
+  const rawSalesOrders = useSelector((state: RootState) => state.salesOrders?.data) || [];
+  const salesOrders = useMemo(() => getFilteredData(rawSalesOrders, 'branch'), [rawSalesOrders, getFilteredData]);
+
+  const rawInventory = useSelector((state: RootState) => state.vehicleInventory.data) || [];
+  const inventory = useMemo(() => getFilteredData(rawInventory, 'showroom'), [rawInventory, getFilteredData]);
+
+  const rawPayments = useSelector((state: RootState) => state.payments.data) || [];
+  const payments = useMemo(() => getFilteredData(rawPayments, 'branch'), [rawPayments, getFilteredData]);
+
+  const rawLoans = useSelector((state: RootState) => state.loans.data) || [];
+  const loans = useMemo(() => getFilteredData(rawLoans, 'branch'), [rawLoans, getFilteredData]);
   
   const models = Array.from(new Set(inventory.map(item => item.model))).filter(Boolean);
 
