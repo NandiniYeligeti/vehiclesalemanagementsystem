@@ -9,6 +9,7 @@ import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { addSalesOrderAction, getSalesOrdersAction, resendOrderEmailAction, previewOrderEmailAction } from '@/store/ducks/sales_orders.ducks';
+import { getCompanySettingsAction } from '@/store/ducks/company.ducks';
 import EmailPreviewModal from '@/components/EmailPreviewModal';
 import { getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
 import { ChevronDown, Check } from 'lucide-react';
@@ -69,6 +70,7 @@ const SalesOrderPage = () => {
   const { data: salesOrders = [], loading: ordersLoading } = useSelector((state: RootState) => state.salesOrders || { data: [], loading: false });
   const { accessories = [] } = useSelector((state: RootState) => state.vehicleFeatures || { accessories: [] });
   const { ledger, ledgerLoading } = useSelector((state: RootState) => state.customers);
+  const { settings } = useSelector((state: RootState) => state.company || { settings: null });
 
   const [isAccessoryDropdownOpen, setIsAccessoryDropdownOpen] = useState(false);
 
@@ -79,6 +81,7 @@ const SalesOrderPage = () => {
       dispatch(getVehicleInventoryAction(companyCode));
       dispatch(getSalesOrdersAction(companyCode));
       dispatch(getAccessoriesAction(companyCode));
+      dispatch(getCompanySettingsAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -124,7 +127,7 @@ const SalesOrderPage = () => {
   });
 
   const filteredOrders = useMemo(() => {
-    return salesOrders.filter(order => {
+    const list = salesOrders.filter(order => {
       const customer = customers.find(c => (c.entity_id || c._id || c.id) === order.customer_id);
       const vehicle = inventory.find(v => (v.entity_id || v._id || v.id) === order.vehicle_inventory_id);
       const searchStr = `${customer?.customer_name || ''} ${vehicle?.model || ''} ${order.sales_order_code || ''}`.toLowerCase();
@@ -132,6 +135,8 @@ const SalesOrderPage = () => {
       const matchesStatus = !statusFilter || order.payment_status === statusFilter || order.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
+    // Sort by date descending
+    return [...list].sort((a, b) => new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime());
   }, [salesOrders, customers, inventory, searchTerm, statusFilter]);
 
   // Stats for cards
@@ -188,6 +193,10 @@ const SalesOrderPage = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const logoUrl = settings?.logo_url 
+      ? (settings.logo_url.startsWith('http') ? settings.logo_url : `http://localhost:4001/${settings.logo_url}`)
+      : '';
+
     const content = `
       <html>
         <head>
@@ -195,6 +204,7 @@ const SalesOrderPage = () => {
           <style>
             body { font-family: sans-serif; padding: 40px; color: #333; }
             .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+            .company-logo { height: 60px; margin-bottom: 15px; }
             .company-info h1 { margin: 0; color: #2563eb; }
             .order-info { text-align: right; }
             .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
@@ -211,11 +221,12 @@ const SalesOrderPage = () => {
         <body>
           <div class="header">
             <div class="company-info">
-              <h1>${user?.company_name || 'VEHICLE ERP'}</h1>
+              ${logoUrl ? `<img src="${logoUrl}" class="company-logo" alt="Logo" />` : ''}
+              <h1>${settings?.company_name || user?.company_name || 'VEHICLE ERP'}</h1>
               <p>${companyCode} | Main Branch</p>
             </div>
             <div class="order-info">
-              <h2>SALES ORDER</h2>
+              <h2 style="margin-top: 0;">SALES ORDER</h2>
               <p><strong>Order #:</strong> ${order.sales_order_code || 'DRAFT'}</p>
               <p><strong>Date:</strong> ${new Date(order.sale_date).toLocaleDateString()}</p>
             </div>
@@ -272,19 +283,26 @@ const SalesOrderPage = () => {
             </tbody>
           </table>
 
-          <div class="totals">
+          <div class="totals" style="margin-top: 30px;">
             <div class="total-row"><span>Sub Total:</span><span>${formatCurrency(order.total_amount)}</span></div>
             <div class="total-row"><span>Down Payment:</span><span>- ${formatCurrency(order.down_payment)}</span></div>
             <div class="total-row"><span>Loan Amount:</span><span>- ${formatCurrency(order.loan_amount)}</span></div>
-            <div class="total-row grand-total"><span>Net Payable:</span><span>${formatCurrency(order.balance_amount)}</span></div>
+            <div class="total-row grand-total"><span>Balance Due:</span><span>${formatCurrency(order.balance_amount)}</span></div>
           </div>
 
           <div style="margin-top: 100px; display: flex; justify-content: space-between;">
-            <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px;">Customer Signature</div>
-            <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px;">Authorized Signatory</div>
+            <div style="text-align: center; border-top: 1px solid #333; width: 240px; padding-top: 10px;">Customer Signature</div>
+            <div style="text-align: center; border-top: 1px solid #333; width: 240px; padding-top: 10px;">Authorized Signatory</div>
           </div>
 
-          <script>window.print(); window.close();</script>
+          <p style="margin-top: 60px; font-size: 10px; color: #999; text-align: center; font-style: italic;">This is a computer-generated confirmation and does not require a physical signature.</p>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            };
+          </script>
         </body>
       </html>
     `;

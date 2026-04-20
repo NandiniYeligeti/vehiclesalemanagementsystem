@@ -99,15 +99,19 @@ const VehicleInventoryPage = () => {
   const soldCount = inventory.filter(i => (i.status || '').toLowerCase() === 'sold').length;
   const totalCount = inventory.length;
 
-  const filteredInventory = inventory.filter(item => {
-    const matchesSearch =
-      (item.chassis_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.engine_number || '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.model || '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.brand || '').toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = !statusFilter || (item.status || '').toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
-  });
+  const filteredInventory = useMemo(() => {
+    const list = inventory.filter(item => {
+      const matchesSearch =
+        (item.chassis_number || '').toLowerCase().includes(search.toLowerCase()) ||
+        (item.engine_number || '').toLowerCase().includes(search.toLowerCase()) ||
+        (item.model || '').toLowerCase().includes(search.toLowerCase()) ||
+        (item.brand || '').toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = !statusFilter || (item.status || '').toLowerCase() === statusFilter.toLowerCase();
+      return matchesSearch && matchesStatus;
+    });
+    // Sort by purchase date descending
+    return [...list].sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime());
+  }, [inventory, search, statusFilter]);
 
   return (
     <div className="space-y-6 pb-12">

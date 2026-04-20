@@ -10,6 +10,7 @@ import { getCustomersAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
 import { getPaymentsAction, addPaymentAction, deletePaymentAction, resendPaymentEmailAction, previewPaymentEmailAction } from '@/store/ducks/payments.ducks';
+import { getCompanySettingsAction } from '@/store/ducks/company.ducks';
 import EmailPreviewModal from '@/components/EmailPreviewModal';
 import {
   AlertDialog,
@@ -64,6 +65,7 @@ const PaymentsPage = () => {
   const [paymentToDelete, setPaymentToDelete] = useState<string | null>(null);
 
   const { data: payments = [], loading: paymentsLoading, saving } = useSelector((state: RootState) => state.payments);
+  const { settings } = useSelector((state: RootState) => state.company);
   
   const rawCustomers = useSelector((state: RootState) => state.customers?.data || []);
   const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
@@ -73,19 +75,20 @@ const PaymentsPage = () => {
 
   const { data: salesOrders = [] } = useSelector((state: RootState) => state.salesOrders);
 
-  const getCustomerName = (customerId: string) => {
-    const customer = customers.find(c => (c.entity_id || c._id || c.id) === customerId);
-    return customer?.customer_name || customer?.name || 'Unknown';
-  };
-
   useEffect(() => {
     if (companyCode) {
       dispatch(getPaymentsAction(companyCode));
       dispatch(getCustomersAction(companyCode));
-      dispatch(getSalespersonsAction(companyCode));
       dispatch(getSalesOrdersAction(companyCode));
+      dispatch(getSalespersonsAction(companyCode));
+      dispatch(getCompanySettingsAction(companyCode));
     }
   }, [dispatch, companyCode]);
+
+  const getCustomerName = (customerId: string) => {
+    const customer = customers.find(c => (c.entity_id || c._id || c.id) === customerId);
+    return customer?.customer_name || customer?.name || 'Unknown';
+  };
 
   const handleOpenEmailPreview = (payment: any) => {
     const id = payment.entity_id || payment._id || payment.id;
@@ -102,7 +105,7 @@ const PaymentsPage = () => {
     dispatch(resendPaymentEmailAction(companyCode, currentEmailId, () => {
       setIsEmailSending(false);
       setShowEmailModal(false);
-      toast.success('Payment receipt email sent to customer!');
+      toast.success('Payment receipt email sent successfully!');
       dispatch(getPaymentsAction(companyCode));
     }));
   };
@@ -112,6 +115,10 @@ const PaymentsPage = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    const logoUrl = settings?.logo_url 
+      ? (settings.logo_url.startsWith('http') ? settings.logo_url : `http://localhost:4001/${settings.logo_url}`)
+      : '';
+
     const content = `
       <html>
         <head>
@@ -120,6 +127,7 @@ const PaymentsPage = () => {
             body { font-family: sans-serif; padding: 40px; color: #333; line-height: 1.6; }
             .receipt-container { max-width: 800px; margin: 0 auto; border: 1px solid #eee; padding: 40px; border-radius: 8px; }
             .header { display: flex; justify-content: space-between; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+            .company-logo { height: 60px; margin-bottom: 15px; }
             .company-info h1 { margin: 0; color: #2563eb; font-size: 24px; }
             .receipt-info { text-align: right; }
             .section-title { font-weight: bold; text-transform: uppercase; font-size: 12px; color: #666; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -133,11 +141,12 @@ const PaymentsPage = () => {
           <div class="receipt-container">
             <div class="header">
               <div class="company-info">
-                <h1>${user?.company_name || 'VEHICLE ERP'}</h1>
+                ${logoUrl ? `<img src="${logoUrl}" class="company-logo" alt="Logo" />` : ''}
+                <h1>${settings?.company_name || user?.company_name || 'VEHICLE ERP'}</h1>
                 <p>${companyCode} | Payment Receipt</p>
               </div>
               <div class="receipt-info">
-                <h2>RECEIPT</h2>
+                <h2 style="margin-top: 0;">RECEIPT</h2>
                 <p><strong>No:</strong> ${p.payment_code}</p>
                 <p><strong>Date:</strong> ${formatDate(p.payment_date)}</p>
               </div>
@@ -161,19 +170,24 @@ const PaymentsPage = () => {
 
             <div style="margin-top: 40px;">
               <div class="section-title">Payment Summary</div>
-              <div class="row"><span>Description</span><span>Amount</span></div>
+              <div class="row" style="font-weight: bold; color: #666;"><span>Description</span><span>Amount</span></div>
               <div class="row"><span>${p.payment_type} Credit</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
               <div class="total-row"><span>Total Amount Received</span><span>₹${(p.payment_amount || 0).toLocaleString('en-IN')}</span></div>
             </div>
 
             <div style="margin-top: 80px; display: flex; justify-content: space-between;">
-              <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px; font-size: 12px;">Customer Signature</div>
-              <div style="text-align: center; border-top: 1px solid #333; width: 200px; padding-top: 10px; font-size: 12px;">Authorized Signatory</div>
+              <div style="text-align: center; border-top: 1px solid #333; width: 240px; padding-top: 10px; font-size: 12px;">Customer Signature</div>
+              <div style="text-align: center; border-top: 1px solid #333; width: 240px; padding-top: 10px; font-size: 12px;">Authorized Signatory</div>
             </div>
 
-            <p style="margin-top: 50px; font-size: 10px; color: #999; text-align: center;">This is a computer-generated receipt and does not require a physical signature.</p>
+            <p style="margin-top: 60px; font-size: 10px; color: #999; text-align: center; font-style: italic;">This is a computer-generated receipt and does not require a physical signature.</p>
           </div>
-          <script>window.print();window.close();</script>
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(() => { window.close(); }, 500);
+            };
+          </script>
         </body>
       </html>
     `;
@@ -198,11 +212,13 @@ const PaymentsPage = () => {
   };
 
   const filtered = useMemo(() => {
-    return (payments || []).filter(p =>
+    const list = (payments || []).filter(p =>
       (p.payment_code || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.invoice_number || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.remarks || '').toLowerCase().includes(search.toLowerCase())
     );
+    // Sort by date descending
+    return [...list].sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime());
   }, [payments, search]);
 
   const formatCurrency = (amount: number) => {
