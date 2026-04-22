@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Edit, Edit2, AlertTriangle, Loader2, Power, Phone, MapPin, Mail, Eye, List, LayoutGrid } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { toast } from 'sonner';
@@ -44,6 +44,7 @@ const SalespersonsPage = () => {
   );
   const salespersons = useMemo(() => getFilteredData(rawSalespersons || [], 'branch'), [rawSalespersons, getFilteredData]);
 
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -199,18 +200,37 @@ const SalespersonsPage = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-black">Sales Team</h1>
-          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Personnel Management</p>
+          <p className="text-xs text-muted-foreground uppercase tracking-widest font-bold">Personnel Management • {filtered.length} Active Members</p>
         </div>
 
         <div className="flex gap-3 w-full sm:w-auto">
-          <div className="flex items-center gap-2 border rounded-xl px-4 h-11 bg-card w-full sm:w-72 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <input
-              placeholder="Search team members..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="bg-transparent outline-none text-sm w-full"
-            />
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 border rounded-xl px-4 h-11 bg-card w-full sm:w-64 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <input
+                placeholder="Search team..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-transparent outline-none text-sm w-full"
+              />
+            </div>
+            
+            <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/60 gap-1 h-11">
+              <button 
+                onClick={() => setViewMode('list')} 
+                className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`}
+                title="List View"
+              >
+                <List className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={() => setViewMode('card')} 
+                className={`p-2 rounded-lg transition-all ${viewMode === 'card' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`}
+                title="Card View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {hasPermission('salespersons', 'add') && (
@@ -238,109 +258,186 @@ const SalespersonsPage = () => {
         </div>
       </div>
 
-      {/* LIST */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((item: any) => (
-          <div key={item.entity_id || item._id || item.id} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
-            {/* Top primary bar */}
-            <div className="h-1 w-full bg-primary" />
-            
-            <div className="p-4 space-y-3.5">
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center border border-primary/10 shrink-0">
-                     <span className="font-bold text-[15px] text-primary">{item.full_name?.[0]?.toUpperCase()}</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    <h3 className="font-bold text-[15px] leading-none text-foreground">{item.full_name}</h3>
-                    <p className="text-[12px] font-semibold text-primary leading-none">{item.showroom || 'No Showroom'}</p>
-                    <div className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-medium leading-none">
-                      {item.branch || 'No Branch'}
+      {/* RENDER VIEW */}
+      {viewMode === 'card' ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filtered.map((item: any) => (
+            <div key={item.entity_id || item._id || item.id} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
+              {/* Top primary bar */}
+              <div className="h-1 w-full bg-primary" />
+              
+              <div className="p-4 space-y-3.5">
+                {/* Header */}
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex flex-col items-center justify-center border border-primary/10 shrink-0">
+                       <span className="font-bold text-[15px] text-primary">{item.full_name?.[0]?.toUpperCase()}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <h3 className="font-bold text-[15px] leading-none text-foreground">{item.full_name}</h3>
+                      <p className="text-[12px] font-semibold text-primary leading-none">{item.showroom || 'No Showroom'}</p>
+                      <div className="inline-block bg-muted/60 text-muted-foreground px-1.5 py-0.5 rounded text-[10px] font-medium leading-none">
+                        {item.branch || 'No Branch'}
+                      </div>
                     </div>
                   </div>
+                  {item.is_inactive ? (
+                    <div className="bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      Inactive
+                    </div>
+                  ) : (
+                    <div className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                      Active
+                    </div>
+                  )}
                 </div>
-                {/* Active Tag */}
-                {item.is_inactive ? (
-                  <div className="bg-red-500/10 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                    Inactive
-                  </div>
-                ) : (
-                  <div className="bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                    Active
-                  </div>
-                )}
-              </div>
 
-              {/* Info Rows */}
-              <div className="space-y-1.5 pt-0.5">
-                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
-                  <Phone className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[12px] font-medium text-muted-foreground">{item.mobile_number || 'N/A'}</span>
+                {/* Info Rows */}
+                <div className="space-y-1.5 pt-0.5">
+                  <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                    <Phone className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[12px] font-medium text-muted-foreground">{item.mobile_number || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                    <MapPin className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[12px] font-medium text-muted-foreground">{item.area || 'N/A'}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
+                    <Mail className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[12px] font-medium text-muted-foreground truncate">{item.email || 'N/A'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
-                  <MapPin className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[12px] font-medium text-muted-foreground">{item.area || 'N/A'}</span>
-                </div>
-                <div className="flex items-center gap-2.5 bg-muted/30 px-3 py-2 rounded-[10px]">
-                  <Mail className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-[12px] font-medium text-muted-foreground truncate">{item.email || 'N/A'}</span>
-                </div>
-              </div>
 
-              <div className="pt-4 border-t border-border/50 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {hasPermission('salespersons', 'view') && (
-                    <button 
-                      onClick={() => {
-                        setForm({
-                          ...item,
-                          inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
-                        });
-                        setIsEditing(false);
-                        setIsViewOnly(true);
-                        setOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">View</span>
-                    </button>
-                  )}
-                  {hasPermission('salespersons', 'edit') && (
-                    <button
-                      onClick={() => {
-                        setForm({
-                          ...item,
-                          inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
-                        });
-                        setIsEditing(true);
-                        setIsViewOnly(false);
-                        setOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                    >
-                      <Edit2 className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">Edit</span>
-                    </button>
-                  )}
-                  {hasPermission('salespersons', 'delete') && (
-                    <button
-                      onClick={() => handleDeleteRequest(item)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span className="text-xs font-semibold">Delete</span>
-                    </button>
-                  )}
+                <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {hasPermission('salespersons', 'view') && (
+                      <button 
+                        onClick={() => {
+                          setForm({
+                            ...item,
+                            inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                          });
+                          setIsEditing(false);
+                          setIsViewOnly(true);
+                          setOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">View</span>
+                      </button>
+                    )}
+                    {hasPermission('salespersons', 'edit') && (
+                      <button
+                        onClick={() => {
+                          setForm({
+                            ...item,
+                            inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '',
+                          });
+                          setIsEditing(true);
+                          setIsViewOnly(false);
+                          setOpen(true);
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Edit</span>
+                      </button>
+                    )}
+                    {hasPermission('salespersons', 'delete') && (
+                      <button
+                        onClick={() => handleDeleteRequest(item)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span className="text-xs font-semibold">Delete</span>
+                      </button>
+                    )}
+                  </div>
+                  <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
                 </div>
-                <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="erp-card overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 border-b border-border">
+              <tr>
+                <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Team Member</th>
+                <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Mobile & Email</th>
+                <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Showroom / Branch</th>
+                <th className="text-center py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Status</th>
+                <th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-32">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((item: any) => (
+                <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors group">
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-primary text-xs">
+                        {item.full_name?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground text-[13px]">{item.full_name}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tight">{item.area || 'No Area'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-6">
+                    <p className="font-semibold text-foreground text-xs">{item.mobile_number || 'N/A'}</p>
+                    <p className="text-[10px] text-muted-foreground">{item.email || 'N/A'}</p>
+                  </td>
+                  <td className="py-4 px-6">
+                    <p className="font-semibold text-primary text-xs">{item.showroom || 'N/A'}</p>
+                    <p className="text-[10px] text-muted-foreground">{item.branch || 'N/A'}</p>
+                  </td>
+                  <td className="py-4 px-6 text-center">
+                    {item.is_inactive ? (
+                      <Badge variant="destructive" className="rounded-md text-[9px] uppercase font-black px-2 py-0.5">Inactive</Badge>
+                    ) : (
+                      <Badge className="bg-emerald-500 hover:bg-emerald-600 rounded-md text-[9px] uppercase font-black px-2 py-0.5">Active</Badge>
+                    )}
+                  </td>
+                  <td className="py-4 px-6 text-right">
+                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {hasPermission('salespersons', 'view') && (
+                        <button 
+                          onClick={() => {
+                            setForm({ ...item, inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '' });
+                            setIsEditing(false); setIsViewOnly(true); setOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-blue-500/10 text-blue-600 transition-colors"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('salespersons', 'edit') && (
+                        <button 
+                          onClick={() => {
+                            setForm({ ...item, inactive_date: item.inactive_date ? new Date(item.inactive_date).toISOString().split('T')[0] : '' });
+                            setIsEditing(true); setIsViewOnly(false); setOpen(true);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-primary/10 text-primary transition-colors"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                      {hasPermission('salespersons', 'delete') && (
+                        <button onClick={() => handleDeleteRequest(item)} className="p-1.5 rounded-lg hover:bg-destructive/10 text-destructive transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {loading && filtered.length === 0 && (
         <div className="flex items-center justify-center h-48 opacity-40 italic">

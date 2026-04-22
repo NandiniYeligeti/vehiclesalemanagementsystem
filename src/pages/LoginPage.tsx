@@ -1,7 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Monitor } from "lucide-react";
+import { 
+  Eye, 
+  EyeOff, 
+  Mail, 
+  Lock, 
+  ArrowRight, 
+  ShieldCheck, 
+  BarChart3, 
+  LayoutGrid, 
+  User,
+  Car
+} from "lucide-react";
 import { loginAction } from '@/store/ducks/auth.duck';
 import { RootState } from '@/store/rootReducer';
 import { forgotPasswordApi } from "@/services/auth/auth";
@@ -13,35 +24,14 @@ export default function LoginPage() {
   const { loading } = useSelector((state: RootState) => state.auth);
 
   const [showPassword, setShowPassword] = useState(false);
-  const [slideIndex, setSlideIndex] = useState(0);
-  const [theme, setTheme] = useState("dark");
   const [showForgot, setShowForgot] = useState(false);
-  const [customColor, setCustomColor] = useState("#111827");
-
   const [email, setEmail] = useState(() => {
     return localStorage.getItem("rememberUser") || "";
   });
   const [password, setPassword] = useState("");
-
-  // Remember Me state
   const [remember, setRemember] = useState(() => {
     return localStorage.getItem("remember") === "true";
   });
-
-  const colorRef = useRef<HTMLInputElement>(null);
-
-  const images = [
-    "https://images.unsplash.com/photo-1551288049-bebda4e38f71",
-    "https://images.unsplash.com/photo-1460925895917-afdab827c52f",
-    "https://images.unsplash.com/photo-1498050108023-c5249f4df085"
-  ];
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSlideIndex((prev) => (prev + 1) % images.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [images.length]);
 
   useEffect(() => {
     if (remember) {
@@ -52,23 +42,6 @@ export default function LoginPage() {
       localStorage.removeItem("rememberUser");
     }
   }, [remember, email]);
-
-  const themes: Record<string, string> = {
-    dark: "bg-gradient-to-br from-gray-950 to-gray-900",
-    blue: "bg-gradient-to-br from-blue-900 to-indigo-950",
-    purple: "bg-gradient-to-br from-purple-900 to-violet-950"
-  };
-
-  const cycleTheme = () => {
-    if (theme === "dark") setTheme("blue");
-    else if (theme === "blue") setTheme("purple");
-    else setTheme("dark");
-  };
-
-  const openColorPicker = (e: React.MouseEvent) => {
-    e.preventDefault();
-    colorRef.current?.click();
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,191 +70,178 @@ export default function LoginPage() {
     }
   };
 
-  const bgStyle = theme === "custom" ? { backgroundColor: customColor } : {};
-
   return (
-    <div
-      className={`min-h-screen flex flex-col items-center justify-center ${theme !== "custom" ? themes[theme] : ""
-        } p-6 gap-4 transition-colors duration-500`}
-      style={bgStyle}
-    >
-      <div className="w-full max-w-[850px] bg-[#1e1e1e] shadow-2xl rounded-2xl grid md:grid-cols-2 overflow-hidden text-white relative ring-1 ring-white/10 mx-auto">
-        {/* Left Image Slider */}
-        <div className="hidden md:block relative h-full bg-black min-h-[400px]">
-          {images.map((img, i) => (
-            <img
-              key={i}
-              src={img}
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${i === slideIndex ? "opacity-100" : "opacity-0"
-                }`}
-            />
-          ))}
+    <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans">
+      {/* Left Panel - Branding Image */}
+      <div className="relative hidden md:flex flex-col w-1/2 bg-[#020617] overflow-hidden">
+        <img 
+          src="/Login page 2.png" 
+          className="w-full h-full object-cover"
+          alt="Branding and features illustration"
+        />
+      </div>
 
-          <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-black/50 to-transparent pointer-events-none" />
-          <div className="absolute bottom-0 inset-x-0 h-40 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
-
-          <div className="absolute bottom-6 w-full flex justify-center gap-2">
-            {images.map((_, i) => (
-              <div
-                key={i}
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${i === slideIndex ? "bg-white" : "bg-white/40"
-                  }`}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* Right Panel */}
-        <div className="p-6 sm:p-7 space-y-4 flex flex-col justify-center bg-[#18181b]">
-          {/* Company Logo */}
-          <div className="flex justify-center -mb-2">
-            <img
-              src="/logo.png"
-              alt="Company Logo"
-              className="h-14 object-contain opacity-100 transition-opacity"
-            />
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 overflow-y-auto">
+        <div className="w-full max-w-[420px] bg-white p-6 lg:p-8 rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] border border-gray-100/50 flex flex-col items-center my-auto">
+          
+          {/* Form Header */}
+          <div className="w-12 h-12 bg-[#2563eb] rounded-full flex items-center justify-center mb-3 shadow-xl shadow-blue-600/20">
+            <User className="w-6 h-6 text-white" strokeWidth={1.5} />
           </div>
 
-          <h1 className="text-2xl tracking-tight font-semibold text-center text-white">
-            {showForgot ? "Forgot Password" : "DDR AutoPro"}
-          </h1>
+          <div className="text-center space-y-0.5 mb-5 w-full">
+            <h3 className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              {showForgot ? "Forgot Password" : "Welcome Back!"}
+            </h3>
+            <p className="text-slate-500 font-medium text-xs">
+              {showForgot ? "We'll send you recovery instructions" : "Login to your account to continue"}
+            </p>
+          </div>
 
           {showForgot ? (
-            <div className="space-y-4 pt-2">
-              <input
-                placeholder="Enter Registered Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full p-3 rounded-lg bg-[#27272a] border border-[#3f3f46] outline-none focus:border-blue-500 focus:bg-[#27272a] transition-colors text-white placeholder:text-gray-400"
-              />
+            <div className="w-full space-y-4">
+              <div className="space-y-1">
+                <label className="text-[13px] font-bold text-slate-700 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />
+                  <input
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-gray-200 outline-none focus:border-blue-500 transition-all text-slate-900 placeholder:text-slate-400 text-sm"
+                  />
+                </div>
+              </div>
 
               <button 
                 onClick={handleForgot}
-                className="w-full bg-[#2563eb] font-semibold py-3 rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/10 active:scale-[0.98]"
+                className="w-full bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] text-sm"
               >
                 Send Password
+                <ArrowRight className="w-4 h-4" />
               </button>
 
               <button
                 onClick={() => setShowForgot(false)}
-                className="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors hover:underline w-full"
+                className="w-full text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors py-1"
               >
                 Back to Login
               </button>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5 pt-2">
-              <div>
-                <input
-                  placeholder="User ID"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full p-3.5 rounded-lg bg-[#27272a] border border-[#3f3f46] outline-none focus:border-[#3b82f6] focus:bg-[#323236] transition-all text-white placeholder:text-gray-400"
-                />
-              </div>
-
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full p-3.5 rounded-lg bg-[#27272a] border border-[#3f3f46] outline-none focus:border-[#3b82f6] focus:bg-[#323236] transition-all text-white placeholder:text-gray-400 pr-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-                </button>
-              </div>
-
-              {/* Remember Me */}
-              <div className="flex items-center justify-between text-sm py-1">
-                <label className="flex items-center gap-2 cursor-pointer group select-none">
+            <form onSubmit={handleSubmit} className="w-full space-y-4">
+              {/* Email Field */}
+              <div className="space-y-1">
+                <label className="text-[13px] font-bold text-slate-700 ml-1">Email Address</label>
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />
                   <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-600 focus:ring-offset-[#18181b] bg-gray-700"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-200 outline-none focus:border-blue-600 transition-all text-slate-900 placeholder:text-slate-400 text-sm"
                   />
-                  <span className="text-gray-200 group-hover:text-white transition-colors font-medium">Remember Me</span>
-                </label>
+                </div>
+              </div>
 
+              {/* Password Field */}
+              <div className="space-y-1">
+                <div className="flex justify-between items-center px-1">
+                  <label className="text-[13px] font-bold text-slate-700">Password</label>
+                </div>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-colors group-focus-within:text-blue-600" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full pl-11 pr-11 py-3 rounded-xl border border-gray-200 outline-none focus:border-blue-600 transition-all text-slate-900 placeholder:text-slate-400 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex justify-end pr-1 -mt-1">
                 <button
                   type="button"
                   onClick={() => setShowForgot(true)}
-                  className="text-blue-400 hover:text-blue-300 transition-colors hover:underline font-medium"
+                  className="text-xs font-bold text-blue-600 hover:text-blue-700 transition-colors"
                 >
                   Forgot Password?
                 </button>
               </div>
 
+              {/* Login Button */}
               <button
                 type="submit"
                 disabled={loading || !email || !password}
-                className="w-full bg-[#1d4ed8] font-semibold py-3 flex justify-center items-center rounded-lg hover:bg-blue-600 transition-colors text-white shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed text-[15px] tracking-wide"
+                className="w-full bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/25 active:scale-[0.98] disabled:opacity-70 text-sm"
               >
                 {loading ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  'Login'
+                  <>
+                    <ArrowRight className="w-4 h-4" />
+                    Login
+                  </>
                 )}
               </button>
+
+              {/* Divider */}
+              <div className="relative flex items-center py-1">
+                <div className="flex-grow border-t border-gray-100"></div>
+                <span className="flex-shrink mx-4 text-gray-400 font-bold text-[10px] uppercase tracking-wider">Or continue with</span>
+                <div className="flex-grow border-t border-gray-100"></div>
+              </div>
+
+              {/* Social Logins */}
+              <div className="grid grid-cols-2 gap-3">
+                <button 
+                  type="button"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors font-bold text-slate-700 text-xs shadow-sm"
+                >
+                  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27h-11.3v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96h-3.98v3.09C3.3 21.35 7.39 24 12 24z"/>
+                    <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.13-1.57.38-2.29V6.62h-3.98C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.39 0 3.3 2.65 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+                  </svg>
+                  Google
+                </button>
+                <button 
+                  type="button"
+                  className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors font-bold text-slate-700 text-xs shadow-sm"
+                >
+                  <div className="grid grid-cols-2 gap-0.5 w-4 h-4 flex-shrink-0">
+                    <div className="bg-[#f35325]" />
+                    <div className="bg-[#81bc06]" />
+                    <div className="bg-[#05a6f0]" />
+                    <div className="bg-[#ffba08]" />
+                  </div>
+                  Microsoft
+                </button>
+              </div>
+
+              {/* Registration Link */}
+              <p className="text-center text-slate-500 font-bold text-xs pt-1">
+                Don't have an account? <span className="text-blue-600 hover:underline cursor-pointer">Register</span>
+              </p>
             </form>
           )}
-
-          {/* Premium Company Branding */}
-          <div className="text-center text-xs text-gray-400 space-y-1 pt-4 mt-1">
-            <div className="w-full h-px bg-white/10 mb-4"></div>
-            {/* <p className="font-bold text-gray-200 text-sm tracking-wide">Rupesh Infotech Pvt. Ltd.</p>
-            <p className="text-gray-400 text-xs">SmartERP Business Suite</p>
-            <p className="pt-1 text-gray-400/80 flex items-center justify-center gap-1.5 font-medium">
-               <span className="text-red-400 text-sm">📍</span> Mumbai, Maharashtra, India
-            </p> */}
-            <p className="text-[10px] text-gray-500/80 tracking-widest uppercase">© 2026 DDR Management All Rights Reserved</p>
-          </div>
         </div>
       </div>
-
-      {/* Visual Theme Selector */}
-      {/* <div className="mt-8 flex flex-col items-center gap-3">
-        <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest">Select Background Theme</p>
-        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-xl p-2.5 rounded-full border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
-          <button
-            onClick={() => setTheme('dark')}
-            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'dark' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,255,255,0.4)]' : 'border-transparent'}`}
-            style={{ background: 'linear-gradient(to bottom right, #030712, #111827)' }}
-            title="Dark Slate"
-          />
-          <button
-            onClick={() => setTheme('blue')}
-            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'blue' ? 'border-white scale-110 shadow-[0_0_15px_rgba(59,130,246,0.6)]' : 'border-transparent'}`}
-            style={{ background: 'linear-gradient(to bottom right, #1e3a8a, #312e81)' }}
-            title="Midnight Blue"
-          />
-          <button
-            onClick={() => setTheme('purple')}
-            className={`w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 ${theme === 'purple' ? 'border-white scale-110 shadow-[0_0_15px_rgba(147,51,234,0.6)]' : 'border-transparent'}`}
-            style={{ background: 'linear-gradient(to bottom right, #581c87, #2e1065)' }}
-            title="Deep Purple"
-          />
-          <div className="w-px h-5 bg-white/20 mx-1"></div>
-
-          <label className={`relative cursor-pointer w-7 h-7 rounded-full border-2 transition-all hover:scale-110 duration-300 overflow-hidden shadow-inner flex items-center justify-center bg-[conic-gradient(red,yellow,lime,aqua,blue,fuchsia,red)] ${theme === 'custom' ? 'border-white scale-110 shadow-[0_0_15px_rgba(255,100,200,0.5)]' : 'border-transparent'}`} title="Pick Custom Color">
-            <input
-              type="color"
-              value={customColor}
-              onChange={(e) => {
-                setCustomColor(e.target.value);
-                setTheme("custom");
-              }}
-              className="absolute opacity-0 w-[200%] h-[200%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer"
-            />
-          </label>
-        </div> */}
-      {/* </div> */}
     </div>
   );
 }
+
+

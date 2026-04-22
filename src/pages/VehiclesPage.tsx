@@ -9,7 +9,7 @@ import {
   getCategoriesAction, addCategoryAction, deleteCategoryAction,
   getAccessoriesAction, addAccessoryAction, deleteAccessoryAction
 } from '@/store/ducks/vehicle_features.ducks';
-import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Eye } from 'lucide-react';
+import { Plus, Search, Trash2, Edit2, X, AlertTriangle, Loader2, Car, Eye, List, LayoutGrid } from 'lucide-react';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -87,6 +87,8 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
   const categories = Array.isArray(rawFeaturesState?.categories) ? rawFeaturesState.categories : [];
   const accessories = Array.isArray(rawFeaturesState?.accessories) ? rawFeaturesState.accessories : [];
   const featuresLoading = !!rawFeaturesState?.loading;
+
+  const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
 
   useEffect(() => {
     if (companyCode) {
@@ -204,70 +206,132 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
       {tab === 'models' && (
         <div className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center h-10 px-3 rounded-xl bg-card border border-border gap-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input type="text" placeholder="Search models..." value={search} onChange={(e) => setSearch(e.target.value)}
-                className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground" />
+            <div className="flex items-center gap-3">
+              <div className="flex items-center h-10 px-3 rounded-xl bg-card border border-border gap-2 shadow-sm focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+                <Search className="w-4 h-4 text-muted-foreground" />
+                <input type="text" placeholder="Search models..." value={search} onChange={(e) => setSearch(e.target.value)}
+                  className="bg-transparent text-sm outline-none w-64 placeholder:text-muted-foreground" />
+              </div>
+              
+              <div className="flex items-center bg-muted/50 rounded-xl p-1 border border-border/60 gap-1 h-10">
+                <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="List View"><List className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setViewMode('card')} className={`p-1.5 rounded-lg transition-all ${viewMode === 'card' ? 'bg-card shadow-sm text-primary' : 'text-muted-foreground'}`} title="Card View"><LayoutGrid className="w-3.5 h-3.5" /></button>
+              </div>
             </div>
+
             {hasPermission('vehicles', 'add') && (
               <button onClick={() => setShowModelForm(true)} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all tracking-tight font-bold">
                 <Plus className="w-4 h-4" /> Add Model
               </button>
             )}
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredModels.map((m) => (
-              <motion.div key={m.entity_id || m._id || m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group overflow-hidden border-t-[3px] border-t-primary">
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10 text-primary shrink-0">
-                      <Car className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-[15px] font-semibold text-foreground">{m.brand} {m.model}</h3>
-                      <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{m.variant} • {(m.fuel_type || []).join(', ')}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="pt-2">
-                    <p className="text-2xl font-bold text-primary tracking-tight">₹{(m.base_price || 0).toLocaleString('en-IN')}</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">Base Price</p>
-                  </div>
 
-                  <div className="pt-4 border-t border-border/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {hasPermission('vehicles', 'view') && (
-                        <button 
-                          onClick={() => {
-                            setEditingModel(m);
-                            setIsViewOnly(true);
-                            setShowModelForm(true);
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span className="text-xs font-semibold">View</span>
-                        </button>
-                      )}
-                      {hasPermission('vehicles', 'edit') && (
-                        <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
-                          <Edit2 className="w-3.5 h-3.5" />
-                          <span className="text-xs font-semibold">Edit</span>
-                        </button>
-                      )}
-                      {hasPermission('vehicles', 'delete') && (
-                        <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors">
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span className="text-xs font-semibold">Delete</span>
-                        </button>
-                      )}
+          {viewMode === 'card' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredModels.map((m) => (
+                <motion.div key={m.entity_id || m._id || m.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="erp-card group overflow-hidden border-t-[3px] border-t-primary">
+                  <div className="p-5 space-y-4">
+                    <div className="flex items-center gap-4">
+                      <div className="p-3 rounded-lg bg-primary/10 text-primary shrink-0">
+                        <Car className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-[15px] font-semibold text-foreground">{m.brand} {m.model}</h3>
+                        <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{m.variant} • {(m.fuel_type || []).join(', ')}</p>
+                      </div>
                     </div>
-                    <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
+                    
+                    <div className="pt-2">
+                      <p className="text-2xl font-bold text-primary tracking-tight">₹{(m.base_price || 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">Base Price</p>
+                    </div>
+
+                    <div className="pt-4 border-t border-border/50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {hasPermission('vehicles', 'view') && (
+                          <button 
+                            onClick={() => {
+                              setEditingModel(m);
+                              setIsViewOnly(true);
+                              setShowModelForm(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">View</span>
+                          </button>
+                        )}
+                        {hasPermission('vehicles', 'edit') && (
+                          <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors">
+                            <Edit2 className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">Edit</span>
+                          </button>
+                        )}
+                        {hasPermission('vehicles', 'delete') && (
+                          <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors">
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="text-xs font-semibold">Delete</span>
+                          </button>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground opacity-60 font-medium hidden sm:block">Actions</span>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="erp-card overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 border-b border-border">
+                  <tr>
+                    <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Model & Brand</th>
+                    <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Variant</th>
+                    <th className="text-left py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Fuel Types</th>
+                    <th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Base Price</th>
+                    <th className="text-right py-4 px-6 font-bold uppercase text-[10px] tracking-widest text-muted-foreground w-32">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredModels.map((m) => (
+                    <tr key={m.entity_id || m._id || m.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-3">
+                          <Car className="w-4 h-4 text-primary opacity-60" />
+                          <div>
+                            <p className="font-bold text-foreground">{m.brand} {m.model}</p>
+                            <p className="text-[10px] text-muted-foreground font-mono">{m.model_code}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 font-medium text-muted-foreground text-xs">{m.variant}</td>
+                      <td className="py-4 px-6">
+                        <div className="flex flex-wrap gap-1">
+                          {(m.fuel_type || []).map((f: string) => (
+                            <span key={f} className="px-2 py-0.5 rounded-full bg-primary/5 text-primary text-[10px] font-bold border border-primary/10">{f}</span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-right font-black text-foreground">₹{(m.base_price || 0).toLocaleString('en-IN')}</td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          {hasPermission('vehicles', 'view') && (
+                            <button onClick={() => { setEditingModel(m); setIsViewOnly(true); setShowModelForm(true); }} className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-600 transition-colors" title="View Detail"><Eye className="w-4 h-4" /></button>
+                          )}
+                          {hasPermission('vehicles', 'edit') && (
+                            <button onClick={() => { setEditingModel(m); setIsViewOnly(false); setShowModelForm(true); }} className="p-2 rounded-lg hover:bg-primary/10 text-primary transition-colors" title="Edit Model"><Edit2 className="w-4 h-4" /></button>
+                          )}
+                          {hasPermission('vehicles', 'delete') && (
+                            <button onClick={() => setModelToDelete(m.entity_id || m._id || m.id!)} className="p-2 rounded-lg hover:bg-red-500/10 text-red-600 transition-colors" title="Delete Model"><Trash2 className="w-4 h-4" /></button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 

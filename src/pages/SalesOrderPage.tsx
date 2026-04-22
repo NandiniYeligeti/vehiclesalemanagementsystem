@@ -5,7 +5,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
-import { getCustomersAction } from '@/store/ducks/customers.ducks';
+import { getCustomersAction, getCustomerLedgerAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
 import { addSalesOrderAction, getSalesOrdersAction, resendOrderEmailAction, previewOrderEmailAction } from '@/store/ducks/sales_orders.ducks';
@@ -68,7 +68,7 @@ const SalesOrderPage = () => {
   const inventory = useMemo(() => getFilteredData(rawInventory, 'showroom'), [rawInventory, getFilteredData]);
 
   const { data: salesOrders = [], loading: ordersLoading } = useSelector((state: RootState) => state.salesOrders || { data: [], loading: false });
-  const { accessories = [] } = useSelector((state: RootState) => state.vehicleFeatures || { accessories: [] });
+  const { accessories: accessoriesList = [] } = useSelector((state: RootState) => state.vehicleFeatures || { accessories: [] });
   const { ledger, ledgerLoading } = useSelector((state: RootState) => state.customers);
   const { settings } = useSelector((state: RootState) => state.company || { settings: null });
 
@@ -140,9 +140,26 @@ const SalesOrderPage = () => {
   }, [salesOrders, customers, inventory, searchTerm, statusFilter]);
 
   // Stats for cards
-  const fullyPaidCount = useMemo(() => salesOrders.filter(o => o.payment_status === 'Fully Paid' || o.balance_amount === 0).length, [salesOrders]);
-  const pendingCount = useMemo(() => salesOrders.filter(o => (o.balance_amount || 0) > 0).length, [salesOrders]);
-  const confirmedCount = useMemo(() => salesOrders.filter(o => o.status === 'Confirmed').length, [salesOrders]);
+  const stats = useMemo(() => {
+    const counts = {
+      fullyPaid: 0,
+      pending: 0,
+      totalBalance: 0,
+      totalOrders: salesOrders.length
+    };
+
+    salesOrders.forEach(o => {
+      const balance = Number(o.balance_amount || 0);
+      if (balance <= 0 || o.payment_status === 'Fully Paid') {
+        counts.fullyPaid++;
+      } else {
+        counts.pending++;
+        counts.totalBalance += balance;
+      }
+    });
+
+    return counts;
+  }, [salesOrders]);
 
   const openLedgerDrawer = (order: any) => {
     setDrawerOrderId(order.entity_id || order._id || order.id);
@@ -223,7 +240,6 @@ const SalesOrderPage = () => {
             <div class="company-info">
               ${logoUrl ? `<img src="${logoUrl}" class="company-logo" alt="Logo" />` : ''}
               <h1>${settings?.company_name || user?.company_name || 'VEHICLE ERP'}</h1>
-              <p>${companyCode} | Main Branch</p>
             </div>
             <div class="order-info">
               <h2 style="margin-top: 0;">SALES ORDER</h2>
@@ -334,53 +350,67 @@ const SalesOrderPage = () => {
       {activeTab === 'list' ? (
         <div className="space-y-4">
           {/* Stat Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <button
               onClick={() => setStatusFilter(statusFilter === 'Fully Paid' ? null : 'Fully Paid')}
-              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
-                statusFilter === 'Fully Paid' ? 'border-emerald-500' : 'border-transparent'
+              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+                statusFilter === 'Fully Paid' ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-transparent'
               }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                  <FileText className="w-4 h-4 text-emerald-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Check className="w-5 h-5 text-emerald-500" />
+                  </div>
+                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Fully Paid</span>
                 </div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Fully Paid</span>
+                {statusFilter === 'Fully Paid' && <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />}
               </div>
-              <p className="text-3xl font-black text-emerald-600">{fullyPaidCount}</p>
-              <p className="text-xs text-muted-foreground mt-1">completed orders</p>
+              <p className="text-3xl font-black text-emerald-600 tracking-tight">{stats.fullyPaid}</p>
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter mt-1 italic">completed sales</p>
             </button>
 
             <button
               onClick={() => setStatusFilter(statusFilter === 'Pending' ? null : 'Pending')}
-              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
-                statusFilter === 'Pending' ? 'border-amber-500' : 'border-transparent'
+              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+                statusFilter === 'Pending' ? 'border-amber-500 shadow-lg shadow-amber-500/10' : 'border-transparent'
               }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4 text-amber-500" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <CreditCard className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Pending</span>
                 </div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Pending</span>
+                {statusFilter === 'Pending' && <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
               </div>
-              <p className="text-3xl font-black text-amber-600">{pendingCount}</p>
-              <p className="text-xs text-muted-foreground mt-1">balance due</p>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-black text-amber-600 tracking-tight">{stats.pending}</p>
+                <span className="text-xs font-bold text-amber-600/60 uppercase">Orders</span>
+              </div>
+              <p className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-tighter mt-1 italic">
+                {stats.totalBalance > 0 ? `${formatCurrency(stats.totalBalance)} total balance` : 'No balance due'}
+              </p>
             </button>
 
             <button
               onClick={() => setStatusFilter(null)}
-              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 ${
-                !statusFilter ? 'border-primary' : 'border-transparent'
+              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+                !statusFilter ? 'border-primary shadow-lg shadow-primary/10' : 'border-transparent'
               }`}
             >
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BookOpen className="w-4 h-4 text-primary" />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <List className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Total Orders</span>
                 </div>
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">All Orders</span>
+                {!statusFilter && <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />}
               </div>
-              <p className="text-3xl font-black text-primary">{salesOrders.length}</p>
-              <p className="text-xs text-muted-foreground mt-1">total records</p>
+              <p className="text-3xl font-black text-primary tracking-tight">{stats.totalOrders}</p>
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter mt-1 italic">all records</p>
             </button>
           </div>
 
@@ -565,8 +595,8 @@ const SalesOrderPage = () => {
 
             const filteredAccessories = useMemo(() => {
               if (!selectedVehicle) return [];
-              return (accessories || []).filter((a: any) => a.model_id === selectedVehicle.vehicle_model_id);
-            }, [accessories, selectedVehicle]);
+              return (accessoriesList || []).filter((a: any) => a.model_id === selectedVehicle.vehicle_model_id);
+            }, [accessoriesList, selectedVehicle]);
 
             const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
               const vId = e.target.value;
@@ -1124,15 +1154,6 @@ const SalesOrderPage = () => {
                 )}
               </div>
 
-              <div className="p-6 bg-card border-t border-border shrink-0 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                 <button 
-                   type="button"
-                   onClick={() => navigate('/ledger')}
-                   className="w-full py-4 bg-foreground text-background font-black uppercase tracking-widest text-[11px] rounded-2xl flex items-center justify-center gap-2 hover:bg-foreground/90 transition-all shadow-xl hover:shadow-2xl active:scale-95 group"
-                 >
-                   Open Full Customer Statement <Eye className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                 </button>
-              </div>
             </motion.div>
           </div>
         )}
