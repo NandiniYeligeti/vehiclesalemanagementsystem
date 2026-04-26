@@ -240,19 +240,35 @@ const DashboardPage = () => {
           <h3 className="erp-section-title">Available Stock — By Model</h3>
           <p className="text-xs text-muted-foreground mb-4">Current inventory available for sale, grouped by model</p>
           {modelAvailableData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={modelAvailableData} layout="vertical" margin={{ left: 8, right: 16 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214,20%,90%)" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11 }} allowDecimals={false} />
-                <YAxis dataKey="model" type="category" tick={{ fontSize: 10 }} width={96} />
-                <Tooltip />
-                <Bar dataKey="count" radius={[0, 6, 6, 0]} fill="hsl(152,60%,40%)">
-                  {modelAvailableData.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={modelAvailableData}
+                    dataKey="count"
+                    nameKey="model"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    strokeWidth={2}
+                  >
+                    {modelAvailableData.map((_, i) => (
+                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                {modelAvailableData.map((item, i) => (
+                  <div key={item.model} className="flex items-center gap-2 text-xs">
+                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                    <span className="text-muted-foreground truncate">{item.model}</span>
+                    <span className="ml-auto font-black tabular-nums">{item.count}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="flex items-center justify-center h-48 text-sm text-muted-foreground">No available vehicles in stock</div>
           )}

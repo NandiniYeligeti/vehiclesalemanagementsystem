@@ -1,16 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Eye, 
-  EyeOff, 
-  Mail, 
-  Lock, 
-  ArrowRight, 
-  ShieldCheck, 
-  BarChart3, 
-  LayoutGrid, 
-  User,
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  BarChart3,
+  LayoutGrid,
   Car
 } from "lucide-react";
 import { loginAction } from '@/store/ducks/auth.duck';
@@ -74,8 +73,8 @@ export default function LoginPage() {
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans">
       {/* Left Panel - Branding Image */}
       <div className="relative hidden md:flex flex-col w-1/2 bg-[#020617] overflow-hidden">
-        <img 
-          src="/Login page 2.png" 
+        <img
+          src="/Login page 2.png"
           className="w-full h-full object-cover"
           alt="Branding and features illustration"
         />
@@ -84,18 +83,18 @@ export default function LoginPage() {
       {/* Right Panel - Login Form */}
       <div className="flex-1 flex flex-col justify-center items-center p-4 lg:p-6 overflow-y-auto">
         <div className="w-full max-w-[420px] bg-white p-6 lg:p-8 rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] border border-gray-100/50 flex flex-col items-center my-auto">
-          
+
           {/* Form Header */}
-          <div className="w-12 h-12 bg-[#2563eb] rounded-full flex items-center justify-center mb-3 shadow-xl shadow-blue-600/20">
-            <User className="w-6 h-6 text-white" strokeWidth={1.5} />
+          <div className="w-24 h-24 bg-orange-50/50 rounded-full flex items-center justify-center mb-6 border border-orange-100/50 shadow-inner">
+            <img src="/logo.png" className="w-14 h-14 object-contain" alt="Logo" />
           </div>
 
-          <div className="text-center space-y-0.5 mb-5 w-full">
-            <h3 className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight">
+          <div className="text-center space-y-1 mb-6 w-full">
+            <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight leading-tight">
               {showForgot ? "Forgot Password" : "Welcome Back!"}
             </h3>
-            <p className="text-slate-500 font-medium text-xs">
-              {showForgot ? "We'll send you recovery instructions" : "Login to your account to continue"}
+            <p className="text-slate-500 font-medium text-sm">
+              {showForgot ? "We'll send you recovery instructions" : "Sign in to continue to your account"}
             </p>
           </div>
 
@@ -115,7 +114,7 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <button 
+              <button
                 onClick={handleForgot}
                 className="w-full bg-[#2563eb] hover:bg-blue-700 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] text-sm"
               >
@@ -198,14 +197,14 @@ export default function LoginPage() {
               </button>
 
               {/* Divider */}
-              <div className="relative flex items-center py-1">
+              {/* <div className="relative flex items-center py-1">
                 <div className="flex-grow border-t border-gray-100"></div>
                 <span className="flex-shrink mx-4 text-gray-400 font-bold text-[10px] uppercase tracking-wider">Or continue with</span>
                 <div className="flex-grow border-t border-gray-100"></div>
-              </div>
+              </div> */}
 
               {/* Social Logins */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* <div className="grid grid-cols-2 gap-3">
                 <button 
                   type="button"
                   className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors font-bold text-slate-700 text-xs shadow-sm"
@@ -230,7 +229,7 @@ export default function LoginPage() {
                   </div>
                   Microsoft
                 </button>
-              </div>
+              </div> */}
 
               {/* Registration Link */}
               <p className="text-center text-slate-500 font-bold text-xs pt-1">
