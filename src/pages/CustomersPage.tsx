@@ -218,14 +218,14 @@ const CustomersPage = () => {
               className={`px-3 h-full rounded-lg transition-all flex items-center gap-2 ${viewMode === 'list' ? 'bg-card shadow-sm text-primary font-bold' : 'text-muted-foreground hover:text-foreground font-medium'}`}
             >
               <List className="w-3.5 h-3.5" />
-              <span className="text-xs">List</span>
+              <span className="text-xs"></span>
             </button>
             <button
               onClick={() => setViewMode('card')}
               className={`px-3 h-full rounded-lg transition-all flex items-center gap-2 ${viewMode === 'card' ? 'bg-card shadow-sm text-primary font-bold' : 'text-muted-foreground hover:text-foreground font-medium'}`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span className="text-xs">Cards</span>
+              <span className="text-xs"></span>
             </button>
           </div>
 

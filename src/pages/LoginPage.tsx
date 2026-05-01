@@ -72,12 +72,12 @@ export default function LoginPage() {
   return (
     <div className="h-screen w-full flex bg-[#f8fafc] overflow-hidden font-sans">
       {/* Left Panel - Branding Image */}
-      <div className="relative hidden md:flex flex-col w-1/2 bg-[#020617] overflow-hidden">
+      <div className="relative hidden md:flex flex-col w-1/2 bg-[#020617] overflow-hidden pt-0">
         <img
-          src="/Login page 2.png"
-          className="w-full h-full object-cover"
-          alt="Branding and features illustration"
-        />
+  src="/Login page 2.png"
+  className="w-full h-auto mt-0 object-cover"
+  alt="Branding and features illustration"
+/>
       </div>
 
       {/* Right Panel - Login Form */}
@@ -85,7 +85,7 @@ export default function LoginPage() {
         <div className="w-full max-w-[420px] bg-white p-6 lg:p-8 rounded-3xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] border border-gray-100/50 flex flex-col items-center my-auto">
 
           {/* Form Header */}
-          <div className="w-24 h-24 bg-orange-50/50 rounded-full flex items-center justify-center mb-6 border border-orange-100/50 shadow-inner">
+          <div className="mb-6 flex items-center justify-center">
             <img src="/logo.png" className="w-14 h-14 object-contain" alt="Logo" />
           </div>
 
@@ -232,9 +232,9 @@ export default function LoginPage() {
               </div> */}
 
               {/* Registration Link */}
-              <p className="text-center text-slate-500 font-bold text-xs pt-1">
+              {/* <p className="text-center text-slate-500 font-bold text-xs pt-1">
                 Don't have an account? <span className="text-blue-600 hover:underline cursor-pointer">Register</span>
-              </p>
+              </p> */}
             </form>
           )}
         </div>
