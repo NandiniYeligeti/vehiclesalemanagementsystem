@@ -170,7 +170,16 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="flex justify-end pr-1 -mt-1">
+              <div className="flex justify-between items-center pr-1 -mt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                  />
+                  <span className="text-[13px] font-bold text-slate-700">Remember me</span>
+                </label>
                 <button
                   type="button"
                   onClick={() => setShowForgot(true)}
@@ -197,11 +206,11 @@ export default function LoginPage() {
               </button>
 
               {/* Divider */}
-              {/* <div className="relative flex items-center py-1">
+              <div className="relative flex items-center py-1">
                 <div className="flex-grow border-t border-gray-100"></div>
-                <span className="flex-shrink mx-4 text-gray-400 font-bold text-[10px] uppercase tracking-wider">Or continue with</span>
+                <span className="flex-shrink mx-4 text-gray-800 font-bold text-[10px] uppercase tracking-wider"> © 2026 DDR Management All Rights Reserved</span>
                 <div className="flex-grow border-t border-gray-100"></div>
-              </div> */}
+              </div>
 
               {/* Social Logins */}
               {/* <div className="grid grid-cols-2 gap-3">

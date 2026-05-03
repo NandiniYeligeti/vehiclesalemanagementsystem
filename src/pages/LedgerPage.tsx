@@ -135,11 +135,12 @@ const LedgerPage = () => {
       return;
     }
 
-    const headers = ['Date', 'Vehicle', 'Description', 'Debit', 'Credit', 'Balance'];
+    const headers = ['Date', 'Vehicle', 'Description', 'Status', 'Debit', 'Credit', 'Balance'];
     const rows = ledger.map((item: any) => [
       formatDate(item.date),
       item.vehicle_name || 'N/A',
       item.description || '',
+      item.status || '',
       item.debit || 0,
       item.credit || 0,
       item.localBalance || 0
@@ -238,6 +239,7 @@ const LedgerPage = () => {
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-5 py-3 font-semibold text-foreground">Date</th>
                   <th className="px-5 py-3 font-semibold text-foreground">Description</th>
+                  <th className="px-5 py-3 font-semibold text-foreground">Status</th>
                   <th className="px-5 py-3 font-semibold text-foreground">Debit</th>
                   <th className="px-5 py-3 font-semibold text-foreground">Credit</th>
                   <th className="px-5 py-3 font-semibold text-foreground">Balance</th>
@@ -248,6 +250,21 @@ const LedgerPage = () => {
                   <tr key={entry.id || Math.random()} className="hover:bg-muted/10 transition-colors">
                     <td className="px-5 py-3">{formatDate(entry.date)}</td>
                     <td className="px-5 py-3 font-medium">{entry.description}</td>
+                    <td className="px-5 py-3">
+                      {entry.status ? (
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
+                          entry.status === 'Applied' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                          entry.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                          entry.status === 'Disbursed' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                          entry.status === 'Rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                          'bg-muted/20 text-muted-foreground border-border'
+                        }`}>
+                          {entry.status}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/40">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3 text-red-600 dark:text-red-400 font-medium">
                       {entry.description === 'Discount Allowed' 
                         ? formatCurrency(entry.credit) 

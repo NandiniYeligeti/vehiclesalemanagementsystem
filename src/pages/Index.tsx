@@ -41,7 +41,7 @@ const Index = () => {
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage />;
-      case 'enquiries': return <EnquiriesPage />;
+      case 'enquiries': return <EnquiriesPage onNavigate={setActiveTab} />;
       case 'customers': return <CustomersPage />;
       case 'salespersons': return <SalespersonsPage />;
       case 'vehicles': return <VehiclesPage initialTab="models" />;

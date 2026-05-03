@@ -81,6 +81,7 @@ const LoansPage = () => {
     status: "Applied",
     emi_amount: 0,
     account_number: "",
+    status_date: "",
   });
 
   useEffect(() => {
@@ -137,18 +138,20 @@ const LoansPage = () => {
   };
 
   const openCreate = () => {
+    const defaultBank = bankMasters.find(b => b.is_default);
     setFormData({
       customer_id: "",
       sales_order_id: "",
-      bank_name: "",
-      bank_person: "",
-      mobile: "",
+      bank_name: defaultBank ? defaultBank.bank_name : "",
+      bank_person: defaultBank ? defaultBank.contact_person : "",
+      mobile: defaultBank ? defaultBank.contact_number : "",
       loan_amount: 0,
       interest_rate: 8.5,
       duration_months: 36,
       status: "Applied",
       emi_amount: 0,
       account_number: "",
+      status_date: "",
     });
     setSelectedLoan(null);
     setIsEdit(true);
@@ -169,6 +172,7 @@ const LoansPage = () => {
       status: loan.status,
       emi_amount: loan.emi_amount,
       account_number: loan.account_number || "",
+      status_date: loan.status_date ? new Date(loan.status_date).toISOString().split('T')[0] : "",
     });
     setSelectedLoan(loan);
     setIsEdit(true);
@@ -189,6 +193,7 @@ const LoansPage = () => {
       status: loan.status,
       emi_amount: loan.emi_amount,
       account_number: loan.account_number || "",
+      status_date: loan.status_date ? new Date(loan.status_date).toISOString().split('T')[0] : "",
     });
     setSelectedLoan(loan);
     setIsEdit(false);
@@ -200,13 +205,21 @@ const LoansPage = () => {
     if (!formData.bank_name) return toast.error("Please select a bank");
     if (formData.loan_amount <= 0) return toast.error("Invalid loan amount");
 
+    // Build payload with proper date conversion
+    const payload: any = { ...formData };
+    if (payload.status_date) {
+      payload.status_date = new Date(payload.status_date).toISOString();
+    } else {
+      delete payload.status_date;
+    }
+
     if (selectedLoan) {
-      dispatch(updateLoanAction(companyCode, selectedLoan.entity_id || selectedLoan._id || '', formData, () => {
+      dispatch(updateLoanAction(companyCode, selectedLoan.entity_id || selectedLoan._id || '', payload, () => {
         toast.success("Loan updated successfully");
         setShowForm(false);
       }));
     } else {
-      dispatch(addLoanAction({ ...formData, company_id: companyCode, branch_id: 'MAIN' }, companyCode, () => {
+      dispatch(addLoanAction({ ...payload, company_id: companyCode, branch_id: 'MAIN' }, companyCode, () => {
         toast.success("Loan application submitted");
         setShowForm(false);
       }));
@@ -576,6 +589,20 @@ const LoansPage = () => {
                     >
                       {["Applied", "Approved", "Disbursed", "Rejected"].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
+                  </div>
+
+                  <div className="md:col-span-1">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">Status Date</label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        type="date"
+                        value={formData.status_date}
+                        disabled={isView}
+                        onChange={(e) => setFormData(p => ({ ...p, status_date: e.target.value }))}
+                        className="h-11 pl-10 rounded-xl bg-muted/20 border-border/50 font-bold text-sm disabled:opacity-50"
+                      />
+                    </div>
                   </div>
 
                   {/* Calculated Result */}

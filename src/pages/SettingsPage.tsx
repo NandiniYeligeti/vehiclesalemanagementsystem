@@ -7,10 +7,41 @@ import { RootState } from '@/store/rootReducer';
 import { getCompanySettingsAction, updateCompanySettingsAction } from '@/store/ducks/company.ducks';
 import { toast } from 'sonner';
 import { getMastersAction, addMasterAction, deleteMasterAction } from '@/store/ducks/company_masters.ducks';
-import { getBanksAction, addBankAction, deleteBankAction, BankMaster } from '@/store/ducks/bank_master.ducks';
+import { getBanksAction, addBankAction, updateBankAction, deleteBankAction, BankMaster } from '@/store/ducks/bank_master.ducks';
+import { Edit2, Star } from 'lucide-react';
 
-const BankMasterSection = ({ data, onAdd, onDelete, loading }: { data: BankMaster[], onAdd: (bank: BankMaster) => void, onDelete: (id: string) => void, loading: boolean }) => {
-  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', contact_person: '', contact_number: '' });
+const BankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { data: BankMaster[], onAdd: (bank: BankMaster) => void, onEdit: (id: string, bank: Partial<BankMaster>) => void, onDelete: (id: string) => void, loading: boolean }) => {
+  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', contact_person: '', contact_number: '', is_default: false });
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+
+  const handleSubmit = () => {
+    if (formData.bank_name) {
+      if (editingId) {
+        onEdit(editingId, formData);
+        setEditingId(null);
+      } else {
+        onAdd(formData as any);
+      }
+      setFormData({ bank_name: '', branch_name: '', contact_person: '', contact_number: '', is_default: false });
+    }
+  };
+
+  const startEdit = (bank: BankMaster) => {
+    setEditingId(bank.entity_id || bank.id || null);
+    setFormData({
+      bank_name: bank.bank_name,
+      branch_name: bank.branch_name,
+      contact_person: bank.contact_person,
+      contact_number: bank.contact_number,
+      is_default: !!bank.is_default,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({ bank_name: '', branch_name: '', contact_person: '', contact_number: '', is_default: false });
+  };
+
   return (
     <div className="erp-card p-8 bg-white border border-border/50 shadow-sm rounded-2xl space-y-6">
       <div className="flex items-center justify-between">
@@ -20,32 +51,66 @@ const BankMasterSection = ({ data, onAdd, onDelete, loading }: { data: BankMaste
         <span className="px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest leading-none">{data.length} Banks</span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-muted/20 p-4 rounded-xl border border-border/40">
-        <input value={formData.bank_name} onChange={(e) => setFormData(p => ({ ...p, bank_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Bank Name" />
-        <input value={formData.branch_name} onChange={(e) => setFormData(p => ({ ...p, branch_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Branch" />
-        <input value={formData.contact_person} onChange={(e) => setFormData(p => ({ ...p, contact_person: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Contact Person" />
-        <div className="flex gap-2">
+      <div className="bg-muted/20 p-4 rounded-xl border border-border/40 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <input value={formData.bank_name} onChange={(e) => setFormData(p => ({ ...p, bank_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Bank Name" />
+          <input value={formData.branch_name} onChange={(e) => setFormData(p => ({ ...p, branch_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Branch" />
+          <input value={formData.contact_person} onChange={(e) => setFormData(p => ({ ...p, contact_person: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Contact Person" />
           <input value={formData.contact_number} onChange={(e) => setFormData(p => ({ ...p, contact_number: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Mobile" />
-          <button 
-            onClick={() => { if(formData.bank_name) { onAdd(formData as any); setFormData({ bank_name: '', branch_name: '', contact_person: '', contact_number: '' }); } }} 
-            className="px-4 rounded-xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input 
+              type="checkbox" 
+              checked={formData.is_default} 
+              onChange={(e) => setFormData(p => ({ ...p, is_default: e.target.checked }))} 
+              className="w-4 h-4 text-primary bg-white border-border rounded focus:ring-primary focus:ring-offset-0"
+            />
+            <span className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">Set as Default Bank</span>
+          </label>
+          <div className="flex gap-2">
+            {editingId && (
+              <button 
+                onClick={cancelEdit} 
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-card border border-border hover:bg-muted transition-all"
+              >
+                Cancel
+              </button>
+            )}
+            <button 
+              onClick={handleSubmit} 
+              className="px-6 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+            >
+              {editingId ? <><Save className="w-3.5 h-3.5" /> Save Changes</> : <><Plus className="w-3.5 h-3.5" /> Add Bank</>}
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
         {data.map((bank) => (
-          <div key={bank.entity_id || bank.id} className="relative p-5 rounded-2xl bg-muted/30 border border-border/50 group hover:bg-white hover:border-primary/30 transition-all">
+          <div key={bank.entity_id || bank.id} className={`relative p-5 rounded-2xl bg-muted/30 border transition-all group ${bank.is_default ? 'border-primary/50 bg-primary/5' : 'border-border/50 hover:bg-white hover:border-primary/30'}`}>
+             {bank.is_default && (
+               <div className="absolute -top-3 -right-3 w-8 h-8 bg-amber-400 rounded-full flex items-center justify-center shadow-lg border-2 border-white" title="Default Bank">
+                 <Star className="w-4 h-4 text-white fill-current" />
+               </div>
+             )}
              <div className="flex items-start justify-between mb-2">
                <h4 className="font-black text-slate-900 text-sm">{bank.bank_name}</h4>
-               <button 
-                 onClick={() => onDelete(bank.entity_id || bank.id!)} 
-                 className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
-               >
-                 <Trash2 className="w-3.5 h-3.5" />
-               </button>
+               <div className="flex gap-1">
+                 <button 
+                   onClick={() => startEdit(bank)} 
+                   className="p-1.5 rounded-lg text-muted-foreground hover:text-blue-500 hover:bg-blue-50 transition-all"
+                 >
+                   <Edit2 className="w-3.5 h-3.5" />
+                 </button>
+                 <button 
+                   onClick={() => onDelete(bank.entity_id || bank.id!)} 
+                   className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+                 >
+                   <Trash2 className="w-3.5 h-3.5" />
+                 </button>
+               </div>
              </div>
              <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4 tracking-tighter opacity-80">{bank.branch_name} Branch</p>
              <div className="space-y-1.5 pt-3 border-t border-border/40">
@@ -431,6 +496,7 @@ const SettingsPage = () => {
         <BankMasterSection 
           data={banks} 
           onAdd={(bank) => dispatch(addBankAction(bank, companyCode, () => toast.success('Bank added to master')))}
+          onEdit={(id, bank) => dispatch(updateBankAction(id, bank, companyCode, () => toast.success('Bank updated')))}
           onDelete={(id) => dispatch(deleteBankAction(id, companyCode, () => toast.success('Bank removed')))}
           loading={banksLoading}
         />

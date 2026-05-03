@@ -873,10 +873,10 @@ const SalesOrderPage = () => {
                                 <option value="Net Banking">Net Banking</option>
                               </Field>
                             </div>
-                            {['Bank Transfer', 'GPay', 'Net Banking'].includes(values.payment_mode) && (
+                            {['Bank Transfer', 'GPay', 'Net Banking', 'Cheque'].includes(values.payment_mode) && (
                               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
-                                <label className="erp-label">UTR Number / Ref No.</label>
-                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder="Enter Transaction Reference Number" />
+                                <label className="erp-label">{values.payment_mode === 'Cheque' ? 'Check No.' : 'UTR Number / Ref No.'}</label>
+                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder={values.payment_mode === 'Cheque' ? 'Enter Check Number' : 'Enter Transaction Reference Number'} />
                               </motion.div>
                             )}
                           </>
@@ -904,10 +904,10 @@ const SalesOrderPage = () => {
                                 <option value="Net Banking">Net Banking</option>
                               </Field>
                             </div>
-                            {['Bank Transfer', 'GPay', 'Net Banking'].includes(values.payment_mode) && (
+                            {['Bank Transfer', 'GPay', 'Net Banking', 'Cheque'].includes(values.payment_mode) && (
                               <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="sm:col-span-2">
-                                <label className="erp-label">UTR Number / Ref No.</label>
-                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder="Enter Transaction Reference Number" />
+                                <label className="erp-label">{values.payment_mode === 'Cheque' ? 'Check No.' : 'UTR Number / Ref No.'}</label>
+                                <Field type="text" name="utr_number" className="erp-input font-mono shadow-inner bg-primary/5 border-primary/20" placeholder={values.payment_mode === 'Cheque' ? 'Enter Check Number' : 'Enter Transaction Reference Number'} />
                               </motion.div>
                             )}
                           </div>

@@ -275,7 +275,7 @@ const IncentiveManagementPage = () => {
                   );
                 }}
               >
-                {({ isSubmitting }) => (
+                {({ isSubmitting, values }) => (
                   <Form className="p-6 space-y-4">
                     <div className="p-3 bg-muted/20 rounded-xl border border-border/50">
                        <p className="text-[10px] font-black text-muted-foreground uppercase mb-1">Incentive Due</p>
@@ -292,15 +292,19 @@ const IncentiveManagementPage = () => {
                       </Field>
                     </div>
                     
-                    <div>
-                      <label className="erp-label">Transaction Reference / UTR</label>
-                      <Field 
-                        type="text" 
-                        name="reference_number" 
-                        placeholder="e.g. TXN12345678" 
-                        className="erp-input font-mono" 
-                      />
-                    </div>
+                    {values.payment_method !== 'Cash' && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                        <label className="erp-label">
+                          {values.payment_method === 'Cheque' ? 'Check No.' : 'Transaction Reference / UTR'}
+                        </label>
+                        <Field 
+                          type="text" 
+                          name="reference_number" 
+                          placeholder={values.payment_method === 'Cheque' ? 'Enter Check Number' : 'e.g. TXN12345678'}
+                          className="erp-input font-mono" 
+                        />
+                      </motion.div>
+                    )}
                     
                     <div className="flex justify-end gap-3 pt-4 border-t border-border">
                       <button type="button" onClick={() => setPayingIncentive(null)} className="px-4 py-2 text-sm font-bold rounded-xl hover:bg-muted transition-colors">Cancel</button>

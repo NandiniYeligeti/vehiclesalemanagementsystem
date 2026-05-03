@@ -30,6 +30,7 @@ export interface Loan {
   bank_person?: string;
   mobile?: string;
   disbursement_date?: string;
+  status_date?: string;
   created_at?: string;
 }
 

@@ -20,6 +20,7 @@ export interface BankMaster {
   branch_name: string;
   contact_person: string;
   contact_number: string;
+  is_default?: boolean;
 }
 
 interface BankMasterState {
