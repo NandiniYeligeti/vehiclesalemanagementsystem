@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { 
-  getVehicleModelsAction, addVehicleModelAction, deleteVehicleModelAction, updateVehicleModelAction 
+  getVehicleModelsAction, addVehicleModelAction, batchAddVehicleModelAction,
+  deleteVehicleModelAction, updateVehicleModelAction 
 } from '@/store/ducks/vehicle_models.ducks';
 import { 
   getTypesAction, addTypeAction, deleteTypeAction,
@@ -90,6 +91,82 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
 
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
 
+  // ---- Two-step wizard state (Add New Model) ----
+  const [wizardStep, setWizardStep] = useState<'setup' | 'variants'>('setup');
+  const [wizardHeader, setWizardHeader] = useState({
+    brand: '', modelName: '', categoryId: '', typeId: '',
+  });
+  const [wizardFuels, setWizardFuels] = useState<string[]>([]);
+  type WizardVariant = {
+    name: string; fuel: string; transmission: string;
+    engineCC: string; batteryKWh: string; chargingTime: string;
+    tankCapacity: string; avgMileage: string;
+    basePrice: string; incentiveType: string; incentiveValue: string;
+  };
+  const [wizardVariants, setWizardVariants] = useState<WizardVariant[]>([]);
+
+  const toggleWizardFuel = (f: string) =>
+    setWizardFuels(prev => prev.includes(f) ? prev.filter(x => x !== f) : [...prev, f]);
+
+  const getTransmissionOpts = (catId: string, fuel: string) => {
+    const cat = categories.find((c: any) => (c.entity_id || c._id || c.id) === catId);
+    const catName = (cat?.name || '').toLowerCase();
+    if (fuel === 'Electric') return ['Automatic'];
+    if (catName.includes('2 wheel') || catName.includes('2wheel')) return ['Manual', 'Automatic'];
+    if (catName.includes('4 wheel') || catName.includes('4wheel') || catName.includes('car')) return ['Manual', 'Automatic', 'AMT', 'CVT', 'DCT'];
+    return ['Manual', 'Automatic'];
+  };
+
+  const generateWizardVariants = () => {
+    if (!wizardHeader.brand || !wizardHeader.modelName || wizardFuels.length === 0) return;
+    setWizardVariants(wizardFuels.map(f => ({
+      name: `${wizardHeader.brand} ${wizardHeader.modelName} ${f}`,
+      fuel: f, transmission: '', engineCC: '', batteryKWh: '',
+      chargingTime: '', tankCapacity: '', avgMileage: '',
+      basePrice: '', incentiveType: 'fixed', incentiveValue: '',
+    })));
+    setWizardStep('variants');
+  };
+
+  const updateWizardVariant = (i: number, field: keyof WizardVariant, val: string) => {
+    setWizardVariants(prev => prev.map((v, idx) => idx === i ? { ...v, [field]: val } : v));
+  };
+
+  const handleWizardSave = () => {
+    const payload = wizardVariants.map(v => ({
+      company_id: companyCode,
+      branch_id: 'MAIN_BRANCH',
+      brand: wizardHeader.brand,
+      model: wizardHeader.modelName,
+      variant: v.name,
+      model_code: `${wizardHeader.brand.slice(0,3).toUpperCase()}-${Date.now()}`,
+      category_id: wizardHeader.categoryId,
+      type_id: wizardHeader.typeId,
+      fuel_type: [v.fuel],
+      base_price: parseFloat(v.basePrice) || 0,
+      incentive_type: v.incentiveType,
+      incentive_value: parseFloat(v.incentiveValue) || 0,
+      transmission: v.transmission,
+      engine_cc: parseFloat(v.engineCC) || 0,
+      battery_kwh: parseFloat(v.batteryKWh) || 0,
+      charging_time: v.chargingTime,
+      tank_capacity: parseFloat(v.tankCapacity) || 0,
+      average_mileage: parseFloat(v.avgMileage) || 0,
+      colors: [], color_count: 0,
+    }));
+    dispatch(batchAddVehicleModelAction(payload, companyCode, () => {
+      handleCloseForms();
+      toast.success(`${payload.length} variant(s) saved`);
+    }, (err: any) => toast.error(err?.message || 'Failed to save')));
+  };
+
+  const resetWizard = () => {
+    setWizardStep('setup');
+    setWizardHeader({ brand: '', modelName: '', categoryId: '', typeId: '' });
+    setWizardFuels([]);
+    setWizardVariants([]);
+  };
+
   useEffect(() => {
     if (companyCode) {
       dispatch(getVehicleModelsAction(companyCode));
@@ -175,6 +252,7 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
     setShowFeatureForm(false);
     setEditingModel(null);
     setIsViewOnly(false);
+    resetWizard();
   };
 
   return (
@@ -414,153 +492,332 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
       <AnimatePresence>
         {showModelForm && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/40 backdrop-blur-sm">
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-border">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full mx-4 overflow-hidden border border-border"
+              style={{ maxWidth: editingModel ? '32rem' : '56rem' }}
+            >
+              {/* ── Header ── */}
               <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
-                <h3 className="text-lg font-bold">{isViewOnly ? 'Vehicle Model Details' : (editingModel ? 'Edit Vehicle Model' : 'New Vehicle Model')}</h3>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold">
+                    {isViewOnly ? 'Vehicle Model Details' : editingModel ? 'Edit Vehicle Model' : 'New Vehicle Model'}
+                  </h3>
+                  {!editingModel && (
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-muted-foreground">
+                      <span className={`px-2 py-0.5 rounded-full ${wizardStep === 'setup' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>1 Setup</span>
+                      <span>›</span>
+                      <span className={`px-2 py-0.5 rounded-full ${wizardStep === 'variants' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>2 Variants</span>
+                    </div>
+                  )}
+                </div>
                 <button onClick={handleCloseForms} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
               </div>
-              <Formik
-                initialValues={{ 
-                  brand: editingModel?.brand || '', 
-                  model: editingModel?.model || '', 
-                  model_code: editingModel?.model_code || '',
-                  variant: editingModel?.variant || '', 
-                  fuel_type: editingModel?.fuel_type || [], 
-                  base_price: editingModel?.base_price || 0,
-                  type_id: editingModel?.type_id || '',
-                  category_id: editingModel?.category_id || '',
-                  colors: Array.isArray(editingModel?.colors) ? editingModel.colors.join(', ') : '',
-                  incentive_type: editingModel?.incentive_type || 'fixed',
-                  incentive_value: editingModel?.incentive_value || 0,
-                  color_count: editingModel?.color_count || 0,
-                  company_id: editingModel?.company_id || companyCode, 
-                  branch_id: editingModel?.branch_id || 'MAIN_BRANCH' 
-                }}
-                validationSchema={modelValidationSchema}
-                onSubmit={(values, { setSubmitting }) => {
-                  const payload = {
-                    ...values,
-                    colors: values.colors.split(',').map((s: string) => s.trim()).filter(Boolean)
-                  };
-                  if (editingModel) {
-                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, payload, companyCode, () => {
-                      handleCloseForms();
-                      setSubmitting(false);
-                      toast.success('Model updated');
-                    }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
-                  } else {
-                    dispatch(addVehicleModelAction(payload, companyCode, () => {
-                      handleCloseForms();
-                      setSubmitting(false);
-                      toast.success('Model added');
-                    }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
-                  }
-                }}
-              >
-                {({ isSubmitting, values, setFieldValue }) => (
-                  <Form className="p-8 space-y-6 max-h-[70vh] overflow-y-auto">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Brand Name</label>
-                        <Field name="brand" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., Tata" />
-                        <ErrorMessage name="brand" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                      </div>
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Name</label>
-                        <Field name="model" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., Nexon" />
-                        <ErrorMessage name="model" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                      </div>
+
+              {/* ══════════════ NEW MODEL: STEP 1 — Setup ══════════════ */}
+              {!editingModel && wizardStep === 'setup' && (
+                <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block">Brand</label>
+                      <input value={wizardHeader.brand} onChange={e => setWizardHeader(h => ({ ...h, brand: e.target.value }))}
+                        className="erp-input h-10 rounded-xl w-full" placeholder="e.g. Tata" />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Variant</label>
-                        <Field name="variant" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g., XZ+" />
-                        <ErrorMessage name="variant" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block">Model Name</label>
+                      <input value={wizardHeader.modelName} onChange={e => setWizardHeader(h => ({ ...h, modelName: e.target.value }))}
+                        className="erp-input h-10 rounded-xl w-full" placeholder="e.g. Nexon" />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block">Category</label>
+                      <select value={wizardHeader.categoryId}
+                        onChange={e => setWizardHeader(h => ({ ...h, categoryId: e.target.value, typeId: '' }))}
+                        className="erp-select h-10 rounded-xl w-full">
+                        <option value="">Select Category</option>
+                        {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block">Type</label>
+                      <select value={wizardHeader.typeId}
+                        onChange={e => setWizardHeader(h => ({ ...h, typeId: e.target.value }))}
+                        className="erp-select h-10 rounded-xl w-full" disabled={!wizardHeader.categoryId}>
+                        <option value="">Select Type</option>
+                        {types.filter((t: any) => t.category_id === wizardHeader.categoryId)
+                          .map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-bold text-muted-foreground uppercase mb-2 block">Fuel Types</label>
+                    <div className="flex flex-wrap gap-2">
+                      {['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'LPG'].map(f => (
+                        <button key={f} type="button" onClick={() => toggleWizardFuel(f)}
+                          className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${wizardFuels.includes(f) ? 'bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20' : 'bg-muted/50 text-muted-foreground border-border hover:border-primary/40'}`}>
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                    {wizardFuels.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        {wizardFuels.length} fuel type(s) selected → will generate {wizardFuels.length} variant(s)
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-2">
+                    <button type="button" onClick={handleCloseForms} className="px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">Cancel</button>
+                    <button type="button" onClick={generateWizardVariants}
+                      disabled={!wizardHeader.brand || !wizardHeader.modelName || !wizardHeader.categoryId || !wizardHeader.typeId || wizardFuels.length === 0}
+                      className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-lg shadow-primary/20 disabled:opacity-40 transition-all hover:scale-[1.02] active:scale-95">
+                      Generate Variants →
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ══════════════ NEW MODEL: STEP 2 — Variants ══════════════ */}
+              {!editingModel && wizardStep === 'variants' && (
+                <div className="max-h-[75vh] overflow-y-auto">
+                  <div className="p-4 bg-primary/5 border-b border-primary/10">
+                    <p className="text-xs font-bold text-primary">
+                      {wizardHeader.brand} {wizardHeader.modelName} — {wizardVariants.length} variant(s)
+                    </p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Fill in specs for each fuel variant below</p>
+                  </div>
+                  <div className="p-4 space-y-4">
+                    {wizardVariants.map((v, i) => (
+                      <div key={i} className="bg-muted/30 rounded-2xl border border-border p-4 space-y-3">
+                        {/* Variant header chip */}
+                        <div className="flex items-center gap-2">
+                          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[11px] font-black uppercase tracking-wide">{v.fuel}</span>
+                          <input value={v.name} onChange={e => updateWizardVariant(i, 'name', e.target.value)}
+                            className="erp-input h-8 rounded-lg flex-1 text-sm font-semibold" placeholder="Variant name" />
+                        </div>
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          {/* Transmission */}
+                          <div>
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Transmission</label>
+                            <select value={v.transmission} onChange={e => updateWizardVariant(i, 'transmission', e.target.value)}
+                              className="erp-select h-9 rounded-lg w-full text-sm">
+                              <option value="">Select</option>
+                              {getTransmissionOpts(wizardHeader.categoryId, v.fuel).map(t => <option key={t}>{t}</option>)}
+                            </select>
+                          </div>
+
+                          {/* Engine CC — non-Electric */}
+                          {v.fuel !== 'Electric' && (
+                            <div>
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Engine (CC)</label>
+                              <input type="number" value={v.engineCC} onChange={e => updateWizardVariant(i, 'engineCC', e.target.value)}
+                                className="erp-input h-9 rounded-lg w-full text-sm" placeholder="e.g. 1199" />
+                            </div>
+                          )}
+
+                          {/* Battery + Charging — Electric */}
+                          {v.fuel === 'Electric' && (
+                            <>
+                              <div>
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Battery (kWh)</label>
+                                <input type="number" value={v.batteryKWh} onChange={e => updateWizardVariant(i, 'batteryKWh', e.target.value)}
+                                  className="erp-input h-9 rounded-lg w-full text-sm" placeholder="e.g. 40.5" />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Charging Time</label>
+                                <input value={v.chargingTime} onChange={e => updateWizardVariant(i, 'chargingTime', e.target.value)}
+                                  className="erp-input h-9 rounded-lg w-full text-sm" placeholder="e.g. 8h / DC Fast" />
+                              </div>
+                            </>
+                          )}
+
+                          {/* CNG Tank */}
+                          {v.fuel === 'CNG' && (
+                            <div>
+                              <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Tank (kg)</label>
+                              <input type="number" value={v.tankCapacity} onChange={e => updateWizardVariant(i, 'tankCapacity', e.target.value)}
+                                className="erp-input h-9 rounded-lg w-full text-sm" placeholder="e.g. 9" />
+                            </div>
+                          )}
+
+                          {/* Average */}
+                          <div>
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">{v.fuel === 'Electric' ? 'Range (km)' : 'Avg (km/l)'}</label>
+                            <input type="number" value={v.avgMileage} onChange={e => updateWizardVariant(i, 'avgMileage', e.target.value)}
+                              className="erp-input h-9 rounded-lg w-full text-sm" placeholder="e.g. 18" />
+                          </div>
+                        </div>
+
+                        {/* Pricing row */}
+                        <div className="grid grid-cols-3 gap-3 pt-1 border-t border-border/50">
+                          <div>
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Base Price (₹)</label>
+                            <input type="number" value={v.basePrice} onChange={e => updateWizardVariant(i, 'basePrice', e.target.value)}
+                              className="erp-input h-9 rounded-lg w-full text-sm" placeholder="0" />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Incentive Type</label>
+                            <select value={v.incentiveType} onChange={e => updateWizardVariant(i, 'incentiveType', e.target.value)}
+                              className="erp-select h-9 rounded-lg w-full text-sm">
+                              <option value="fixed">Fixed (₹)</option>
+                              <option value="percentage">Percentage (%)</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Incentive Value</label>
+                            <input type="number" value={v.incentiveValue} onChange={e => updateWizardVariant(i, 'incentiveValue', e.target.value)}
+                              className="erp-input h-9 rounded-lg w-full text-sm" placeholder="0" />
+                          </div>
+                        </div>
                       </div>
-                      <div className="col-span-1">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type (Multi Select)</label>
-                        <div className="grid grid-cols-3 gap-2 border border-border/40 p-3 rounded-xl bg-muted/10">
-                          {['Petrol', 'Diesel', 'Cng', 'Electric', 'Hybrid', 'Lpg'].map(f => (
+                    ))}
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 border-t border-border bg-muted/10">
+                    <button type="button" onClick={() => setWizardStep('setup')}
+                      className="px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">← Back</button>
+                    <button type="button" onClick={handleWizardSave}
+                      className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all">
+                      Save {wizardVariants.length} Variant(s)
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* ══════════════ EDIT / VIEW — Formik form ══════════════ */}
+              {editingModel && (
+                <Formik
+                  initialValues={{
+                    brand: editingModel?.brand || '',
+                    model: editingModel?.model || '',
+                    model_code: editingModel?.model_code || '',
+                    variant: editingModel?.variant || '',
+                    fuel_type: editingModel?.fuel_type || [],
+                    base_price: editingModel?.base_price || 0,
+                    type_id: editingModel?.type_id || '',
+                    category_id: editingModel?.category_id || '',
+                    colors: Array.isArray(editingModel?.colors) ? editingModel.colors.join(', ') : '',
+                    incentive_type: editingModel?.incentive_type || 'fixed',
+                    incentive_value: editingModel?.incentive_value || 0,
+                    color_count: editingModel?.color_count || 0,
+                    transmission: editingModel?.transmission || '',
+                    engine_cc: editingModel?.engine_cc || 0,
+                    battery_kwh: editingModel?.battery_kwh || 0,
+                    charging_time: editingModel?.charging_time || '',
+                    tank_capacity: editingModel?.tank_capacity || 0,
+                    average_mileage: editingModel?.average_mileage || 0,
+                    company_id: editingModel?.company_id || companyCode,
+                    branch_id: editingModel?.branch_id || 'MAIN_BRANCH',
+                  }}
+                  validationSchema={modelValidationSchema}
+                  onSubmit={(values, { setSubmitting }) => {
+                    const payload = { ...values, colors: values.colors.split(',').map((s: string) => s.trim()).filter(Boolean) };
+                    dispatch(updateVehicleModelAction(editingModel.entity_id || editingModel._id || editingModel.id, payload, companyCode, () => {
+                      handleCloseForms(); setSubmitting(false); toast.success('Model updated');
+                    }, (err: any) => { setSubmitting(false); toast.error(err.message); }));
+                  }}
+                >
+                  {({ isSubmitting, values, setFieldValue }) => (
+                    <Form className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Brand</label>
+                          <Field name="brand" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" placeholder="e.g., Tata" />
+                          <ErrorMessage name="brand" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Name</label>
+                          <Field name="model" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" placeholder="e.g., Nexon" />
+                          <ErrorMessage name="model" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Variant Name</label>
+                          <Field name="variant" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" placeholder="e.g., XZ+ Petrol" />
+                          <ErrorMessage name="variant" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Code</label>
+                          <Field name="model_code" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" placeholder="e.g. NXN-001" />
+                          <ErrorMessage name="model_code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
+                          <Field as="select" name="category_id" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70"
+                            onChange={(e: any) => { setFieldValue('category_id', e.target.value); setFieldValue('type_id', ''); }}>
+                            <option value="">Select Category</option>
+                            {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
+                          </Field>
+                          <ErrorMessage name="category_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
+                          <Field as="select" name="type_id" disabled={isViewOnly || !values.category_id} className="erp-select h-11 rounded-xl disabled:opacity-70">
+                            <option value="">Select Type</option>
+                            {types.filter((t: any) => t.category_id === values.category_id).map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                          </Field>
+                          <ErrorMessage name="type_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Fuel Type</label>
+                        <div className="flex flex-wrap gap-2 border border-border/40 p-3 rounded-xl bg-muted/10">
+                          {['Petrol', 'Diesel', 'CNG', 'Electric', 'Hybrid', 'LPG'].map(f => (
                             <label key={f} className={`flex items-center gap-2 text-[11px] font-medium ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
-                              <Field type="checkbox" name="fuel_type" value={f} disabled={isViewOnly} className="w-4 h-4 rounded border-border disabled:opacity-70" />
-                              {f}
+                              <Field type="checkbox" name="fuel_type" value={f} disabled={isViewOnly} className="w-4 h-4 rounded border-border disabled:opacity-70" />{f}
                             </label>
                           ))}
                         </div>
                         <ErrorMessage name="fuel_type" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Category</label>
-                        <Field as="select" name="category_id" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" onChange={(e: any) => {
-                          setFieldValue('category_id', e.target.value);
-                          setFieldValue('type_id', '');
-                        }}>
-                          <option value="">Select Category</option>
-                          {categories.map((c: any) => <option key={c.entity_id || c._id || c.id} value={c.entity_id || c._id || c.id}>{c.name}</option>)}
-                        </Field>
-                        <ErrorMessage name="category_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Type</label>
-                        <Field as="select" name="type_id" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" disabled={!values.category_id}>
-                          <option value="">Select Type</option>
-                          {types.filter((t: any) => t.category_id === values.category_id).map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
-                        </Field>
-                        <ErrorMessage name="type_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Model Code (Unique)</label>
-                      <Field name="model_code" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="e.g. NXN-001" />
-                      <ErrorMessage name="model_code" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Base Price (₹)</label>
-                      <Field type="number" name="base_price" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" />
-                      <ErrorMessage name="base_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
-                    </div>
-
-                    <div className="bg-muted/20 p-4 rounded-2xl border border-border/40 space-y-4">
-                      <div className="flex items-center gap-6">
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase block px-1">Incentive Type</label>
-                        <div className="flex gap-4">
-                          <label className={`flex items-center gap-2 text-sm font-bold ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
-                            <Field type="radio" name="incentive_type" value="fixed" disabled={isViewOnly} className="w-4 h-4 disabled:opacity-70" /> Fixed
-                          </label>
-                          <label className={`flex items-center gap-2 text-sm font-bold ${isViewOnly ? 'cursor-default' : 'cursor-pointer'}`}>
-                            <Field type="radio" name="incentive_type" value="percentage" disabled={isViewOnly} className="w-4 h-4 disabled:opacity-70" /> Percentage
-                          </label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Transmission</label>
+                          <Field as="select" name="transmission" disabled={isViewOnly} className="erp-select h-11 rounded-xl disabled:opacity-70">
+                            <option value="">Select</option>
+                            {['Manual','Automatic','AMT','CVT','DCT'].map(t => <option key={t}>{t}</option>)}
+                          </Field>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Engine (CC)</label>
+                          <Field type="number" name="engine_cc" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Battery (kWh)</label>
+                          <Field type="number" name="battery_kwh" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Avg / Range</label>
+                          <Field type="number" name="average_mileage" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" />
                         </div>
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Incentive Value (₹)</label>
-                        <Field type="number" name="incentive_value" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter amount" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Base Price (₹)</label>
+                          <Field type="number" name="base_price" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" />
+                          <ErrorMessage name="base_price" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Incentive Value</label>
+                          <Field type="number" name="incentive_value" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70" />
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Catalog</label>
-                        <Field name="colors" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter colors (e.g. Red, White, Black)" />
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">{isViewOnly ? 'Close' : 'Discard'}</button>
+                        {!isViewOnly && (
+                          <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all">
+                            {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Model'}
+                          </button>
+                        )}
                       </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5 block px-1">Color Count</label>
-                        <Field type="number" name="color_count" disabled={isViewOnly} className="erp-input h-11 rounded-xl disabled:opacity-70 disabled:cursor-default" placeholder="Enter total colors" />
-                      </div>
-                    </div>
-                    <div className="flex justify-end gap-3 pt-4">
-                      <button type="button" onClick={handleCloseForms} className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors">{isViewOnly ? 'Close' : 'Discard'}</button>
-                      {!isViewOnly && (
-                        <button type="submit" disabled={isSubmitting} className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-black shadow-xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all tracking-tight">
-                          {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (editingModel ? 'Update Model' : 'Save Model')}
-                        </button>
-                      )}
-                    </div>
-                  </Form>
-                )}
-              </Formik>
+                    </Form>
+                  )}
+                </Formik>
+              )}
             </motion.div>
           </div>
         )}

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, UserCheck, Car, ShoppingCart, CreditCard,
   Landmark, BookOpen, BarChart3, Settings, ChevronLeft, Menu, UserPlus, Gift,
-  ChevronDown, Settings2, Mail
+  ChevronDown, Settings2, Mail, MessageSquare
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -12,6 +12,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 
 const allMenuItems = [
   { id: 'dashboard',   label: 'Dashboard',        icon: LayoutDashboard, roles: ['admin', 'user'] },
+  { id: 'enquiries',   label: 'Enquiries',        icon: MessageSquare,   roles: ['admin', 'user'] },
   { id: 'customers',   label: 'Customers',         icon: Users,           roles: ['admin', 'user'] },
   { id: 'salespersons',label: 'Salespersons',      icon: UserCheck,       roles: ['admin', 'user'] },
   { id: 'vehicles',    label: 'Vehicles',          icon: Car,             roles: ['admin', 'user'] },

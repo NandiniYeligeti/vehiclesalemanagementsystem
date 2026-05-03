@@ -8,6 +8,10 @@ export const addVehicleModel = async (companyCode: string, data: any) => {
   return await api.post(`/vehicle-model/${companyCode}`, data);
 };
 
+export const batchAddVehicleModels = async (companyCode: string, data: any[]) => {
+  return await api.post(`/vehicle-model/${companyCode}/batch`, data);
+};
+
 export const updateVehicleModel = async (companyCode: string, id: string, data: any) => {
   return await api.put(`/vehicle-model/${companyCode}/${id}`, data);
 };

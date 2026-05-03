@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import TopNav from '@/components/TopNav';
 import DashboardPage from '@/pages/DashboardPage';
+import EnquiriesPage from '@/pages/EnquiriesPage';
 import CustomersPage from '@/pages/CustomersPage';
 import SalespersonsPage from '@/pages/SalespersonsPage';
 import VehiclesPage from '@/pages/VehiclesPage';
@@ -18,6 +19,7 @@ import EmailSettingsPage from '@/pages/EmailSettingsPage';
 
 const pageTitles: Record<string, string> = {
   dashboard: 'Dashboard',
+  enquiries: 'Enquiries',
   customers: 'Customers',
   salespersons: 'Salespersons',
   vehicles: 'Vehicles',
@@ -39,6 +41,7 @@ const Index = () => {
   const renderPage = () => {
     switch (activeTab) {
       case 'dashboard': return <DashboardPage />;
+      case 'enquiries': return <EnquiriesPage />;
       case 'customers': return <CustomersPage />;
       case 'salespersons': return <SalespersonsPage />;
       case 'vehicles': return <VehiclesPage initialTab="models" />;

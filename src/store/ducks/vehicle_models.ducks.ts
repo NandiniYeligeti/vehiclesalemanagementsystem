@@ -6,6 +6,7 @@ import * as vehicleService from '@/services/vehicle_models/vehicle_models';
 export const GET_VEHICLE_MODELS = 'vehicle_models/GET_VEHICLE_MODELS';
 export const SET_VEHICLE_MODELS = 'vehicle_models/SET_VEHICLE_MODELS';
 export const ADD_VEHICLE_MODEL = 'vehicle_models/ADD_VEHICLE_MODEL';
+export const BATCH_ADD_VEHICLE_MODEL = 'vehicle_models/BATCH_ADD_VEHICLE_MODEL';
 export const UPDATE_VEHICLE_MODEL = 'vehicle_models/UPDATE_VEHICLE_MODEL';
 export const DELETE_VEHICLE_MODEL = 'vehicle_models/DELETE_VEHICLE_MODEL';
 export const SET_LOADING = 'vehicle_models/SET_LOADING';
@@ -30,6 +31,13 @@ export interface VehicleModel {
   color_count: number;
   company_id: string;
   branch_id: string;
+  // Per-variant spec fields
+  transmission?: string;
+  engine_cc?: number;
+  battery_kwh?: number;
+  charging_time?: string;
+  tank_capacity?: number;
+  average_mileage?: number;
   created_at?: string;
 }
 
@@ -71,6 +79,14 @@ export const getVehicleModelsAction = (companyCode: string) => ({
 
 export const addVehicleModelAction = (data: any, companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
   type: ADD_VEHICLE_MODEL,
+  payload: data,
+  companyCode,
+  onSuccess,
+  onError,
+});
+
+export const batchAddVehicleModelAction = (data: any[], companyCode: string, onSuccess?: () => void, onError?: (err: any) => void) => ({
+  type: BATCH_ADD_VEHICLE_MODEL,
   payload: data,
   companyCode,
   onSuccess,
@@ -121,6 +137,21 @@ function* addVehicleModelSaga(action: any): SagaIterator {
   }
 }
 
+function* batchAddVehicleModelSaga(action: any): SagaIterator {
+  try {
+    yield put({ type: SET_SAVING, payload: true });
+    const companyCode = action.companyCode || 'DEFAULT_COMPANY';
+    yield call(vehicleService.batchAddVehicleModels, companyCode, action.payload);
+    yield put(getVehicleModelsAction(companyCode));
+    if (action.onSuccess) yield call(action.onSuccess);
+  } catch (error: any) {
+    yield put({ type: SET_ERROR, payload: error.message });
+    if (action.onError) yield call(action.onError, error);
+  } finally {
+    yield put({ type: SET_SAVING, payload: false });
+  }
+}
+
 function* updateVehicleModelSaga(action: any): SagaIterator {
   try {
     yield put({ type: SET_SAVING, payload: true });
@@ -158,6 +189,10 @@ export function* watchGetVehicleModels() {
 
 export function* watchAddVehicleModel() {
   yield takeLatest(ADD_VEHICLE_MODEL, addVehicleModelSaga);
+}
+
+export function* watchBatchAddVehicleModel() {
+  yield takeLatest(BATCH_ADD_VEHICLE_MODEL, batchAddVehicleModelSaga);
 }
 
 export function* watchUpdateVehicleModel() {

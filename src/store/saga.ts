@@ -19,6 +19,7 @@ import {
 import {
   watchGetVehicleModels,
   watchAddVehicleModel,
+  watchBatchAddVehicleModel,
   watchUpdateVehicleModel,
   watchDeleteVehicleModel,
 } from "./ducks/vehicle_models.ducks";
@@ -65,6 +66,7 @@ export default function* rootSaga(): SagaIterator {
     // Vehicle Models
     fork(watchGetVehicleModels),
     fork(watchAddVehicleModel),
+    fork(watchBatchAddVehicleModel),
     fork(watchUpdateVehicleModel),
     fork(watchDeleteVehicleModel),
 
