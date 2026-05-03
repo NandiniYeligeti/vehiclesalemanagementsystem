@@ -8,7 +8,110 @@ import { getCompanySettingsAction, updateCompanySettingsAction } from '@/store/d
 import { toast } from 'sonner';
 import { getMastersAction, addMasterAction, deleteMasterAction } from '@/store/ducks/company_masters.ducks';
 import { getBanksAction, addBankAction, updateBankAction, deleteBankAction, BankMaster } from '@/store/ducks/bank_master.ducks';
-import { Edit2, Star } from 'lucide-react';
+import { getCompanyBanksAction, addCompanyBankAction, updateCompanyBankAction, deleteCompanyBankAction, CompanyBankMaster } from '@/store/ducks/company_bank_master.ducks';
+import { Edit2, Star, Landmark } from 'lucide-react';
+
+const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { data: CompanyBankMaster[], onAdd: (bank: CompanyBankMaster) => void, onEdit: (id: string, bank: Partial<CompanyBankMaster>) => void, onDelete: (id: string) => void, loading: boolean }) => {
+  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', account_number: '' });
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+
+  const handleSubmit = () => {
+    if (formData.bank_name && formData.account_number) {
+      if (editingId) {
+        onEdit(editingId, formData);
+        setEditingId(null);
+      } else {
+        onAdd(formData as any);
+      }
+      setFormData({ bank_name: '', branch_name: '', account_number: '' });
+    }
+  };
+
+  const startEdit = (bank: CompanyBankMaster) => {
+    setEditingId(bank.entity_id || bank.id || null);
+    setFormData({
+      bank_name: bank.bank_name,
+      branch_name: bank.branch_name,
+      account_number: bank.account_number,
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setFormData({ bank_name: '', branch_name: '', account_number: '' });
+  };
+
+  return (
+    <div className="erp-card p-8 bg-white border border-border/50 shadow-sm rounded-2xl space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+          <Landmark className="w-4 h-4 text-primary" /> Company Bank Accounts
+        </h3>
+        <span className="px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-widest leading-none">{data.length} Accounts</span>
+      </div>
+
+      <div className="bg-muted/20 p-4 rounded-xl border border-border/40 space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input value={formData.bank_name} onChange={(e) => setFormData(p => ({ ...p, bank_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Bank Name" />
+          <input value={formData.branch_name} onChange={(e) => setFormData(p => ({ ...p, branch_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Branch" />
+          <input value={formData.account_number} onChange={(e) => setFormData(p => ({ ...p, account_number: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Account Number" />
+        </div>
+        <div className="flex items-center justify-end">
+          <div className="flex gap-2">
+            {editingId && (
+              <button 
+                onClick={cancelEdit} 
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-card border border-border hover:bg-muted transition-all"
+              >
+                Cancel
+              </button>
+            )}
+            <button 
+              onClick={handleSubmit} 
+              className="px-6 py-2 text-xs font-black uppercase tracking-wider rounded-xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all shadow-lg shadow-primary/20 flex items-center gap-2"
+            >
+              {editingId ? <><Save className="w-3.5 h-3.5" /> Save Changes</> : <><Plus className="w-3.5 h-3.5" /> Add Account</>}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+        {data.map((bank) => (
+          <div key={bank.entity_id || bank.id} className="relative p-5 rounded-2xl bg-muted/30 border transition-all group border-border/50 hover:bg-white hover:border-primary/30">
+             <div className="flex items-start justify-between mb-2">
+               <h4 className="font-black text-slate-900 text-sm">{bank.bank_name}</h4>
+               <div className="flex gap-1">
+                 <button 
+                   type="button"
+                   onClick={() => startEdit(bank)} 
+                   className="p-1.5 rounded-lg text-muted-foreground hover:text-blue-500 hover:bg-blue-50 transition-all"
+                 >
+                   <Edit2 className="w-3.5 h-3.5" />
+                 </button>
+                 <button 
+                   type="button"
+                   onClick={() => onDelete(bank.entity_id || bank.id!)} 
+                   className="p-1.5 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-50 transition-all"
+                 >
+                   <Trash2 className="w-3.5 h-3.5" />
+                 </button>
+               </div>
+             </div>
+             <p className="text-[10px] font-bold text-muted-foreground uppercase mb-4 tracking-tighter opacity-80">{bank.branch_name} Branch</p>
+             <div className="space-y-1.5 pt-3 border-t border-border/40">
+                <p className="text-[10px] font-black text-slate-800 flex items-center gap-2 tracking-tight">
+                   <span className="w-5 h-5 rounded bg-primary/10 flex items-center justify-center text-primary text-[8px] font-black uppercase tracking-widest leading-none">A/C</span>
+                   {bank.account_number}
+                </p>
+             </div>
+          </div>
+        ))}
+        {data.length === 0 && <p className="col-span-full text-[10px] text-muted-foreground/60 italic text-center py-10 bg-muted/10 rounded-2xl border border-dashed border-border/50">No company bank accounts added yet.</p>}
+      </div>
+    </div>
+  );
+};
 
 const BankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { data: BankMaster[], onAdd: (bank: BankMaster) => void, onEdit: (id: string, bank: Partial<BankMaster>) => void, onDelete: (id: string) => void, loading: boolean }) => {
   const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', contact_person: '', contact_number: '', is_default: false });
@@ -176,12 +279,14 @@ const SettingsPage = () => {
   const { settings, loading, saving } = useSelector((state: RootState) => state.company);
   const { data: masters, loading: mastersLoading } = useSelector((state: RootState) => state.companyMasters);
   const { data: banks = [], loading: banksLoading } = useSelector((state: RootState) => state.bankMaster);
+  const { data: companyBanks = [], loading: companyBanksLoading } = useSelector((state: RootState) => state.companyBankMaster);
 
   useEffect(() => {
     if (companyCode) {
       dispatch(getCompanySettingsAction(companyCode));
       dispatch(getMastersAction(companyCode));
       dispatch(getBanksAction(companyCode));
+      dispatch(getCompanyBanksAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -499,6 +604,27 @@ const SettingsPage = () => {
           onEdit={(id, bank) => dispatch(updateBankAction(id, bank, companyCode, () => toast.success('Bank updated')))}
           onDelete={(id) => dispatch(deleteBankAction(id, companyCode, () => toast.success('Bank removed')))}
           loading={banksLoading}
+        />
+      </div>
+
+      {/* Company Bank Master Section */}
+      <div className="space-y-6">
+        <div className="flex items-center gap-3">
+           <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+             <Landmark className="w-5 h-5" />
+           </div>
+           <div>
+             <h3 className="text-lg font-black text-[#0f172a]">Company Bank Accounts</h3>
+             <p className="text-xs text-muted-foreground font-medium">Manage company bank accounts for loan disbursement and receiving payments.</p>
+           </div>
+        </div>
+        
+        <CompanyBankMasterSection 
+          data={companyBanks} 
+          onAdd={(bank) => dispatch(addCompanyBankAction(bank, companyCode, () => toast.success('Company bank added')))}
+          onEdit={(id, bank) => dispatch(updateCompanyBankAction(id, bank, companyCode, () => toast.success('Company bank updated')))}
+          onDelete={(id) => dispatch(deleteCompanyBankAction(id, companyCode, () => toast.success('Company bank removed')))}
+          loading={companyBanksLoading}
         />
       </div>
     </div>

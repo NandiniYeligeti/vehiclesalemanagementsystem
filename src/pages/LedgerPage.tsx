@@ -236,28 +236,39 @@ const LedgerPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="px-5 py-3 font-semibold text-foreground">Date</th>
-                  <th className="px-5 py-3 font-semibold text-foreground">Description</th>
-                  <th className="px-5 py-3 font-semibold text-foreground">Status</th>
-                  <th className="px-5 py-3 font-semibold text-foreground">Debit</th>
-                  <th className="px-5 py-3 font-semibold text-foreground">Credit</th>
-                  <th className="px-5 py-3 font-semibold text-foreground">Balance</th>
+                <tr className="border-b border-border bg-transparent">
+                  <th className="px-5 py-4 font-bold text-foreground">Date</th>
+                  <th className="px-5 py-4 font-bold text-foreground">Description</th>
+                  <th className="px-5 py-4 font-bold text-foreground">Debit</th>
+                  <th className="px-5 py-4 font-bold text-foreground">Credit</th>
+                  <th className="px-5 py-4 font-bold text-foreground">Balance</th>
+                  <th className="px-5 py-4 font-bold text-foreground">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-foreground/80">
                 {group.items.map((entry: any) => (
-                  <tr key={entry.id || Math.random()} className="hover:bg-muted/10 transition-colors">
-                    <td className="px-5 py-3">{formatDate(entry.date)}</td>
-                    <td className="px-5 py-3 font-medium">{entry.description}</td>
-                    <td className="px-5 py-3">
+                  <tr key={entry.id || Math.random()} className="hover:bg-muted/5 transition-colors bg-card">
+                    <td className="px-5 py-4 whitespace-nowrap">{formatDate(entry.date)}</td>
+                    <td className="px-5 py-4 font-medium whitespace-nowrap">{entry.description}</td>
+                    <td className="px-5 py-4 font-medium whitespace-nowrap">
+                      {entry.description === 'Discount Allowed' 
+                        ? <span className="text-red-600 dark:text-red-400">{formatCurrency(entry.credit)}</span> 
+                        : (entry.debit > 0 ? <span className="text-red-600 dark:text-red-400">{formatCurrency(entry.debit)}</span> : '-')}
+                    </td>
+                    <td className="px-5 py-4 font-medium whitespace-nowrap">
+                      {entry.description === 'Discount Allowed' 
+                        ? '-' 
+                        : (entry.credit > 0 ? <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(entry.credit)}</span> : '-')}
+                    </td>
+                    <td className="px-5 py-4 font-bold text-foreground whitespace-nowrap">{formatCurrency(entry.localBalance)}</td>
+                    <td className="px-5 py-4 whitespace-nowrap">
                       {entry.status ? (
-                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${
-                          entry.status === 'Applied' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                          entry.status === 'Approved' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                          entry.status === 'Disbursed' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
-                          entry.status === 'Rejected' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
-                          'bg-muted/20 text-muted-foreground border-border'
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide ${
+                          ['Done', 'Received', 'Disbursed'].includes(entry.status) ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                          ['Pending', 'Applied'].includes(entry.status) ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' :
+                          entry.status === 'Approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+                          entry.status === 'Rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                          'bg-muted text-muted-foreground'
                         }`}>
                           {entry.status}
                         </span>
@@ -265,17 +276,6 @@ const LedgerPage = () => {
                         <span className="text-muted-foreground/40">—</span>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-red-600 dark:text-red-400 font-medium">
-                      {entry.description === 'Discount Allowed' 
-                        ? formatCurrency(entry.credit) 
-                        : (entry.debit > 0 ? formatCurrency(entry.debit) : '-')}
-                    </td>
-                    <td className="px-5 py-3 text-emerald-600 dark:text-emerald-400 font-medium">
-                      {entry.description === 'Discount Allowed' 
-                        ? '-' 
-                        : (entry.credit > 0 ? formatCurrency(entry.credit) : '-')}
-                    </td>
-                    <td className="px-5 py-3 font-black text-foreground">{formatCurrency(entry.localBalance)}</td>
                   </tr>
                 ))}
               </tbody>

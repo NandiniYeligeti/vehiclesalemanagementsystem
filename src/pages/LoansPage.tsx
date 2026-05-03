@@ -31,6 +31,7 @@ import {
 import { getLoansAction, addLoanAction, updateLoanAction, deleteLoanAction, Loan } from "@/store/ducks/loans.ducks";
 import { getSalesOrdersAction } from "@/store/ducks/sales_orders.ducks";
 import { getBanksAction } from "@/store/ducks/bank_master.ducks";
+import { getCompanyBanksAction } from "@/store/ducks/company_bank_master.ducks";
 import { usePermissions } from "@/hooks/usePermissions";
 
 
@@ -54,6 +55,7 @@ const LoansPage = () => {
   const salesOrders = useMemo(() => getFilteredData(rawSalesOrders || [], 'branch'), [rawSalesOrders, getFilteredData]);
 
   const { data: bankMasters = [] } = useSelector((state: RootState) => state.bankMaster);
+  const { data: companyBanks = [] } = useSelector((state: RootState) => state.companyBankMaster);
 
   // Filter States
   const [tab, setTab] = useState("All");
@@ -89,6 +91,7 @@ const LoansPage = () => {
       dispatch(getLoansAction(companyCode));
       dispatch(getSalesOrdersAction(companyCode));
       dispatch(getBanksAction(companyCode));
+      dispatch(getCompanyBanksAction(companyCode));
     }
   }, [dispatch, companyCode]);
 
@@ -604,6 +607,25 @@ const LoansPage = () => {
                       />
                     </div>
                   </div>
+
+                  {formData.status === 'Disbursed' && (
+                    <div className="md:col-span-2 p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-500 ml-1 mb-2 block">Disbursing Company Bank</label>
+                      <select
+                        className="w-full h-11 px-4 rounded-xl bg-background border border-border/50 font-bold text-sm outline-none focus:ring-2 focus:ring-primary/10 disabled:opacity-50"
+                        value={formData.account_number}
+                        disabled={isView}
+                        onChange={(e) => setFormData(p => ({ ...p, account_number: e.target.value }))}
+                      >
+                        <option value="">Select Company Bank Account</option>
+                        {companyBanks.map((b: any) => (
+                          <option key={b.entity_id || b.id} value={b.account_number}>
+                            {b.bank_name} - {b.account_number} ({b.branch_name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Calculated Result */}
                   <div className="md:col-span-2 p-6 rounded-3xl bg-primary/5 border border-primary/20 flex items-center justify-between">

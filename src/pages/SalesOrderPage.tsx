@@ -1101,44 +1101,58 @@ const SalesOrderPage = () => {
                   </div>
                 ) : filteredLedger.length > 0 ? (
                   <div className="space-y-4">
-                     <div className="grid grid-cols-2 gap-3 mb-6">
-                        <div className="bg-muted p-5 rounded-2xl border border-border shadow-sm">
-                          <p className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest">Outstanding Balance</p>
-                          <p className="text-2xl font-black text-red-500 tabular-nums">{formatCurrency(filteredLedger[filteredLedger.length - 1]?.localBalance || 0)}</p>
-                        </div>
-                        <div className="bg-primary/5 border border-primary/10 p-5 rounded-2xl shadow-sm">
-                          <p className="text-[10px] font-black uppercase text-primary mb-1 tracking-widest">Entries</p>
-                          <p className="text-2xl font-black text-primary tabular-nums">{filteredLedger.length}</p>
-                        </div>
+                     <div className="overflow-x-auto bg-card rounded-2xl border border-border shadow-sm">
+                        <table className="w-full text-sm text-left">
+                          <thead>
+                            <tr className="border-b border-border bg-transparent">
+                              <th className="px-5 py-4 font-bold text-foreground">Date</th>
+                              <th className="px-5 py-4 font-bold text-foreground">Description</th>
+                              <th className="px-5 py-4 font-bold text-foreground">Debit</th>
+                              <th className="px-5 py-4 font-bold text-foreground">Credit</th>
+                              <th className="px-5 py-4 font-bold text-foreground">Balance</th>
+                              <th className="px-5 py-4 font-bold text-foreground">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border text-foreground/80">
+                            {filteredLedger.map((entry: any, index: number) => (
+                              <tr key={entry.id || Math.random()} className="hover:bg-muted/5 transition-colors">
+                                <td className="px-5 py-4 whitespace-nowrap">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                <td className="px-5 py-4 font-medium whitespace-nowrap">{entry.description}</td>
+                                <td className="px-5 py-4 font-medium whitespace-nowrap">
+                                  {entry.description === 'Discount Allowed' 
+                                    ? <span className="text-red-600 dark:text-red-400">{formatCurrency(entry.credit)}</span> 
+                                    : (entry.debit > 0 ? <span className="text-red-600 dark:text-red-400">{formatCurrency(entry.debit)}</span> : '-')}
+                                </td>
+                                <td className="px-5 py-4 font-medium whitespace-nowrap">
+                                  {entry.description === 'Discount Allowed' 
+                                    ? '-' 
+                                    : (entry.credit > 0 ? <span className="text-emerald-600 dark:text-emerald-400">{formatCurrency(entry.credit)}</span> : '-')}
+                                </td>
+                                <td className="px-5 py-4 font-bold text-foreground whitespace-nowrap">{formatCurrency(entry.localBalance)}</td>
+                                <td className="px-5 py-4 whitespace-nowrap">
+                                  {entry.status ? (
+                                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-bold tracking-wide ${
+                                      ['Done', 'Received', 'Disbursed'].includes(entry.status) ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                                      ['Pending', 'Applied'].includes(entry.status) ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400' :
+                                      entry.status === 'Approved' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' :
+                                      entry.status === 'Rejected' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                                      'bg-muted text-muted-foreground'
+                                    }`}>
+                                      {entry.status}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground/40">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                      </div>
-
-                     <div className="space-y-3">
-                        {filteredLedger.map((entry: any, index: number) => (
-                          <motion.div 
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: index * 0.03 }}
-                            key={entry.id || Math.random()} 
-                            className="p-5 rounded-2xl border border-border bg-card shadow-sm hover:shadow-md transition-all relative overflow-hidden group border-l-4 border-l-transparent hover:border-l-primary"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                               <div>
-                                 <p className="text-[10px] font-black text-muted-foreground/60 uppercase mb-1">{new Date(entry.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                                 <h4 className="font-bold text-foreground group-hover:text-primary transition-colors leading-tight">{entry.description}</h4>
-                               </div>
-                               <div className="text-right">
-                                  <p className={`font-black text-base tabular-nums ${entry.debit > 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                                    {entry.debit > 0 ? `+ ${formatCurrency(entry.debit)}` : `- ${formatCurrency(entry.credit)}`}
-                                  </p>
-                               </div>
-                            </div>
-                            
-                            <div className="flex justify-between items-center pt-3 border-t border-dashed border-border mt-3 group-hover:border-primary/20 transition-colors">
-                               <p className="text-[9px] font-bold text-muted-foreground uppercase italic tracking-tighter">Running Balance</p>
-                               <p className="font-black text-[13px] text-foreground tabular-nums opacity-80">{formatCurrency(entry.localBalance)}</p>
-                            </div>
-                          </motion.div>
-                        ))}
+                     <div className="flex justify-end p-2">
+                        <h4 className="text-lg font-medium text-foreground">
+                          Outstanding: <span className="font-bold">{formatCurrency(filteredLedger[filteredLedger.length - 1]?.localBalance || 0)}</span>
+                        </h4>
                      </div>
                   </div>
                 ) : (
