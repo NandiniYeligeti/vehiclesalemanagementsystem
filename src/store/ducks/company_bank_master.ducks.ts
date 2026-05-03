@@ -1,8 +1,6 @@
 import { put, takeLatest, all, call } from 'redux-saga/effects';
 import { SagaIterator } from 'redux-saga';
-import axios from 'axios';
-
-const BASE_URL = import.meta.env.VITE_BASE_URL;
+import { api } from '@/services/api';
 
 // Action Types
 export const GET_COMPANY_BANKS = 'companyBankMaster/GET_COMPANY_BANKS';
@@ -53,7 +51,7 @@ export default function reducer(state = initialState, action: any): CompanyBankM
 // Sagas
 function* getCompanyBanksSaga(action: any): SagaIterator {
   try {
-    const response = yield call(axios.get, `${BASE_URL}/company-bank-master/${action.payload}`);
+    const response = yield call([api, api.get], `/company-bank-master/${action.payload}`);
     yield put(setCompanyBanksAction(response.data));
   } catch (error: any) {
     yield put({ type: SET_ERROR, payload: error.message });
@@ -62,7 +60,7 @@ function* getCompanyBanksSaga(action: any): SagaIterator {
 
 function* addCompanyBankSaga(action: any): SagaIterator {
   try {
-    yield call(axios.post, `${BASE_URL}/company-bank-master/${action.payload.companyCode}`, action.payload.bank);
+    yield call([api, api.post], `/company-bank-master/${action.payload.companyCode}`, action.payload.bank);
     yield put(getCompanyBanksAction(action.payload.companyCode));
     if (action.callback) action.callback();
   } catch (error: any) {
@@ -72,7 +70,7 @@ function* addCompanyBankSaga(action: any): SagaIterator {
 
 function* updateCompanyBankSaga(action: any): SagaIterator {
   try {
-    yield call(axios.put, `${BASE_URL}/company-bank-master/${action.payload.companyCode}/${action.payload.id}`, action.payload.bank);
+    yield call([api, api.put], `/company-bank-master/${action.payload.companyCode}/${action.payload.id}`, action.payload.bank);
     yield put(getCompanyBanksAction(action.payload.companyCode));
     if (action.callback) action.callback();
   } catch (error: any) {
@@ -82,7 +80,7 @@ function* updateCompanyBankSaga(action: any): SagaIterator {
 
 function* deleteCompanyBankSaga(action: any): SagaIterator {
   try {
-    yield call(axios.delete, `${BASE_URL}/company-bank-master/${action.payload.companyCode}/${action.payload.id}`);
+    yield call([api, api.delete], `/company-bank-master/${action.payload.companyCode}/${action.payload.id}`);
     yield put(getCompanyBanksAction(action.payload.companyCode));
     if (action.callback) action.callback();
   } catch (error: any) {
