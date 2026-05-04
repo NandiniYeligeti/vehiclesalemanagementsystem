@@ -12,7 +12,7 @@ import { getCompanyBanksAction, addCompanyBankAction, updateCompanyBankAction, d
 import { Edit2, Star, Landmark } from 'lucide-react';
 
 const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { data: CompanyBankMaster[], onAdd: (bank: CompanyBankMaster) => void, onEdit: (id: string, bank: Partial<CompanyBankMaster>) => void, onDelete: (id: string) => void, loading: boolean }) => {
-  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', account_number: '' });
+  const [formData, setFormData] = React.useState({ bank_name: '', branch_name: '', account_number: '', is_default: false });
   const [editingId, setEditingId] = React.useState<string | null>(null);
 
   const handleSubmit = () => {
@@ -23,7 +23,7 @@ const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { 
       } else {
         onAdd(formData as any);
       }
-      setFormData({ bank_name: '', branch_name: '', account_number: '' });
+      setFormData({ bank_name: '', branch_name: '', account_number: '', is_default: false });
     }
   };
 
@@ -33,12 +33,13 @@ const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { 
       bank_name: bank.bank_name,
       branch_name: bank.branch_name,
       account_number: bank.account_number,
+      is_default: !!bank.is_default,
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
-    setFormData({ bank_name: '', branch_name: '', account_number: '' });
+    setFormData({ bank_name: '', branch_name: '', account_number: '', is_default: false });
   };
 
   return (
@@ -56,7 +57,16 @@ const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { 
           <input value={formData.branch_name} onChange={(e) => setFormData(p => ({ ...p, branch_name: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Branch" />
           <input value={formData.account_number} onChange={(e) => setFormData(p => ({ ...p, account_number: e.target.value }))} className="erp-input h-10 text-xs" placeholder="Account Number" />
         </div>
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input 
+              type="checkbox" 
+              checked={formData.is_default} 
+              onChange={(e) => setFormData(p => ({ ...p, is_default: e.target.checked }))} 
+              className="w-4 h-4 text-emerald-500 bg-white border-border rounded focus:ring-emerald-500 focus:ring-offset-0"
+            />
+            <span className="text-xs font-bold text-muted-foreground group-hover:text-emerald-600 transition-colors">Set as Default Account</span>
+          </label>
           <div className="flex gap-2">
             {editingId && (
               <button 
@@ -78,7 +88,12 @@ const CompanyBankMasterSection = ({ data, onAdd, onEdit, onDelete, loading }: { 
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
         {data.map((bank) => (
-          <div key={bank.entity_id || bank.id} className="relative p-5 rounded-2xl bg-muted/30 border transition-all group border-border/50 hover:bg-white hover:border-primary/30">
+          <div key={bank.entity_id || bank.id} className={`relative p-5 rounded-2xl bg-muted/30 border transition-all group ${bank.is_default ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-border/50 hover:bg-white hover:border-primary/30'}`}>
+             {bank.is_default && (
+               <div className="absolute -top-3 -right-3 w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg border-2 border-white" title="Default Account">
+                 <Star className="w-4 h-4 text-white fill-current" />
+               </div>
+             )}
              <div className="flex items-start justify-between mb-2">
                <h4 className="font-black text-slate-900 text-sm">{bank.bank_name}</h4>
                <div className="flex gap-1">

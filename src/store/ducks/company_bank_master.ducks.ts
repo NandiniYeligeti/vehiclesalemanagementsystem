@@ -17,6 +17,7 @@ export interface CompanyBankMaster {
   bank_name: string;
   branch_name: string;
   account_number: string;
+  is_default?: boolean;
 }
 
 interface CompanyBankMasterState {
