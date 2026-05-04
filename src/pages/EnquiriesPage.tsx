@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Search, UserPlus, PhoneCall, Calendar, MessageSquare,
-  User, Car, Banknote, Mail, Loader2, ArrowRight, X, Phone, ClipboardList
+  User, Car, Banknote, Mail, Loader2, ArrowRight, X, Phone, ClipboardList, BadgeCheck
 } from "lucide-react";
 
 interface Props { onNavigate?: (tab: string) => void; }
@@ -98,22 +98,35 @@ export default function EnquiriesPage({ onNavigate }: Props) {
       customer_name: enq.name, mobile_number: enq.mobile, email: enq.email || "",
       address: "TBD", city: "TBD", state: "TBD", pincode: "000000"
     };
-    dispatch(addCustomerAction(payload, companyCode, () => {
-      toast.success(`${enq.name} converted to customer!`);
+    dispatch(addCustomerAction(payload, companyCode, async () => {
+      try {
+        await api.put(`/enquiry/${companyCode}/${enq.entity_id || enq.id}`, { is_converted: true });
+        toast.success(`${enq.name} converted to customer!`);
+        fetchEnquiries();
+        setTab("converted");
+      } catch (err) {
+        toast.error("Customer created but enquiry status update failed");
+      }
       setLoading(false);
-      if (onNavigate) onNavigate("customers");
     }, () => { toast.error("Error converting"); setLoading(false); }));
   };
 
   const selectedEnquiry = useMemo(() =>
     enquiries.find(e => (e.entity_id || e.id) === selectedEnquiryId), [enquiries, selectedEnquiryId]);
 
-  const filteredEnquiries = useMemo(() =>
-    enquiries.filter(e =>
+  const activeEnquiries = useMemo(() =>
+    enquiries.filter(e => !e.is_converted && (
       (e.name || "").toLowerCase().includes(search.toLowerCase()) ||
       (e.mobile || "").toLowerCase().includes(search.toLowerCase()) ||
       (e.vehicle || "").toLowerCase().includes(search.toLowerCase())
-    ), [enquiries, search]);
+    )), [enquiries, search]);
+
+  const convertedLeads = useMemo(() =>
+    enquiries.filter(e => e.is_converted && (
+      (e.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (e.mobile || "").toLowerCase().includes(search.toLowerCase()) ||
+      (e.vehicle || "").toLowerCase().includes(search.toLowerCase())
+    )), [enquiries, search]);
 
   const formatDate = (d: string) => {
     if (!d) return "";
@@ -128,7 +141,7 @@ export default function EnquiriesPage({ onNavigate }: Props) {
         <div>
           <h1 className="text-3xl font-black tracking-tighter erp-gradient-text">Enquiry Management</h1>
           <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2 mt-1">
-            <ClipboardList className="w-3 h-3" /> Lead Pipeline • {enquiries.length} Records
+            <ClipboardList className="w-3 h-3" /> Lead Pipeline • {activeEnquiries.length} Active • {convertedLeads.length} Converted
           </p>
         </div>
       </div>
@@ -139,7 +152,8 @@ export default function EnquiriesPage({ onNavigate }: Props) {
           {[
             { val: "enquiry", label: "Enquiry", icon: UserPlus },
             { val: "followup", label: "Follow Up", icon: PhoneCall },
-            { val: "customer", label: "Customer", icon: User },
+            { val: "customer", label: "Convert", icon: ArrowRight },
+            { val: "converted", label: "Converted Leads", icon: BadgeCheck },
           ].map(t => (
             <TabsTrigger key={t.val} value={t.val}
               className="rounded-xl px-6 text-[10px] font-black uppercase tracking-widest data-[state=active]:bg-card data-[state=active]:shadow-lg transition-all flex items-center gap-2">
@@ -164,11 +178,11 @@ export default function EnquiriesPage({ onNavigate }: Props) {
           </div>
 
           {/* Enquiry Cards */}
-          {filteredEnquiries.length === 0 ? (
-            <div className="text-center py-20 text-muted-foreground bg-card rounded-xl border border-border">No enquiries found.</div>
+          {activeEnquiries.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground bg-card rounded-xl border border-border">No active enquiries found.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {filteredEnquiries.map(enq => (
+              {activeEnquiries.map(enq => (
                 <motion.div key={enq.entity_id || enq.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden">
                   <div className="h-1 w-full bg-primary" />
@@ -292,7 +306,7 @@ export default function EnquiriesPage({ onNavigate }: Props) {
                 <select className="w-full h-12 px-4 rounded-2xl bg-muted/20 border border-border/50 font-bold text-sm outline-none focus:ring-2 focus:ring-primary/10"
                   value={selectedEnquiryId} onChange={e => setSelectedEnquiryId(e.target.value)}>
                   <option value="">— Select an Enquiry —</option>
-                  {enquiries.map(e => (
+                  {activeEnquiries.map(e => (
                     <option key={e.entity_id || e.id} value={e.entity_id || e.id}>{e.name} — {e.mobile}</option>
                   ))}
                 </select>
@@ -397,14 +411,14 @@ export default function EnquiriesPage({ onNavigate }: Props) {
                   <select className="w-full h-12 px-4 rounded-2xl bg-muted/20 border border-border/50 font-bold text-sm outline-none focus:ring-2 focus:ring-primary/10"
                     value={convertEnquiryId} onChange={e => setConvertEnquiryId(e.target.value)}>
                     <option value="">— Select Enquiry —</option>
-                    {enquiries.map(e => (
+                    {activeEnquiries.map(e => (
                       <option key={e.entity_id || e.id} value={e.entity_id || e.id}>{e.name} — {e.mobile}</option>
                     ))}
                   </select>
                 </div>
 
                 {convertEnquiryId && (() => {
-                  const enq = enquiries.find(e => (e.entity_id || e.id) === convertEnquiryId);
+                  const enq = activeEnquiries.find(e => (e.entity_id || e.id) === convertEnquiryId);
                   if (!enq) return null;
                   return (
                     <div className="bg-muted/10 p-5 rounded-2xl border border-border/40 space-y-2">
@@ -423,6 +437,75 @@ export default function EnquiriesPage({ onNavigate }: Props) {
               </div>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* ─── TAB 4: CONVERTED LEADS ─── */}
+      {tab === "converted" && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="relative group flex-1 max-w-sm">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Search converted leads..." value={search} onChange={e => setSearch(e.target.value)}
+                className="h-11 pl-10 rounded-2xl bg-muted/20 border-border/50 font-medium text-sm" />
+            </div>
+          </div>
+
+          {convertedLeads.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground bg-card rounded-xl border border-border">No converted leads yet.</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {convertedLeads.map(enq => (
+                <motion.div key={enq.entity_id || enq.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden relative group">
+                  <div className="absolute top-0 right-0 p-3">
+                    <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[9px] font-black uppercase tracking-widest">
+                      <BadgeCheck className="w-3 h-3 mr-1" /> Converted
+                    </Badge>
+                  </div>
+                  <div className="h-1 w-full bg-emerald-500" />
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                          <User className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-foreground">{enq.name}</h3>
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Converted on {formatDate(enq.updated_at)}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+                        <Phone className="w-3 h-3 text-primary shrink-0" />
+                        <span className="text-[11px] font-bold truncate">{enq.mobile}</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+                        <Car className="w-3 h-3 text-primary shrink-0" />
+                        <span className="text-[11px] font-bold truncate">{enq.vehicle || "N/A"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+                        <UserPlus className="w-3 h-3 text-purple-500 shrink-0" />
+                        <span className="text-[11px] font-bold truncate">{enq.salesperson || "Unassigned"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-muted/30 px-3 py-2 rounded-lg">
+                        <Calendar className="w-3 h-3 text-blue-500 shrink-0" />
+                        <span className="text-[11px] font-bold truncate">{formatDate(enq.created_at)}</span>
+                      </div>
+                    </div>
+                    <Button variant="ghost" className="w-full h-8 rounded-lg text-[9px] font-black uppercase tracking-widest gap-2 hover:bg-primary/5"
+                      onClick={() => {
+                        if (onNavigate) onNavigate("customers");
+                        toast.info(`Viewing ${enq.name} in Customers`);
+                      }}>
+                      View Profile <ArrowRight className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
