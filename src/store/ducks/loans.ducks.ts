@@ -54,7 +54,7 @@ export default function loansReducer(state = initialState, action: any): LoansSt
     case GET_LOANS:
       return { ...state, loading: true, error: null };
     case SET_LOANS:
-      return { ...state, data: action.payload, loading: false };
+      return { ...state, data: action.payload, loading: false, saving: false };
     case ADD_LOAN:
     case UPDATE_LOAN:
     case DELETE_LOAN:

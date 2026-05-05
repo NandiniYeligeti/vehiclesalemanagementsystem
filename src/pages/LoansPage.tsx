@@ -211,7 +211,12 @@ const LoansPage = () => {
     // Build payload with proper date conversion
     const payload: any = { ...formData };
     if (payload.status_date) {
-      payload.status_date = new Date(payload.status_date).toISOString();
+      const isoDate = new Date(payload.status_date).toISOString();
+      payload.status_date = isoDate;
+      // If status is Disbursed, also set disbursement_date
+      if (payload.status === 'Disbursed') {
+        payload.disbursement_date = isoDate;
+      }
     } else {
       delete payload.status_date;
     }
@@ -399,7 +404,11 @@ const LoansPage = () => {
                       </div>
                     </td>
                     <td className="p-4 text-center">
-                      <span className="text-xs font-bold text-muted-foreground">{format(new Date(row.created_at || ''), "dd MMM yyyy")}</span>
+                      <span className="text-xs font-bold text-muted-foreground">
+                        {row.status_date || row.disbursement_date 
+                          ? format(new Date(row.status_date || row.disbursement_date || ''), "dd MMM yyyy")
+                          : format(new Date(row.created_at || ''), "dd MMM yyyy")}
+                      </span>
                     </td>
                     <td className="p-4 text-center">
                       <Badge className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-widest border ${statusColors[row.status] || ''}`}>
@@ -595,7 +604,11 @@ const LoansPage = () => {
                   </div>
 
                   <div className="md:col-span-1">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">Status Date</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1 mb-2 block">
+                      {formData.status === 'Disbursed' ? 'Disbursement Date' : 
+                       formData.status === 'Approved' ? 'Approval Date' : 
+                       formData.status === 'Rejected' ? 'Rejection Date' : 'Status Date'}
+                    </label>
                     <div className="relative">
                       <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                       <Input
