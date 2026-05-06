@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail, BookOpen, CreditCard } from 'lucide-react';
+import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail, BookOpen, CreditCard, Truck, Calendar } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -8,7 +8,7 @@ import * as Yup from 'yup';
 import { getCustomersAction, getCustomerLedgerAction } from '@/store/ducks/customers.ducks';
 import { getSalespersonsAction } from '@/store/ducks/salespersons.ducks';
 import { getVehicleInventoryAction } from '@/store/ducks/vehicle_inventory.ducks';
-import { addSalesOrderAction, getSalesOrdersAction, resendOrderEmailAction, previewOrderEmailAction } from '@/store/ducks/sales_orders.ducks';
+import { addSalesOrderAction, getSalesOrdersAction, resendOrderEmailAction, previewOrderEmailAction, updateSalesOrderAction } from '@/store/ducks/sales_orders.ducks';
 import { getCompanySettingsAction } from '@/store/ducks/company.ducks';
 import EmailPreviewModal from '@/components/EmailPreviewModal';
 import { getAccessoriesAction } from '@/store/ducks/vehicle_features.ducks';
@@ -57,6 +57,7 @@ const SalesOrderPage = () => {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false);
 
   const rawCustomers = useSelector((state: RootState) => state.customers?.data || []);
   const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
@@ -185,6 +186,20 @@ const SalesOrderPage = () => {
       setIsEmailSending(false);
       setShowEmailModal(false);
       toast.success('Sales order email sent to customer!');
+      dispatch(getSalesOrdersAction(companyCode));
+    }));
+  };
+  
+  const handleUpdateDelivery = (values: any) => {
+    if (!selectedOrder) return;
+    const id = selectedOrder.entity_id || selectedOrder._id || selectedOrder.id;
+    dispatch(updateSalesOrderAction(id, {
+      ...values,
+      actual_delivery_date: values.actual_delivery_date ? new Date(values.actual_delivery_date).toISOString() : null,
+      company_id: companyCode
+    }, () => {
+      setShowDeliveryModal(false);
+      toast.success('Delivery status updated successfully!');
       dispatch(getSalesOrdersAction(companyCode));
     }));
   };
@@ -437,7 +452,8 @@ const SalesOrderPage = () => {
                     <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer</th>
                     <th className="text-left px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Vehicle</th>
                     <th className="text-right px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Amount</th>
-                    <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Payment Status</th>
+                    <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Delivery</th>
                     <th className="text-center px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Status</th>
                     <th className="text-right px-6 py-4 text-xs font-bold text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
@@ -476,6 +492,7 @@ const SalesOrderPage = () => {
                             type="button"
                             onClick={() => openLedgerDrawer(order)}
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 ${
+                              order.status === 'Fully Paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 
                               order.status === 'Confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
                               order.status === 'Draft' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
                               'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -483,6 +500,23 @@ const SalesOrderPage = () => {
                           >
                             {order.status || 'Pending'}
                           </button>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border ${
+                              order.delivery_status === 'Delivered' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 
+                              order.delivery_status === 'Ready' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' : 
+                              order.delivery_status === 'Cancelled' ? 'bg-destructive/10 text-destructive border-destructive/20' : 
+                              'bg-amber-500/10 text-amber-600 border-amber-500/20'
+                            }`}>
+                              {order.delivery_status || 'Pending'}
+                            </span>
+                            {order.actual_delivery_date && (
+                              <span className="text-[8px] font-bold text-muted-foreground tabular">
+                                {new Date(order.actual_delivery_date).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-center">
                           {order.email_status ? (
@@ -518,6 +552,12 @@ const SalesOrderPage = () => {
                               <Printer className="w-4 h-4" />
                             </button>
                              <button 
+                              onClick={() => { setSelectedOrder(order); setShowDeliveryModal(true); }}
+                              className="p-2 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition-all hover:scale-110 active:scale-95" title="Manage Delivery"
+                            >
+                              <Truck className="w-4 h-4" />
+                            </button>
+                            <button 
                               onClick={() => handleOpenEmailPreview(order)}
                               className="p-2 rounded-lg hover:bg-blue-500/10 text-blue-500 transition-all hover:scale-110 active:scale-95 border border-transparent hover:border-blue-500/20 shadow-sm" title="Open Email"
                             >
@@ -1172,13 +1212,86 @@ const SalesOrderPage = () => {
           </div>
         )}
       </AnimatePresence>
-      <EmailPreviewModal 
+       <EmailPreviewModal 
         isOpen={showEmailModal}
         onClose={() => setShowEmailModal(false)}
         previewData={emailPreview}
         onSend={handleConfirmSendEmail}
         isLoading={isEmailSending}
       />
+
+      {/* Delivery Management Modal */}
+      <AnimatePresence>
+        {showDeliveryModal && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+              <div className="p-6 border-b border-border flex justify-between items-center bg-primary text-primary-foreground">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black uppercase">Manage Delivery</h3>
+                    <p className="text-xs opacity-75">{selectedOrder.sales_order_code}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowDeliveryModal(false)} className="p-2 hover:bg-white/10 rounded-xl transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+              
+              <div className="p-8">
+                <Formik
+                  initialValues={{
+                    delivery_status: selectedOrder.delivery_status || 'Pending',
+                    actual_delivery_date: selectedOrder.actual_delivery_date ? new Date(selectedOrder.actual_delivery_date).toISOString().split('T')[0] : ''
+                  }}
+                  onSubmit={handleUpdateDelivery}
+                >
+                  {({ isSubmitting }) => (
+                    <Form className="space-y-6">
+                      <div className="space-y-4">
+                        <div>
+                          <label className="erp-label">Delivery Status</label>
+                          <Field as="select" name="delivery_status" className="erp-select">
+                            <option value="Pending">Pending</option>
+                            <option value="Ready">Ready for Delivery</option>
+                            <option value="Delivered">Delivered</option>
+                            <option value="Cancelled">Cancelled</option>
+                          </Field>
+                        </div>
+                        
+                        <div>
+                          <label className="erp-label flex items-center gap-2">
+                            <Calendar className="w-3.5 h-3.5" /> Actual Delivery Date
+                          </label>
+                          <Field type="date" name="actual_delivery_date" className="erp-input" />
+                          <p className="text-[10px] text-muted-foreground mt-1.5 italic">Expected was: {new Date(selectedOrder.delivery_date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+
+                      <div className="pt-4 flex flex-col gap-3">
+                        <button 
+                          type="submit" 
+                          disabled={isSubmitting} 
+                          className="w-full py-3.5 bg-primary text-primary-foreground rounded-xl font-black uppercase tracking-wider shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all flex items-center justify-center gap-2"
+                        >
+                          {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4" /> Update Status</>}
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setShowDeliveryModal(false)}
+                          className="w-full py-3 text-muted-foreground hover:text-foreground font-bold transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </Form>
+                  )}
+                </Formik>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

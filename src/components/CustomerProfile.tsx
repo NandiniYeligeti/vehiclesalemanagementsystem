@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
@@ -6,8 +6,9 @@ import { getCustomerLedgerAction, updateCustomerAction, Customer } from '@/store
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
 import { getPaymentsAction } from '@/store/ducks/payments.ducks';
 import { getLoansAction } from '@/store/ducks/loans.ducks';
-import { X, Upload, FileText, Check, Plus, Loader2, Download, Edit2, Eye } from 'lucide-react';
+import { X, Upload, FileText, Check, Plus, Loader2, Download, Edit2, Eye, CarFront } from 'lucide-react';
 import { toast } from 'sonner';
+import { motion } from 'framer-motion';
 
 interface CustomerProfileProps {
   customer: Customer;
@@ -58,6 +59,74 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
       dispatch(getLoansAction(companyCode));
     }
   }, [dispatch, customerId, companyCode]);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount || 0);
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(date);
+    } catch {
+      return dateString;
+    }
+  };
+
+  // Process ledger data for grouping
+  const { totalPurchase, totalPaid, totalOutstanding, vehiclesArray } = useMemo(() => {
+    if (!customerLedger || !customerLedger.length) {
+      return { totalPurchase: 0, totalPaid: 0, totalOutstanding: 0, vehiclesArray: [] };
+    }
+
+    let globalPurchase = 0;
+    let globalPaid = 0;
+
+    const groupMap: Record<string, any> = {};
+
+    customerLedger.forEach((item: any) => {
+      globalPurchase += (item.debit || 0);
+      globalPaid += (item.credit || 0);
+
+      const vId = item.vehicle_id || 'unassigned';
+      if (!groupMap[vId]) {
+        groupMap[vId] = {
+          vehicle_id: vId,
+          vehicle_name: item.vehicle_name || 'Other/Unassigned',
+          sales_order_code: item.sales_order_code || '',
+          items: [],
+          outstanding: 0
+        };
+      }
+      groupMap[vId].items.push({ ...item });
+    });
+
+    const arr = Object.values(groupMap);
+
+    // Calculate local balances per vehicle
+    arr.forEach(group => {
+      let runBalance = 0;
+      group.items.forEach((txn: any) => {
+        runBalance += (txn.debit || 0);
+        runBalance -= (txn.credit || 0);
+        txn.localBalance = runBalance;
+      });
+      group.outstanding = runBalance;
+    });
+
+    return {
+      totalPurchase: globalPurchase,
+      totalPaid: globalPaid,
+      totalOutstanding: globalPurchase - globalPaid,
+      vehiclesArray: arr
+    };
+  }, [customerLedger]);
 
   const handleSaveProfile = () => {
     // Validate required fields
@@ -185,8 +254,8 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
         </div>
 
         {/* Tabs Content */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
             <div className="px-6 pt-4 border-b border-border/50 bg-muted/5">
               <TabsList className="h-12 bg-transparent gap-1 p-0">
                 {['profile', 'vehicles', 'loan', 'payments', 'ledger', 'documents'].map(tab => (
@@ -201,7 +270,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-8 custom-scrollbar min-h-0">
               {/* Profile Tab — shows form in edit mode, read-only in view mode */}
               <TabsContent value="profile" className="m-0 focus-visible:outline-none">
                 {isEditing ? (
@@ -363,39 +432,102 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
               </TabsContent>
 
               <TabsContent value="ledger" className="m-0 focus-visible:outline-none">
-                {ledgerLoading ? (
-                  <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary/40" /></div>
-                ) : customerLedger && customerLedger.length > 0 ? (
-                  <div className="erp-card overflow-hidden">
-                    <table className="w-full text-xs">
-                      <thead className="bg-muted/30 border-b border-border font-black text-muted-foreground uppercase text-[10px] tracking-widest">
-                        <tr>
-                          <th className="px-6 py-4 text-left">Date</th>
-                          <th className="px-6 py-4 text-left">Description</th>
-                          <th className="px-6 py-4 text-right">Debit</th>
-                          <th className="px-6 py-4 text-right">Credit</th>
-                          <th className="px-6 py-4 text-right">Balance</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {customerLedger.map((l: any, idx: number) => (
-                          <tr key={idx} className="border-b border-border/50 hover:bg-muted/10 font-medium">
-                            <td className="px-6 py-4 text-muted-foreground italic">{(l.date || '').split('T')[0]}</td>
-                            <td className="px-6 py-4 font-bold">{l.description}</td>
-                            <td className="px-6 py-4 text-right font-black text-destructive/80">₹{(l.debit || 0).toLocaleString()}</td>
-                            <td className="px-6 py-4 text-right font-black text-emerald-600">₹{(l.credit || 0).toLocaleString()}</td>
-                            <td className="px-6 py-4 text-right font-black">₹{(l.balance || 0).toLocaleString()}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
-                    <FileText className="w-12 h-12 mb-4 opacity-20" />
-                    <p className="text-sm font-bold italic">No financial ledger entries yet.</p>
-                  </div>
-                )}
+                <div className="space-y-6 pr-2">
+                  {ledgerLoading ? (
+                    <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary/40" /></div>
+                  ) : customerLedger && customerLedger.length > 0 ? (
+                    <>
+                      {/* Summary Cards */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Total Purchase</p>
+                          <h2 className="text-xl font-black text-foreground">{formatCurrency(totalPurchase)}</h2>
+                        </div>
+                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Total Paid</p>
+                          <h2 className="text-xl font-black text-emerald-600">{formatCurrency(totalPaid)}</h2>
+                        </div>
+                        <div className="bg-card border border-border rounded-xl p-5 shadow-sm">
+                          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mb-1 opacity-60">Outstanding</p>
+                          <h2 className="text-xl font-black text-destructive">{formatCurrency(totalOutstanding)}</h2>
+                        </div>
+                      </div>
+
+                      {/* Vehicle Groups */}
+                      {vehiclesArray.map((group: any) => (
+                        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="erp-card overflow-hidden" key={group.vehicle_id}>
+                          <div className="px-5 py-3 border-b border-border bg-muted/20 flex items-center gap-2">
+                            <CarFront className="w-4 h-4 text-primary opacity-60" />
+                            <div className="flex flex-col">
+                              <h3 className="font-bold text-sm text-foreground">{group.vehicle_name}</h3>
+                              {group.sales_order_code && (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">{group.sales_order_code}</span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-[11px] text-left">
+                              <thead>
+                                <tr className="border-b border-border bg-muted/5">
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Date</th>
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Description</th>
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Debit</th>
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Credit</th>
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Balance</th>
+                                  <th className="px-5 py-3 font-black text-muted-foreground uppercase tracking-widest text-[9px]">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border/50">
+                                {group.items.map((entry: any, idx: number) => (
+                                  <tr key={idx} className="hover:bg-muted/10 transition-colors">
+                                    <td className="px-5 py-3 whitespace-nowrap text-muted-foreground">{formatDate(entry.date)}</td>
+                                    <td className="px-5 py-3 font-bold">{entry.description}</td>
+                                    <td className="px-5 py-3 font-bold whitespace-nowrap">
+                                      {entry.description === 'Discount Allowed' 
+                                        ? <span className="text-destructive">{formatCurrency(entry.credit)}</span> 
+                                        : (entry.debit > 0 ? <span className="text-destructive">{formatCurrency(entry.debit)}</span> : '-')}
+                                    </td>
+                                    <td className="px-5 py-3 font-bold whitespace-nowrap">
+                                      {entry.description === 'Discount Allowed' 
+                                        ? '-' 
+                                        : (entry.credit > 0 ? <span className="text-emerald-600">{formatCurrency(entry.credit)}</span> : '-')}
+                                    </td>
+                                    <td className="px-5 py-3 font-black text-foreground whitespace-nowrap">{formatCurrency(entry.localBalance)}</td>
+                                    <td className="px-5 py-3 whitespace-nowrap">
+                                      {entry.status ? (
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                          ['Done', 'Received', 'Disbursed'].includes(entry.status) ? 'bg-emerald-500/10 text-emerald-600' :
+                                          ['Pending', 'Applied'].includes(entry.status) ? 'bg-amber-500/10 text-amber-600' :
+                                          entry.status === 'Approved' ? 'bg-blue-500/10 text-blue-600' :
+                                          entry.status === 'Rejected' ? 'bg-red-500/10 text-red-600' :
+                                          'bg-muted text-muted-foreground'
+                                        }`}>
+                                          {entry.status}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground/30">—</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div className="px-5 py-3 border-t border-border bg-muted/5 flex justify-end">
+                            <h4 className="font-black text-xs text-foreground">Outstanding: {formatCurrency(group.outstanding)}</h4>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground/40">
+                      <FileText className="w-12 h-12 mb-4 opacity-20" />
+                      <p className="text-sm font-bold italic">No financial ledger entries yet.</p>
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="documents" className="m-0 focus-visible:outline-none">
