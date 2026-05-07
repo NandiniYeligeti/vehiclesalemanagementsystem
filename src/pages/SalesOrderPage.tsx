@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail, BookOpen, CreditCard, Truck, Calendar } from 'lucide-react';
+import { Printer, Save, Loader2, Eye, FileText, Search, Plus, List, X, Mail, BookOpen, CreditCard, Truck, Calendar, ShieldCheck } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/store/rootReducer';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
@@ -58,6 +58,7 @@ const SalesOrderPage = () => {
   const [isEmailSending, setIsEmailSending] = useState(false);
   const [currentEmailId, setCurrentEmailId] = useState<string | null>(null);
   const [showDeliveryModal, setShowDeliveryModal] = useState(false);
+  const [showRegModal, setShowRegModal] = useState(false);
 
   const rawCustomers = useSelector((state: RootState) => state.customers?.data || []);
   const customers = useMemo(() => getFilteredData(rawCustomers, 'showroom'), [rawCustomers, getFilteredData]);
@@ -410,6 +411,27 @@ const SalesOrderPage = () => {
             </button>
 
             <button
+              onClick={() => setStatusFilter(statusFilter === 'Part-Funded' ? null : 'Part-Funded')}
+              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+                statusFilter === 'Part-Funded' ? 'border-violet-500 shadow-lg shadow-violet-500/10' : 'border-transparent'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <ShieldCheck className="w-5 h-5 text-violet-500" />
+                  </div>
+                  <span className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">Part-Funded</span>
+                </div>
+                {statusFilter === 'Part-Funded' && <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />}
+              </div>
+              <p className="text-3xl font-black text-violet-600 tracking-tight">
+                {salesOrders.filter(o => o.status === 'Part-Funded').length}
+              </p>
+              <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tighter mt-1 italic">loan pending</p>
+            </button>
+
+            <button
               onClick={() => setStatusFilter(null)}
               className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
                 !statusFilter ? 'border-primary shadow-lg shadow-primary/10' : 'border-transparent'
@@ -492,7 +514,8 @@ const SalesOrderPage = () => {
                             type="button"
                             onClick={() => openLedgerDrawer(order)}
                             className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all hover:scale-105 active:scale-95 ${
-                              order.status === 'Fully Paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 
+                             order.status === 'Fully Paid' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 
+                              order.status === 'Part-Funded' ? 'bg-violet-500/10 text-violet-600 border-violet-500/20' : 
                               order.status === 'Confirmed' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
                               order.status === 'Draft' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 
                               'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -556,6 +579,12 @@ const SalesOrderPage = () => {
                               className="p-2 rounded-lg hover:bg-emerald-500/10 text-emerald-500 transition-all hover:scale-110 active:scale-95" title="Manage Delivery"
                             >
                               <Truck className="w-4 h-4" />
+                            </button>
+                            <button 
+                              onClick={() => { setSelectedOrder(order); setShowRegModal(true); }}
+                              className="p-2 rounded-lg hover:bg-violet-500/10 text-violet-500 transition-all hover:scale-110 active:scale-95 border border-transparent hover:border-violet-500/20 shadow-sm" title="Vehicle Registration & Insurance"
+                            >
+                              <ShieldCheck className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={() => handleOpenEmailPreview(order)}
@@ -1069,18 +1098,87 @@ const SalesOrderPage = () => {
                   <div className="bg-orange-50 px-4 py-3 rounded-xl border border-orange-100"><p className="text-[9px] uppercase font-black text-orange-600 mb-1">Balance Due</p><p className="font-bold text-orange-600">{formatCurrency(selectedOrder.balance_amount)}</p></div>
                 </div>
 
-                <div className="border border-border rounded-xl p-4 flex items-center justify-between">
-                   <div>
-                     <p className="text-[10px] items-center gap-1 font-bold text-muted-foreground uppercase tracking-widest flex"><CreditCard className="w-3 h-3" /> Payment Method</p>
-                     <p className="font-bold">{selectedOrder.payment_mode || 'Cash'}</p>
-                   </div>
-                   {selectedOrder.utr_number && (
-                     <div className="text-right">
-                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">UTR / Ref No.</p>
-                       <p className="font-mono font-bold text-primary">{selectedOrder.utr_number}</p>
-                     </div>
-                   )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="border border-border rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] items-center gap-1 font-bold text-muted-foreground uppercase tracking-widest flex"><CreditCard className="w-3 h-3" /> Payment Method</p>
+                      <p className="font-bold">{selectedOrder.payment_mode || 'Cash'}</p>
+                    </div>
+                    {selectedOrder.utr_number && (
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">UTR / Ref No.</p>
+                        <p className="font-mono font-bold text-primary">{selectedOrder.utr_number}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedOrder.registration_status && (
+                    <div className={`border rounded-xl p-4 flex items-center justify-between ${
+                      selectedOrder.registration_status === 'Completed' ? 'bg-emerald-500/5 border-emerald-500/20' : 
+                      selectedOrder.registration_status === 'In Process' ? 'bg-blue-500/5 border-blue-500/20' : 
+                      'bg-amber-500/5 border-amber-500/20'
+                    }`}>
+                      <div>
+                        <p className="text-[10px] items-center gap-1 font-bold text-muted-foreground uppercase tracking-widest flex"><ShieldCheck className="w-3 h-3" /> Registration</p>
+                        <p className={`font-bold ${
+                          selectedOrder.registration_status === 'Completed' ? 'text-emerald-600' : 
+                          selectedOrder.registration_status === 'In Process' ? 'text-blue-600' : 
+                          'text-amber-600'
+                        }`}>{selectedOrder.registration_status}</p>
+                      </div>
+                      {selectedOrder.vehicle_number && (
+                        <div className="text-right">
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Plate No.</p>
+                          <p className="font-mono font-bold text-emerald-700">{selectedOrder.vehicle_number}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {(selectedOrder.registration_status === 'Completed' || selectedOrder.insurance_policy_no) && (
+                  <div className="bg-muted/30 rounded-2xl p-6 space-y-4 border border-border/50">
+                    <div className="grid grid-cols-2 gap-6">
+                      {selectedOrder.rto && (
+                        <div>
+                          <h4 className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">RTO Office</h4>
+                          <p className="text-sm font-bold">{selectedOrder.rto}</p>
+                        </div>
+                      )}
+                      {selectedOrder.registration_date && (
+                        <div>
+                          <h4 className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Reg. Date</h4>
+                          <p className="text-sm font-bold">{new Date(selectedOrder.registration_date).toLocaleDateString()}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {selectedOrder.insurance_policy_no && (
+                      <div className="pt-4 border-t border-border/50">
+                        <div className="flex items-center gap-2 mb-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.5)]" />
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-violet-600">Insurance Active</h4>
+                        </div>
+                        <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+                          <div>
+                            <h4 className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Provider</h4>
+                            <p className="text-sm font-bold">{selectedOrder.insurance_company}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Policy No.</h4>
+                            <p className="text-sm font-mono font-bold text-violet-600">{selectedOrder.insurance_policy_no}</p>
+                          </div>
+                          <div>
+                            <h4 className="text-[9px] uppercase font-black text-muted-foreground tracking-widest mb-1">Validity</h4>
+                            <p className="text-xs font-medium">
+                              {selectedOrder.insurance_start_date ? new Date(selectedOrder.insurance_start_date).toLocaleDateString() : '-'} to {selectedOrder.insurance_end_date ? new Date(selectedOrder.insurance_end_date).toLocaleDateString() : '-'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="p-6 border-t border-border bg-muted/20 flex gap-3">
@@ -1219,6 +1317,255 @@ const SalesOrderPage = () => {
         onSend={handleConfirmSendEmail}
         isLoading={isEmailSending}
       />
+
+      {/* Vehicle Registration & Insurance Modal */}
+      <AnimatePresence>
+        {showRegModal && selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-md">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} 
+              animate={{ opacity: 1, scale: 1, y: 0 }} 
+              exit={{ opacity: 0, scale: 0.9, y: 20 }} 
+              className="bg-card rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col border border-border/50"
+            >
+              <div className="p-8 border-b border-border flex justify-between items-center bg-gradient-to-br from-violet-600 to-indigo-700 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-3xl" />
+                <div className="relative z-10 flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shadow-xl">
+                    <ShieldCheck className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">Vehicle Management</h3>
+                    <p className="text-xs font-bold opacity-80 tracking-widest">{selectedOrder.sales_order_code} • {selectedOrder.customer_name}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowRegModal(false)} className="relative z-10 p-3 hover:bg-white/10 rounded-2xl transition-all hover:rotate-90"><X className="w-6 h-6" /></button>
+              </div>
+              
+              <div className="p-10 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <Formik
+                  initialValues={{
+                    registration_status: selectedOrder.registration_status || 'Pending',
+                    registration_application_no: selectedOrder.registration_application_no || '',
+                    registration_temp_no: selectedOrder.registration_temp_no || '',
+                    registration_agent_name: selectedOrder.registration_agent_name || '',
+                    registration_agent_mobile: selectedOrder.registration_agent_mobile || '',
+                    registration_date: selectedOrder.registration_date ? new Date(selectedOrder.registration_date).toISOString().split('T')[0] : '',
+                    vehicle_number: selectedOrder.vehicle_number || '',
+                    rto: selectedOrder.rto || '',
+                    insurance_company: selectedOrder.insurance_company || '',
+                    insurance_policy_no: selectedOrder.insurance_policy_no || '',
+                    insurance_start_date: selectedOrder.insurance_start_date ? new Date(selectedOrder.insurance_start_date).toISOString().split('T')[0] : '',
+                    insurance_end_date: selectedOrder.insurance_end_date ? new Date(selectedOrder.insurance_end_date).toISOString().split('T')[0] : '',
+                  }}
+                  onSubmit={(values, { setSubmitting }) => {
+                    const id = selectedOrder.entity_id || selectedOrder._id || selectedOrder.id;
+                    dispatch(updateSalesOrderAction(id, {
+                      ...values,
+                      registration_date: values.registration_date ? new Date(values.registration_date).toISOString() : null,
+                      insurance_start_date: values.insurance_start_date ? new Date(values.insurance_start_date).toISOString() : null,
+                      insurance_end_date: values.insurance_end_date ? new Date(values.insurance_end_date).toISOString() : null,
+                      company_id: companyCode
+                    }, () => {
+                      setSubmitting(false);
+                      setShowRegModal(false);
+                      toast.success('Vehicle records updated successfully!');
+                      dispatch(getSalesOrdersAction(companyCode));
+                    }, () => setSubmitting(false)));
+                  }}
+                >
+                  {({ values, setFieldValue, isSubmitting }) => (
+                    <Form className="space-y-10">
+                      {/* State Switcher */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-1.5 bg-muted/30 rounded-[1.25rem] border border-border w-fit">
+                          {['Pending', 'In Process', 'Completed'].map((status) => (
+                            <button
+                              key={status}
+                              type="button"
+                              onClick={() => setFieldValue('registration_status', status)}
+                              className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${
+                                values.registration_status === status 
+                                  ? status === 'Pending' ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' :
+                                    status === 'In Process' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/30' :
+                                    'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30'
+                                  : 'text-muted-foreground hover:bg-muted/50'
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          ))}
+                        </div>
+                        
+                        <AnimatePresence mode="wait">
+                          {values.registration_status === 'Pending' && (
+                            <motion.div 
+                              key="pending"
+                              initial={{ opacity: 0, x: -10 }} 
+                              animate={{ opacity: 1, x: 0 }} 
+                              exit={{ opacity: 0, x: 10 }}
+                              className="p-6 bg-amber-500/5 border border-amber-500/20 rounded-[1.5rem] flex flex-col items-center text-center gap-4"
+                            >
+                              <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                                <Calendar className="w-8 h-8 text-amber-500 animate-pulse" />
+                              </div>
+                              <div>
+                                <h4 className="text-lg font-black text-amber-600 uppercase tracking-tight">Registration is Pending</h4>
+                                <p className="text-sm text-amber-600/70 font-medium mt-1">Initialize the registration process for this vehicle.</p>
+                              </div>
+                              <button 
+                                type="button"
+                                onClick={() => setFieldValue('registration_status', 'In Process')}
+                                className="mt-2 px-8 py-3 bg-amber-500 text-white rounded-xl font-black uppercase tracking-widest text-[10px] hover:bg-amber-600 transition-all shadow-lg shadow-amber-500/20"
+                              >
+                                Start Process Now
+                              </button>
+                            </motion.div>
+                          )}
+
+                          {values.registration_status === 'In Process' && (
+                            <motion.div 
+                              key="in-process"
+                              initial={{ opacity: 0, x: -10 }} 
+                              animate={{ opacity: 1, x: 0 }} 
+                              exit={{ opacity: 0, x: 10 }}
+                              className="space-y-6"
+                            >
+                              <div className="grid grid-cols-2 gap-5">
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Application No</label>
+                                  <Field name="registration_application_no" className="erp-input h-12 rounded-2xl bg-muted/20 focus:bg-card transition-all" placeholder="Enter App No..." />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Temp Reg No</label>
+                                  <Field name="registration_temp_no" className="erp-input h-12 rounded-2xl bg-muted/20 focus:bg-card transition-all" placeholder="Enter Temp No..." />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Agent Name</label>
+                                  <Field name="registration_agent_name" className="erp-input h-12 rounded-2xl bg-muted/20 focus:bg-card transition-all" placeholder="Assigned Agent..." />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Agent Mobile</label>
+                                  <Field name="registration_agent_mobile" className="erp-input h-12 rounded-2xl bg-muted/20 focus:bg-card transition-all" placeholder="Agent Contact..." />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Application Date</label>
+                                  <Field type="date" name="registration_date" className="erp-input h-12 rounded-2xl bg-muted/20 focus:bg-card transition-all" />
+                                </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Process Document</label>
+                                  <div className="h-12 border-2 border-dashed border-border rounded-2xl flex items-center justify-center gap-2 cursor-pointer hover:bg-muted/30 transition-all text-muted-foreground hover:text-primary">
+                                    <FileText className="w-4 h-4" />
+                                    <span className="text-[10px] font-bold uppercase tracking-widest">Upload Receipt</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="flex gap-3 pt-2">
+                                <button 
+                                  type="button" 
+                                  onClick={() => setFieldValue('registration_status', 'Completed')}
+                                  className="flex-1 h-12 bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                >
+                                  <Check className="w-4 h-4 stroke-[3]" /> Mark Completed
+                                </button>
+                                <button 
+                                  type="submit" 
+                                  disabled={isSubmitting}
+                                  className="px-8 h-12 bg-primary text-primary-foreground rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                >
+                                  Save Progress
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+
+                          {values.registration_status === 'Completed' && (
+                            <motion.div 
+                              key="completed"
+                              initial={{ opacity: 0, x: -10 }} 
+                              animate={{ opacity: 1, x: 0 }} 
+                              exit={{ opacity: 0, x: 10 }}
+                              className="space-y-8"
+                            >
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">Registration Details</h4>
+                                </div>
+                                <div className="grid grid-cols-2 gap-5">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Vehicle Number</label>
+                                    <Field name="vehicle_number" className="erp-input h-12 rounded-2xl bg-emerald-500/5 border-emerald-500/20 focus:bg-card transition-all font-mono font-bold text-emerald-700" placeholder="e.g. MH01AB1234" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">RTO Name / Code</label>
+                                    <Field name="rto" className="erp-input h-12 rounded-2xl bg-emerald-500/5 border-emerald-500/20 focus:bg-card transition-all" placeholder="e.g. MH-01 Mumbai South" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <div className="w-1 h-4 bg-violet-500 rounded-full" />
+                                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-violet-600">Insurance Details</h4>
+                                </div>
+                                <div className="grid grid-cols-2 gap-5">
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Insurance Company</label>
+                                    <Field name="insurance_company" className="erp-input h-12 rounded-2xl bg-violet-500/5 border-violet-500/20 focus:bg-card transition-all" placeholder="e.g. HDFC Ergo" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Policy Number</label>
+                                    <Field name="insurance_policy_no" className="erp-input h-12 rounded-2xl bg-violet-500/5 border-violet-500/20 focus:bg-card transition-all font-mono" placeholder="POL-XXXX-XXXX" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Start Date</label>
+                                    <Field type="date" name="insurance_start_date" className="erp-input h-12 rounded-2xl bg-violet-500/5 border-violet-500/20 focus:bg-card transition-all" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Expiry Date</label>
+                                    <Field type="date" name="insurance_end_date" className="erp-input h-12 rounded-2xl bg-violet-500/5 border-violet-500/20 focus:bg-card transition-all" />
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex gap-3 pt-4">
+                                <button 
+                                  type="submit" 
+                                  disabled={isSubmitting}
+                                  className="flex-1 h-14 bg-emerald-500 text-white rounded-[1.25rem] font-black uppercase tracking-widest text-xs shadow-xl shadow-emerald-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+                                >
+                                  {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> Finalize Records</>}
+                                </button>
+                                <button 
+                                  type="button" 
+                                  onClick={() => setFieldValue('registration_status', 'In Process')}
+                                  className="px-10 h-14 bg-muted hover:bg-muted-foreground/10 text-muted-foreground font-black uppercase tracking-widest text-[10px] rounded-[1.25rem] transition-all"
+                                >
+                                  Edit Info
+                                </button>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </Form>
+                  )}
+                </Formik>
+              </div>
+
+              <div className="p-8 border-t border-border bg-muted/10 flex justify-center">
+                <button 
+                  onClick={() => setShowRegModal(false)} 
+                  className="px-12 py-3.5 bg-card hover:bg-muted text-muted-foreground font-black uppercase tracking-[0.2em] text-[10px] rounded-2xl border border-border shadow-sm transition-all"
+                >
+                  Close Manager
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Delivery Management Modal */}
       <AnimatePresence>
