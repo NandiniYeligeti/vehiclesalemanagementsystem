@@ -101,7 +101,7 @@ const ReportsPage = () => {
             formatDate(so.sale_date || so.created_at),
             so.customer_name,
             `${so.brand} ${so.model}`,
-            `₹${(so.total_amount || 0).toLocaleString()}`,
+            so.total_amount || 0,
             so.status,
             so.salesperson_name
           ]);
@@ -133,7 +133,7 @@ const ReportsPage = () => {
             item.color,
             item.chassis_number,
             item.status,
-            `₹${(item.selling_price || item.base_price || 0).toLocaleString()}`,
+            item.selling_price || item.base_price || 0,
             formatDate(item.created_at)
           ]);
         filename = 'Inventory_Report';
@@ -148,7 +148,7 @@ const ReportsPage = () => {
             formatDate(p.payment_date),
             p.customer_name,
             p.payment_mode,
-            `₹${(p.amount || 0).toLocaleString()}`,
+            p.amount || 0,
             p.status
           ]);
         filename = 'Payment_Report';
@@ -162,8 +162,8 @@ const ReportsPage = () => {
             l.customer_name,
             l.sales_order_code,
             l.bank_name,
-            `₹${(l.loan_amount || 0).toLocaleString()}`,
-            `₹${(l.emi || 0).toLocaleString()}`,
+            l.loan_amount || 0,
+            l.emi_amount || 0,
             l.status,
             formatDate(l.created_at)
           ]);
@@ -180,7 +180,7 @@ const ReportsPage = () => {
       ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
     ].join('\n');
     
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);

@@ -366,10 +366,10 @@ const SalesOrderPage = () => {
       {activeTab === 'list' ? (
         <div className="space-y-4">
           {/* Stat Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <button
               onClick={() => setStatusFilter(statusFilter === 'Fully Paid' ? null : 'Fully Paid')}
-              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
                 statusFilter === 'Fully Paid' ? 'border-emerald-500 shadow-lg shadow-emerald-500/10' : 'border-transparent'
               }`}
             >
@@ -388,7 +388,7 @@ const SalesOrderPage = () => {
 
             <button
               onClick={() => setStatusFilter(statusFilter === 'Pending' ? null : 'Pending')}
-              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
                 statusFilter === 'Pending' ? 'border-amber-500 shadow-lg shadow-amber-500/10' : 'border-transparent'
               }`}
             >
@@ -412,7 +412,7 @@ const SalesOrderPage = () => {
 
             <button
               onClick={() => setStatusFilter(statusFilter === 'Part-Funded' ? null : 'Part-Funded')}
-              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
                 statusFilter === 'Part-Funded' ? 'border-violet-500 shadow-lg shadow-violet-500/10' : 'border-transparent'
               }`}
             >
@@ -433,7 +433,7 @@ const SalesOrderPage = () => {
 
             <button
               onClick={() => setStatusFilter(null)}
-              className={`erp-card p-5 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
+              className={`erp-card p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.98] border-2 group ${
                 !statusFilter ? 'border-primary shadow-lg shadow-primary/10' : 'border-transparent'
               }`}
             >
