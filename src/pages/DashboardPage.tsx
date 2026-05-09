@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp, Database
+  Car, Users, ShoppingCart, CreditCard, Landmark, TrendingUp, Database,
+  FileText, Hourglass, Truck, Shield, Phone, Gift, CheckCircle2
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { useDispatch, useSelector } from 'react-redux';
@@ -84,6 +85,19 @@ const DashboardPage = () => {
     return Object.entries(map).map(([brand, count]) => ({ brand, count })).sort((a, b) => b.count - a.count);
   }, [availableInventory]);
 
+  const operationalCards = [
+    { label: 'Registration Pending', value: stats?.registration_pending || 0, icon: FileText, color: 'text-orange-500', bgColor: 'bg-orange-500/10', borderColor: 'border-orange-500/20' },
+    { label: 'Registration In Process', value: stats?.registration_in_process || 0, icon: Hourglass, color: 'text-blue-500', bgColor: 'bg-blue-500/10', borderColor: 'border-blue-500/20' },
+    { label: 'Delivery Pending', value: stats?.delivery_pending || 0, icon: Truck, color: 'text-emerald-500', bgColor: 'bg-emerald-500/10', borderColor: 'border-emerald-500/20' },
+    { label: 'Insurance Pending', value: stats?.insurance_pending || 0, icon: Shield, color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/20' },
+    { label: 'Today Follow-ups', value: stats?.today_follow_ups || 0, icon: Phone, color: 'text-purple-500', bgColor: 'bg-purple-500/10', borderColor: 'border-purple-500/20' },
+  ];
+
+  const incentiveCards = [
+    { label: 'Incentive Pending', value: stats?.incentive_pending || 0, icon: Gift, color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/20' },
+    { label: 'Incentive Paid', value: stats?.incentive_paid || 0, icon: CheckCircle2, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10', borderColor: 'border-cyan-500/20' },
+  ];
+
   const statsCards = [
     { label: 'Vehicles in Stock', value: stats?.total_vehicles_in_stock || 0, icon: Car, color: 'text-info' },
     { label: 'Vehicles Sold', value: stats?.total_vehicles_sold || 0, icon: TrendingUp, color: 'text-success' },
@@ -96,6 +110,14 @@ const DashboardPage = () => {
   const monthlyData = stats?.monthly_revenue || [];
   const modelSalesData = stats?.sales_by_model || [];
   const saleOrders = stats?.recent_sales || [];
+  const followUpList = stats?.follow_up_list || [];
+
+  const registrationStats = [
+    { label: 'Registration Pending', count: stats?.registration_pending || 0 },
+    { label: 'In Process', count: stats?.registration_in_process || 0 },
+    { label: 'Completed', count: (stats?.total_vehicles_sold || 0) - (stats?.registration_pending || 0) - (stats?.registration_in_process || 0) },
+  ];
+  const maxReg = Math.max(...registrationStats.map(s => s.count), 1);
 
   return (
     <div className="space-y-6 relative">
@@ -115,23 +137,166 @@ const DashboardPage = () => {
         </motion.div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
+      {/* Operational Cards Row */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {operationalCards.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.05 }}
+            className={`erp-card p-5 border-l-4 ${stat.borderColor} relative overflow-hidden group`}
+          >
+            <div className="flex justify-between items-start mb-2 relative z-10">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">{stat.label}</p>
+                <p className="text-3xl font-black text-foreground">{stat.value}</p>
+              </div>
+              <div className={`p-2 rounded-xl ${stat.bgColor} ${stat.color} shadow-inner`}>
+                <stat.icon className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-2 relative z-10">
+              <span className="text-[10px] font-bold text-muted-foreground/50 uppercase">Updated Today</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${stat.bgColor.replace('/10', '/50')} animate-pulse`} />
+              <span className={`text-[10px] font-bold ${stat.color} uppercase ml-auto`}>Active</span>
+            </div>
+            {/* Background Accent */}
+            <div className={`absolute -right-4 -bottom-4 w-16 h-16 rounded-full ${stat.bgColor} blur-2xl opacity-50 group-hover:scale-150 transition-transform duration-500`} />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Incentives Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {incentiveCards.map((stat, i) => (
+          <motion.div
+            key={stat.label}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 + (i * 0.1) }}
+            className={`erp-card p-5 border-b-4 ${stat.borderColor} flex items-center justify-between group cursor-pointer`}
+          >
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-2xl ${stat.bgColor} ${stat.color} group-hover:scale-110 transition-transform`}>
+                <stat.icon className="w-6 h-6" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/60">{stat.label}</p>
+                <p className="text-2xl font-black">{stat.value}</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end">
+               <span className="text-[10px] font-bold text-muted-foreground mb-1">Live Tracking</span>
+               <div className="flex gap-1">
+                 {[1,2,3].map(j => <span key={j} className={`w-4 h-1 rounded-full ${stat.bgColor}`} />)}
+               </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Main Financial Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statsCards.map((stat, i) => (
           <motion.div
             key={stat.label}
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="erp-card p-5"
+            transition={{ delay: 0.5 + (i * 0.05) }}
+            className="erp-card p-4 border border-border/30 hover:border-primary/30 transition-all group"
           >
             <div className="flex items-center gap-2 mb-2">
-              <stat.icon className={`w-4 h-4 ${stat.color}`} />
-              <span className="text-sm text-muted-foreground font-semibold">{stat.label}</span>
+              <stat.icon className={`w-3.5 h-3.5 ${stat.color} group-hover:scale-110 transition-transform`} />
+              <span className="text-[10px] text-muted-foreground font-black uppercase tracking-wider whitespace-nowrap">{stat.label}</span>
             </div>
-            <p className="text-3xl font-black mt-1 text-foreground whitespace-nowrap overflow-hidden text-ellipsis">{stat.value}</p>
+            <p className="text-xl font-black text-foreground truncate">{stat.value}</p>
           </motion.div>
         ))}
+      </div>
+
+      {/* Follow-up List and Registration Progress Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Left Column: Follow-up List */}
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="lg:col-span-3 erp-card p-6 min-h-[400px]">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-black tracking-tight">Today's Follow-up List</h3>
+              <p className="text-xs text-muted-foreground font-medium">Active enquiries requiring follow-up today</p>
+            </div>
+            <button className="px-3 py-1 text-[10px] font-black uppercase tracking-widest bg-primary/10 text-primary rounded-lg border border-primary/20">View All</button>
+          </div>
+          
+          <div className="space-y-3">
+            {followUpList.length > 0 ? followUpList.map((enq, i) => (
+              <motion.div 
+                key={enq.entity_id} 
+                initial={{ opacity: 0, y: 10 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ delay: 0.7 + (i * 0.05) }}
+                className="flex items-center justify-between p-4 bg-muted/20 hover:bg-muted/40 rounded-2xl border border-border/50 transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-black text-primary border border-primary/20">
+                    {enq.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm group-hover:text-primary transition-colors">{enq.name}</h4>
+                    <p className="text-[11px] text-muted-foreground font-medium">{enq.vehicle || 'Unknown Model'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg border ${
+                    enq.follow_ups?.[enq.follow_ups.length-1]?.status === 'Hot' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                    enq.follow_ups?.[enq.follow_ups.length-1]?.status === 'Warm' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                    'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                  }`}>
+                    {enq.follow_ups?.[enq.follow_ups.length-1]?.status || 'Cold'}
+                  </span>
+                  <div className="p-2 rounded-xl bg-card border border-border/50 group-hover:border-primary/30 transition-all">
+                    <Phone className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                  </div>
+                </div>
+              </motion.div>
+            )) : (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <div className="p-4 rounded-full bg-muted/50 mb-4">
+                  <Phone className="w-8 h-8 opacity-20" />
+                </div>
+                <p className="text-sm font-bold italic opacity-50">No follow-ups scheduled for today</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Right Column: Registration Status Progress */}
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.6 }} className="erp-card p-6">
+          <h3 className="text-lg font-black tracking-tight mb-1">Registration Status</h3>
+          <p className="text-xs text-muted-foreground font-medium mb-8">Process tracking for all sales</p>
+          
+          <div className="space-y-8">
+            {registrationStats.map((reg, i) => (
+              <div key={reg.label} className="space-y-3">
+                <div className="flex justify-between items-end">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-muted-foreground">{reg.label}</span>
+                  <span className="text-xs font-black text-foreground">{Math.round((reg.count / maxReg) * 100)}%</span>
+                </div>
+                <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }} 
+                    animate={{ width: `${(reg.count / maxReg) * 100}%` }}
+                    transition={{ delay: 0.8 + (i * 0.1), duration: 1 }}
+                    className={`h-full rounded-full ${
+                      i === 0 ? 'bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.4)]' : 
+                      i === 1 ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.4)]' : 
+                      'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.4)]'
+                    }`}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
       </div>
 
       {/* Charts Row 1 */}

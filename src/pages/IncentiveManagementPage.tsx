@@ -193,6 +193,7 @@ const IncentiveManagementPage = () => {
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="text-left font-black tracking-wide text-foreground px-6 py-4">Sales Order</th>
+                  <th className="text-left font-black tracking-wide text-foreground px-6 py-4">Date</th>
                   <th className="text-left font-black tracking-wide text-foreground px-6 py-4">Salesperson</th>
                   <th className="text-left font-black tracking-wide text-foreground px-6 py-4">Customer</th>
                   <th className="text-left font-black tracking-wide text-foreground px-6 py-4">Vehicle</th>
@@ -205,6 +206,9 @@ const IncentiveManagementPage = () => {
                 {displayIncentives.map((item) => (
                   <tr key={item.entity_id || item._id || item.id} className="hover:bg-muted/30 transition-colors">
                     <td className="px-6 py-4 font-bold text-primary">{item.sales_order_code}</td>
+                    <td className="px-6 py-4 font-medium text-muted-foreground whitespace-nowrap">
+                      {new Date(item.full_payment_date || item.sale_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </td>
                     <td className="px-6 py-4 font-medium">{getSalespersonName(item.salesperson_id, item.salesperson_name)}</td>
                     <td className="px-6 py-4 font-medium">{item.customer_name}</td>
                     <td className="px-6 py-4 font-medium">{item.brand} {item.model}</td>
@@ -245,7 +249,7 @@ const IncentiveManagementPage = () => {
                 
                 {!loading && displayIncentives.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground font-medium italic">
+                    <td colSpan={8} className="px-6 py-12 text-center text-muted-foreground font-medium italic">
                       No incentives found in this category.
                     </td>
                   </tr>
