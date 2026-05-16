@@ -15,6 +15,14 @@ export interface DashboardStats {
   total_sales_revenue: number;
   total_pending_payments: number;
   total_pending_loans: number;
+  registration_pending: number;
+  registration_in_process: number;
+  delivery_pending: number;
+  insurance_pending: number;
+  incentive_pending: number;
+  incentive_paid: number;
+  today_follow_ups: number;
+  follow_up_list: any[];
   recent_sales: any[];
   monthly_revenue: any[];
   sales_by_model: any[];

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { FileDown, BarChart3, Loader2, Calendar, Filter } from 'lucide-react';
+import { FileDown, BarChart3, Loader2, Calendar, Filter, Truck } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useMemo } from 'react';
 import { RootState } from '@/store/rootReducer';
@@ -13,11 +13,12 @@ import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
 
 const reportTypes = [
-  { id: 'sales', name: 'Sales Report', description: 'Complete sales data with vehicle and customer details' },
-  { id: 'customer', name: 'Customer Report', description: 'Customer list with purchase history' },
-  { id: 'stock', name: 'Vehicle Stock Report', description: 'Current inventory status and vehicle details' },
-  { id: 'payment', name: 'Payment Report', description: 'All payment transactions with mode and status' },
-  { id: 'loan', name: 'Loan Report', description: 'Loan disbursement, EMI, and status tracking' },
+  { id: 'sales', name: 'Sales Report', description: 'Complete sales data with vehicle and customer details', icon: BarChart3 },
+  { id: 'customer', name: 'Customer Report', description: 'Customer list with purchase history', icon: BarChart3 },
+  { id: 'stock', name: 'Vehicle Stock Report', description: 'Current inventory status and vehicle details', icon: BarChart3 },
+  { id: 'payment', name: 'Payment Report', description: 'All payment transactions with mode and status', icon: BarChart3 },
+  { id: 'loan', name: 'Loan Report', description: 'Loan disbursement, EMI, and status tracking', icon: BarChart3 },
+  { id: 'delivery_status', name: 'Detailed Vehicle Delivery Status Report', description: 'Comprehensive tracking of vehicle delivery, RTO, insurance, and loan status', icon: Truck },
 ];
 
 const ReportsPage = () => {
@@ -155,19 +156,70 @@ const ReportsPage = () => {
         break;
 
       case 'loan':
-        headers = ['Customer', 'Order Code', 'Bank', 'Loan Amount', 'EMI', 'Status', 'Date'];
+        headers = ['Customer', 'Order Code', 'Vehicle Amount', 'Down Payment', 'Mode', 'Bank', 'Loan Amount', 'EMI', 'Status', 'Date'];
         rows = loans
           .filter(l => isWithinDateRange(l.created_at))
-          .map(l => [
-            l.customer_name,
-            l.sales_order_code,
-            l.bank_name,
-            l.loan_amount || 0,
-            l.emi_amount || 0,
-            l.status,
-            formatDate(l.created_at)
-          ]);
+          .map(l => {
+            const so = salesOrders.find((s: any) => s.entity_id === l.sales_order_id || s.sales_order_code === l.sales_order_code);
+            return [
+              l.customer_name,
+              l.sales_order_code,
+              so?.total_amount || 0,
+              so?.down_payment || 0,
+              so?.payment_mode || 'N/A',
+              l.bank_name,
+              l.loan_amount || 0,
+              l.emi_amount || 0,
+              l.status,
+              formatDate(l.created_at)
+            ];
+          });
         filename = 'Loan_Report';
+        break;
+
+      case 'delivery_status':
+        headers = [
+          'Booking ID', 'Customer Name', 'Mobile No', 'Vehicle Model', 'Variant', 'Color', 
+          'Chassis No', 'Engine No', 'Sales Executive', 'Booking Date', 'Expected Delivery', 
+          'Current Status', 'Pending Work', 'Insurance Status', 'RTO Status', 'Number Plate', 
+          'Loan Status', 'Agent Name', 'Agent Mobile', 'Remarks'
+        ];
+        rows = salesOrders
+          .filter(so => isWithinDateRange(so.sale_date || so.created_at))
+          .filter(so => selectedModel === 'All Models' || so.model === selectedModel)
+          .map(so => {
+            const loan = loans.find((l: any) => l.sales_order_id === so.entity_id || l.sales_order_code === so.sales_order_code);
+            
+            // Logic for derived fields based on the image example
+            const pendingWork = so.registration_status === 'Completed' ? 'None' : 'RC Pending';
+            const insuranceStatus = so.insurance_policy_no ? 'Done' : 'Pending';
+            const rtoStatus = so.registration_status === 'Completed' ? 'Done' : (so.registration_status || 'Pending');
+            const numberPlate = so.vehicle_number || 'Pending';
+            
+            return [
+              so.sales_order_code,
+              so.customer_name,
+              so.mobile_number,
+              so.model,
+              so.variant,
+              so.color,
+              so.chassis_number,
+              so.engine_number,
+              so.salesperson_name,
+              formatDate(so.sale_date || so.created_at),
+              formatDate(so.delivery_date),
+              so.delivery_status || so.status,
+              pendingWork,
+              insuranceStatus,
+              rtoStatus,
+              numberPlate,
+              so.loan_status || 'N/A',
+              loan?.bank_person || '-',
+              loan?.mobile || '-',
+              so.remarks || (so.delivery_status === 'Ready' ? 'Ready for delivery' : '-')
+            ];
+          });
+        filename = 'Vehicle_Delivery_Status_Report';
         break;
     }
 
@@ -275,7 +327,7 @@ const ReportsPage = () => {
             >
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary/5 flex items-center justify-center group-hover:bg-primary/10 transition-colors border border-primary/10">
-                  <BarChart3 className="w-6 h-6 text-primary" />
+                  {report.icon ? <report.icon className="w-6 h-6 text-primary" /> : <BarChart3 className="w-6 h-6 text-primary" />}
                 </div>
                 <h3 className="font-black text-lg text-foreground">{report.name}</h3>
               </div>
