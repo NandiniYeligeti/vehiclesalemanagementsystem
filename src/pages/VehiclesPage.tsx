@@ -255,6 +255,8 @@ const VehiclesPage = ({ initialTab = 'models' }: { initialTab?: 'models' | 'acce
     resetWizard();
   };
 
+ 
+
   return (
     <div className="space-y-6">
       {/* Block-Delete Dialog */}

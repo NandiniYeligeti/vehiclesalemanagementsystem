@@ -3,6 +3,7 @@ import { call, put, takeLatest } from "redux-saga/effects";
 import { toast } from "sonner";
 import { loginApi } from "../../services/auth/auth";
 import { SagaIterator } from "redux-saga";
+import { IconRight } from "react-day-picker";
 
 // ================================
 // STATE & TYPES
