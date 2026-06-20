@@ -6,9 +6,11 @@ import { getCustomerLedgerAction, updateCustomerAction, Customer } from '@/store
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
 import { getPaymentsAction } from '@/store/ducks/payments.ducks';
 import { getLoansAction } from '@/store/ducks/loans.ducks';
+import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 import { X, Upload, FileText, Check, Plus, Loader2, Download, Edit2, Eye, CarFront } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface CustomerProfileProps {
   customer: Customer;
@@ -23,12 +25,16 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
   const customerId = (customer.entity_id || customer._id || customer.id) as string;
   const user = useSelector((state: RootState) => state.auth.user);
   const companyCode = user?.CompanyCode || 'DEFAULT_COMPANY';
+  const { data: masters } = useSelector((state: RootState) => state.companyMasters);
+  const { hasPermission, getFilteredMasters, getFilteredData } = usePermissions();
 
   // Live data from Redux
   const { data: salesOrders } = useSelector((state: RootState) => state.salesOrders);
   const { data: payments } = useSelector((state: RootState) => state.payments);
   const { data: loans } = useSelector((state: RootState) => state.loans);
   const { ledger: customerLedger, ledgerLoading } = useSelector((state: RootState) => state.customers);
+
+  const showrooms = getFilteredMasters((masters || []).filter(m => m.type === 'Showroom'), 'Showroom');
 
   // Filter for this customer
   const customerVehicles = (salesOrders || []).filter((s: any) => s.customer_id === customerId);
@@ -49,6 +55,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
     pincode: customer.pincode || '',
     aadhaar_card_no: customer.aadhaar_card_no || '',
     pan_card_no: customer.pan_card_no || '',
+    showroom: (customer as any).showroom || '',
   });
 
   useEffect(() => {
@@ -57,6 +64,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
       dispatch(getSalesOrdersAction(companyCode));
       dispatch(getPaymentsAction(companyCode));
       dispatch(getLoansAction(companyCode));
+      dispatch(getMastersAction(companyCode));
     }
   }, [dispatch, customerId, companyCode]);
 
@@ -182,6 +190,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
     { label: 'Customer Name', key: 'customer_name', required: true },
     { label: 'Mobile Number', key: 'mobile_number', required: true, pattern: '\\d{10}' },
     { label: 'Email', key: 'email', type: 'email' },
+    { label: 'Showroom', key: 'showroom', type: 'select', options: showrooms },
     { label: 'Aadhaar Card', key: 'aadhaar_card_no' },
     { label: 'PAN Card', key: 'pan_card_no' },
     { label: 'City', key: 'city' },
@@ -226,7 +235,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
                     Save Changes
                   </button>
                   <button
-                    onClick={() => { setIsEditing(false); setEditForm({ customer_name: customer.customer_name || customer.name || '', mobile_number: customer.mobile_number || customer.mobile || '', email: customer.email || '', address: customer.address || '', city: customer.city || '', state: customer.state || '', pincode: customer.pincode || '', aadhaar_card_no: customer.aadhaar_card_no || '', pan_card_no: customer.pan_card_no || '' }); }}
+                    onClick={() => { setIsEditing(false); setEditForm({ customer_name: customer.customer_name || customer.name || '', mobile_number: customer.mobile_number || customer.mobile || '', email: customer.email || '', address: customer.address || '', city: customer.city || '', state: customer.state || '', pincode: customer.pincode || '', aadhaar_card_no: customer.aadhaar_card_no || '', pan_card_no: customer.pan_card_no || '', showroom: (customer as any).showroom || '' }); }}
                     className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted text-xs font-bold active:scale-95 transition-all"
                   >
                     Cancel
@@ -288,6 +297,17 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
                               onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
                               placeholder={field.label}
                             />
+                          ) : field.type === 'select' ? (
+                            <select
+                              className="erp-input w-full h-11 px-4 text-sm"
+                              value={editForm[field.key as keyof typeof editForm]}
+                              onChange={(e) => setEditForm({ ...editForm, [field.key]: e.target.value })}
+                            >
+                              <option value="">Select Showroom (optional)</option>
+                              {field.options?.map((opt: any) => (
+                                <option key={opt.id} value={opt.name}>{opt.name}</option>
+                              ))}
+                            </select>
                           ) : (
                             <input
                               type={field.type || 'text'}
@@ -307,6 +327,7 @@ const CustomerProfile: React.FC<CustomerProfileProps> = ({ customer, onClose, mo
                     {[
                       { label: 'Mobile Number', value: customer.mobile_number || customer.mobile },
                       { label: 'Email', value: customer.email || 'N/A' },
+                      { label: 'Showroom', value: (customer as any).showroom || '—' },
                       { label: 'Aadhaar Card', value: customer.aadhaar_card_no || 'N/A' },
                       { label: 'PAN Card', value: customer.pan_card_no || 'N/A' },
                       { label: 'City', value: customer.city || '—' },

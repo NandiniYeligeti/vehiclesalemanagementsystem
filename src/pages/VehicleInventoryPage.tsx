@@ -382,6 +382,20 @@ const VehicleInventoryPage = () => {
                     }
                   }, [values.vehicle_model_id, models, editingItem, setFieldValue]);
 
+                  // Filter types based on selected category
+                  const filteredTypes = useMemo(() => {
+                    if (!values.selected_category) return types;
+                    return types.filter((t: any) => t.category_id === values.selected_category);
+                  }, [types, values.selected_category]);
+
+                  // Filter models based on selected type and category
+                  const filteredModels = useMemo(() => {
+                    return models.filter(m => 
+                      (!values.selected_type || m.type_id === values.selected_type) && 
+                      (!values.selected_category || m.category_id === values.selected_category)
+                    );
+                  }, [models, values.selected_type, values.selected_category]);
+
                   return (
                   <Form className="max-h-[85vh] overflow-y-auto custom-scrollbar">
                     <div className="p-8 space-y-6">
@@ -397,7 +411,7 @@ const VehicleInventoryPage = () => {
                           <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 block px-1">Vehicle Type</label>
                           <Field as="select" name="selected_type" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-bold bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">All Types</option>
-                            {types.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
+                            {filteredTypes.map((t: any) => <option key={t.entity_id || t._id || t.id} value={t.entity_id || t._id || t.id}>{t.name}</option>)}
                           </Field>
                         </div>
                       </div>
@@ -407,11 +421,8 @@ const VehicleInventoryPage = () => {
                         <div className="grid grid-cols-2 gap-4">
                           <Field as="select" name="vehicle_model_id" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
                             <option value="">Select Model</option>
-                            {models.filter(m => 
-                              (!values.selected_type || m.type_id === values.selected_type) && 
-                              (!values.selected_category || m.category_id === values.selected_category)
-                            ).map(m => (
-                              <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model}</option>
+                            {filteredModels.map(m => (
+                              <option key={m.entity_id || m._id || m.id} value={m.entity_id || m._id || m.id}>{m.brand} {m.model} - {m.variant}</option>
                             ))}
                           </Field>
                           <Field as="select" name="showroom" disabled={isViewOnly} className="erp-select h-12 rounded-xl text-xs font-black bg-muted/40 border-none focus:ring-2 focus:ring-primary/20 disabled:opacity-70">
@@ -421,6 +432,30 @@ const VehicleInventoryPage = () => {
                         </div>
                         <ErrorMessage name="vehicle_model_id" component="div" className="text-[10px] text-destructive mt-1 font-bold pl-1" />
                       </div>
+
+                      {/* Display Brand, Model, Variant separately when a model is selected */}
+                      {values.vehicle_model_id && (
+                        <div className="grid grid-cols-3 gap-4 bg-muted/20 p-4 rounded-xl">
+                          <div>
+                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1 block">Brand</label>
+                            <div className="erp-input h-10 rounded-lg bg-white border border-border/50 flex items-center px-3 text-foreground text-xs font-bold">
+                              {models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.brand || '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1 block">Model</label>
+                            <div className="erp-input h-10 rounded-lg bg-white border border-border/50 flex items-center px-3 text-foreground text-xs font-bold">
+                              {models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.model || '-'}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1 block">Variant</label>
+                            <div className="erp-input h-10 rounded-lg bg-white border border-border/50 flex items-center px-3 text-foreground text-xs font-bold">
+                              {models.find(m => (m.entity_id || m._id || m.id) === values.vehicle_model_id)?.variant || '-'}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="col-span-1">
