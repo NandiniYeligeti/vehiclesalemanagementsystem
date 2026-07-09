@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { Plus, X, Building, Mail, KeyRound, Loader2, PlaySquare, LogOut } from 'lucide-react';
 import { RootState } from '@/store/rootReducer';
-import { createCompanyApi, getCompaniesApi } from '@/services/auth/auth';
+import { createCompanyApi, getCompaniesApi, updatePasswordApi } from '@/services/auth/auth';
 import { toast } from 'sonner';
 import { logout, impersonateCompany } from '@/store/ducks/auth.duck';
 
@@ -23,6 +23,10 @@ const SuperAdminPage = () => {
     admin_email: '',
     admin_password: ''
   });
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<any | null>(null);
+  const [passwordForm, setPasswordForm] = useState({ password: '' });
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   const fetchCompanies = async () => {
     try {
@@ -132,7 +136,7 @@ const SuperAdminPage = () => {
                     <td className="px-6 py-4 text-right">
                        <span className="status-badge status-delivered">Active</span>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right space-x-2">
                       <button
                         className="px-4 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold shadow hover:scale-105 transition-all"
                         onClick={() => {
@@ -141,6 +145,16 @@ const SuperAdminPage = () => {
                         }}
                       >
                         Access
+                      </button>
+                      <button
+                        className="px-4 py-1.5 rounded-lg border border-border text-xs font-bold text-foreground hover:bg-muted transition-all"
+                        onClick={() => {
+                          setSelectedCompany(c);
+                          setPasswordForm({ password: '' });
+                          setShowPasswordForm(true);
+                        }}
+                      >
+                        Change Password
                       </button>
                     </td>
                   </tr>
@@ -267,6 +281,87 @@ const SuperAdminPage = () => {
                         Saving...
                       </div>
                     ) : 'Provision Tenant'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+
+        {showPasswordForm && selectedCompany && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-foreground/30 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-card rounded-2xl ring-1 ring-border shadow-2xl w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-border bg-muted/20">
+                <div>
+                  <h3 className="text-lg font-bold">Change Company Password</h3>
+                  <p className="text-xs text-muted-foreground">Update the administrator password for {selectedCompany.company_name || selectedCompany.email}</p>
+                </div>
+                <button onClick={() => setShowPasswordForm(false)} className="p-2 rounded-xl hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
+              </div>
+
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!selectedCompany) return;
+                  setPasswordLoading(true);
+                  try {
+                    await updatePasswordApi(selectedCompany.id, passwordForm.password);
+                    toast.success('Password updated successfully');
+                    setShowPasswordForm(false);
+                    setSelectedCompany(null);
+                    setPasswordForm({ password: '' });
+                    fetchCompanies();
+                  } catch (error: any) {
+                    toast.error(error.response?.data?.error || error.message || 'Failed to update password');
+                  } finally {
+                    setPasswordLoading(false);
+                  }
+                }}
+                className="overflow-y-auto p-6 space-y-6"
+              >
+                <div>
+                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest pl-1 mb-2 block">New Password</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <input
+                      type="password"
+                      value={passwordForm.password}
+                      onChange={(e) => setPasswordForm({ password: e.target.value })}
+                      required
+                      minLength={6}
+                      className="w-full h-11 pl-10 pr-4 rounded-xl bg-muted/20 border border-border/60 hover:border-border transition-all focus:ring-2 focus:ring-primary/10 outline-none text-sm font-medium"
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-border mt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPasswordForm(false);
+                      setSelectedCompany(null);
+                    }}
+                    className="px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-muted transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-8 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:grayscale"
+                    disabled={passwordLoading}
+                  >
+                    {passwordLoading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                        Updating...
+                      </div>
+                    ) : 'Update Password'}
                   </button>
                 </div>
               </form>
