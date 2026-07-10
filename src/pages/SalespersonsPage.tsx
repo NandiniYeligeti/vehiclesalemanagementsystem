@@ -30,6 +30,7 @@ import {
 import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 import { getSalesOrdersAction } from '@/store/ducks/sales_orders.ducks';
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 const SalespersonsPage = () => {
   const dispatch = useDispatch();
@@ -46,6 +47,8 @@ const SalespersonsPage = () => {
 
   const [viewMode, setViewMode] = useState<'list' | 'card'>('card');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [open, setOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
@@ -75,9 +78,15 @@ const SalespersonsPage = () => {
   const branches = getFilteredMasters((masters || []).filter(m => m.type === 'Branch'), 'Branch');
   const areas = getFilteredMasters((masters || []).filter(m => m.type === 'Area'), 'Area');
 
-  const filtered = (salespersons || []).filter((d: any) =>
+  const filtered = useMemo(() => (salespersons || []).filter((d: any) =>
     (d.full_name || '').toLowerCase().includes(search.toLowerCase())
-  );
+  ), [salespersons, search]);
+
+  const paginatedSalespersons = useMemo(() => paginateItems(filtered, page, pageSize), [filtered, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize]);
 
   const handleSave = () => {
     if (!form.full_name?.trim()) {
@@ -373,7 +382,7 @@ const SalespersonsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((item: any) => (
+              {paginatedSalespersons.items.map((item: any) => (
                 <tr key={item.entity_id || item._id || item.id} className="border-b border-border hover:bg-muted/30 transition-colors group">
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-3">
@@ -438,6 +447,19 @@ const SalespersonsPage = () => {
           </table>
         </div>
       )}
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
+        <div className="text-sm text-muted-foreground">Showing {paginatedSalespersons.items.length} of {paginatedSalespersons.total} salespersons</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+          </select>
+          <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedSalespersons.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+          <span className="text-sm font-medium">Page {paginatedSalespersons.currentPage} / {paginatedSalespersons.totalPages}</span>
+          <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedSalespersons.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+        </div>
+      </div>
 
       {loading && filtered.length === 0 && (
         <div className="flex items-center justify-center h-48 opacity-40 italic">

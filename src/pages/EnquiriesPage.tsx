@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { api } from "@/services/api";
+import { paginateItems } from "@/lib/pagination";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store/rootReducer";
 import { getSalespersonsAction } from "@/store/ducks/salespersons.ducks";
@@ -31,6 +32,8 @@ export default function EnquiriesPage({ onNavigate }: Props) {
   const [enquiries, setEnquiries] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // Enquiry form
   const [form, setForm] = useState({ name: "", mobile: "", email: "", vehicle: "", budget: "", salesperson: "" });
@@ -128,6 +131,13 @@ export default function EnquiriesPage({ onNavigate }: Props) {
       (e.vehicle || "").toLowerCase().includes(search.toLowerCase())
     )), [enquiries, search]);
 
+  const paginatedActiveEnquiries = useMemo(() => paginateItems(activeEnquiries, page, pageSize), [activeEnquiries, page, pageSize]);
+  const paginatedConvertedLeads = useMemo(() => paginateItems(convertedLeads, page, pageSize), [convertedLeads, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize, tab]);
+
   const formatDate = (d: string) => {
     if (!d) return "";
     try { return new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(d)); }
@@ -182,7 +192,7 @@ export default function EnquiriesPage({ onNavigate }: Props) {
             <div className="text-center py-20 text-muted-foreground bg-card rounded-xl border border-border">No active enquiries found.</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {activeEnquiries.map(enq => (
+              {paginatedActiveEnquiries.items.map(enq => (
                 <motion.div key={enq.entity_id || enq.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                   className="bg-card rounded-2xl border border-border/50 shadow-sm hover:shadow-md transition-all overflow-hidden">
                   <div className="h-1 w-full bg-primary" />
@@ -229,6 +239,18 @@ export default function EnquiriesPage({ onNavigate }: Props) {
               ))}
             </div>
           )}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
+            <div className="text-sm text-muted-foreground">Showing {paginatedActiveEnquiries.items.length} of {paginatedActiveEnquiries.total} active enquiries</div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+              </select>
+              <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedActiveEnquiries.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+              <span className="text-sm font-medium">Page {paginatedActiveEnquiries.currentPage} / {paginatedActiveEnquiries.totalPages}</span>
+              <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedActiveEnquiries.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+            </div>
+          </div>
 
           {/* New Enquiry Modal */}
           <AnimatePresence>

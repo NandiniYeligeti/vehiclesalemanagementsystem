@@ -30,6 +30,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getMastersAction } from '@/store/ducks/company_masters.ducks';
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 // Only name & mobile are required; everything else optional
 const validationSchema = Yup.object().shape({
@@ -65,6 +66,8 @@ const CustomersPage = () => {
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [profileMode, setProfileMode] = useState<'view' | 'edit' | 'add' | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
@@ -85,7 +88,7 @@ const CustomersPage = () => {
 
   // Sort newest first then filter
   const rawData = useMemo(() => getFilteredData(customers || [], 'showroom'), [customers, getFilteredData]);
-  const filtered = [...rawData]
+  const filtered = useMemo(() => [...rawData]
     .sort((a, b) => {
       const dateA = new Date(a.createdDate || a.created_at || 0).getTime();
       const dateB = new Date(b.createdDate || b.created_at || 0).getTime();
@@ -96,7 +99,13 @@ const CustomersPage = () => {
       (c.mobile || '').includes(search) ||
       (c.customer_name || '').toLowerCase().includes(search.toLowerCase()) ||
       (c.mobile_number || '').includes(search)
-    );
+    ), [rawData, search]);
+
+  const paginatedCustomers = useMemo(() => paginateItems(filtered, page, pageSize), [filtered, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize]);
 
   const handleDeleteRequest = (item: any) => {
     const id = item._id || item.id;
@@ -260,7 +269,7 @@ const CustomersPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((c) => (
+                {paginatedCustomers.items.map((c) => (
                   <tr key={c._id || c.id} className="hover:bg-muted/30 transition-colors group">
                     <td className="px-6 py-4 font-mono text-[10px] text-muted-foreground/60">{(c._id || c.id)?.slice(-8).toUpperCase()}</td>
                     <td className="px-6 py-4">
@@ -310,7 +319,7 @@ const CustomersPage = () => {
                     </td>
                   </tr>
                 ))}
-                {filtered.length === 0 && !loading && (
+                {paginatedCustomers.items.length === 0 && !loading && (
                   <tr>
                     <td colSpan={7} className="px-6 py-12 text-center">
                       <div className="flex flex-col items-center gap-2 grayscale opacity-40">
@@ -323,11 +332,26 @@ const CustomersPage = () => {
               </tbody>
             </table>
           </div>
+          <div className="border-t border-border/60 bg-muted/20 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {paginatedCustomers.items.length} of {paginatedCustomers.total} customers
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+              </select>
+              <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedCustomers.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+              <span className="text-sm font-medium">Page {paginatedCustomers.currentPage} / {paginatedCustomers.totalPages}</span>
+              <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedCustomers.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+            </div>
+          </div>
         </motion.div>
       ) : (
         /* Card View */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filtered.map((c) => (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {paginatedCustomers.items.map((c) => (
             <div key={c._id || c.id} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
               {/* Top primary bar */}
               <div className="h-1 w-full bg-primary" />
@@ -405,6 +429,21 @@ const CustomersPage = () => {
               </div>
             </div>
           ))}
+          </div>
+          <div className="border-t border-border/60 bg-muted/20 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-muted-foreground">
+              Showing {paginatedCustomers.items.length} of {paginatedCustomers.total} customers
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+              </select>
+              <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedCustomers.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+              <span className="text-sm font-medium">Page {paginatedCustomers.currentPage} / {paginatedCustomers.totalPages}</span>
+              <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedCustomers.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+            </div>
+          </div>
         </div>
       )}
 

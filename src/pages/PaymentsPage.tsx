@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 const paymentSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -56,6 +57,8 @@ const PaymentsPage = () => {
 
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [selectedPayment, setSelectedPayment] = useState<any>(null);
   const [showViewModal, setShowViewModal] = useState(false);
   const [emailPreview, setEmailPreview] = useState<any>(null);
@@ -217,9 +220,14 @@ const PaymentsPage = () => {
       (p.invoice_number || '').toLowerCase().includes(search.toLowerCase()) ||
       (p.remarks || '').toLowerCase().includes(search.toLowerCase())
     );
-    // Sort by date descending
     return [...list].sort((a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime());
   }, [payments, search]);
+
+  const paginatedPayments = useMemo(() => paginateItems(filtered, page, pageSize), [filtered, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, pageSize]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -295,7 +303,7 @@ const PaymentsPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((p) => (
+              {paginatedPayments.items.map((p) => (
                 <tr key={p._id || p.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4 font-bold text-primary">{p.payment_code}</td>
                   <td className="px-6 py-4 font-medium text-foreground">{getCustomerName(p.customer_id)}</td>
@@ -372,7 +380,7 @@ const PaymentsPage = () => {
                   </td>
                 </tr>
               ))}
-              {!paymentsLoading && filtered.length === 0 && (
+              {!paymentsLoading && paginatedPayments.items.length === 0 && (
                 <tr>
                   <td colSpan={10} className="text-center py-20 text-muted-foreground italic font-medium">No payment records found.</td>
                 </tr>
@@ -384,6 +392,20 @@ const PaymentsPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="border-t border-border/60 bg-muted/20 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm text-muted-foreground">
+            Showing {paginatedPayments.items.length} of {paginatedPayments.total} receipts
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+            </select>
+            <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedPayments.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+            <span className="text-sm font-medium">Page {paginatedPayments.currentPage} / {paginatedPayments.totalPages}</span>
+            <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedPayments.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+          </div>
         </div>
       </motion.div>
 

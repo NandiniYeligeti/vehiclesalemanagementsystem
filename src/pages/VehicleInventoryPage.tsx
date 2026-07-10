@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 const inventoryValidationSchema = Yup.object().shape({
   vehicle_model_id: Yup.string().required('Model is required'),
@@ -52,6 +53,8 @@ const VehicleInventoryPage = () => {
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'card'>('list');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // DEFENSIVE SELECTORS
   const rawInventoryState = useSelector((state: RootState) => state.vehicleInventory);
@@ -109,9 +112,14 @@ const VehicleInventoryPage = () => {
       const matchesStatus = !statusFilter || (item.status || '').toLowerCase() === statusFilter.toLowerCase();
       return matchesSearch && matchesStatus;
     });
-    // Sort by purchase date descending
     return [...list].sort((a, b) => new Date(b.purchase_date).getTime() - new Date(a.purchase_date).getTime());
   }, [inventory, search, statusFilter]);
+
+  const paginatedInventory = useMemo(() => paginateItems(filteredInventory, page, pageSize), [filteredInventory, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search, statusFilter, pageSize]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -199,7 +207,7 @@ const VehicleInventoryPage = () => {
       </div>
 
       <div className={`grid gap-6 ${viewMode === 'card' ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1'}`}>
-        {filteredInventory.map((item) => (
+        {paginatedInventory.items.map((item) => (
           <motion.div key={item.entity_id || item._id || item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-card rounded-2xl shadow-sm hover:shadow-md transition-all border border-border/50 overflow-hidden relative group">
             {/* Top primary bar */}
             <div className="h-1 w-full bg-primary" />

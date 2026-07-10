@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { Plus, X, User, Mail, KeyRound, Loader2, Trash2, Users, Eye, EyeOff, Shield } from 'lucide-react';
@@ -59,6 +59,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 const UsersManagementPage = () => {
   const dispatch = useDispatch();
@@ -71,6 +72,8 @@ const UsersManagementPage = () => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showPassword, setShowPassword] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
@@ -95,6 +98,13 @@ const UsersManagementPage = () => {
   const [tempAreas, setTempAreas] = useState<string[]>([]);
   
   const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  const filteredUsers = useMemo(() => [...users].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')), [users]);
+  const paginatedUsers = useMemo(() => paginateItems(filteredUsers, page, pageSize), [filteredUsers, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [pageSize]);
 
   const fetchUsers = async () => {
     if (!companyCode) return;
@@ -298,7 +308,7 @@ const UsersManagementPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {users.map((u, index) => (
+              {paginatedUsers.items.map((u, index) => (
                 <motion.tr
                   key={u.id}
                   initial={{ opacity: 0, x: -10 }}
@@ -374,7 +384,7 @@ const UsersManagementPage = () => {
                   </td>
                 </motion.tr>
               ))}
-              {users.length === 0 && !loading && (
+              {paginatedUsers.items.length === 0 && !loading && (
                 <tr>
                   <td colSpan={5} className="px-6 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
@@ -400,6 +410,18 @@ const UsersManagementPage = () => {
           </table>
         </div>
       </motion.div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
+        <div className="text-sm text-muted-foreground">Showing {paginatedUsers.items.length} of {paginatedUsers.total} users</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+          </select>
+          <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedUsers.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+          <span className="text-sm font-medium">Page {paginatedUsers.currentPage} / {paginatedUsers.totalPages}</span>
+          <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedUsers.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+        </div>
+      </div>
 
       {/* Add User Modal */}
       <AnimatePresence>

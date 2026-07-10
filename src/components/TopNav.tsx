@@ -93,7 +93,7 @@ const TopNav = ({ title, onTabChange }: TopNavProps) => {
           </button>
 
           {/* Search */}
-          <div className="hidden lg:flex items-center h-10 px-4 rounded-xl bg-muted/30 border border-border/40 gap-3 group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+          {/* <div className="hidden lg:flex items-center h-10 px-4 rounded-xl bg-muted/30 border border-border/40 gap-3 group focus-within:ring-2 focus-within:ring-primary/20 transition-all">
             <Search className="w-4 h-4 text-muted-foreground group-focus-within:text-primary" />
             <input
               type="text"
@@ -103,7 +103,7 @@ const TopNav = ({ title, onTabChange }: TopNavProps) => {
             <kbd className="hidden xl:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
               <span className="text-xs">⌘</span>K
             </kbd>
-          </div>
+          </div> */}
 
           <div className="w-px h-6 bg-border/60 mx-1 hidden sm:block"></div>
 

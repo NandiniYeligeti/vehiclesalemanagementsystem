@@ -16,6 +16,7 @@ import { ChevronDown, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { usePermissions } from '@/hooks/usePermissions';
+import { paginateItems } from '@/lib/pagination';
 
 const salesOrderSchema = Yup.object().shape({
   customer_id: Yup.string().required('Customer is required'),
@@ -49,6 +50,8 @@ const SalesOrderPage = () => {
   const [showViewModal, setShowViewModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [showLedgerDrawer, setShowLedgerDrawer] = useState(false);
   const [drawerOrderId, setDrawerOrderId] = useState<string | null>(null);
   const [drawerOrderCode, setDrawerOrderCode] = useState<string | null>(null);
@@ -137,9 +140,14 @@ const SalesOrderPage = () => {
       const matchesStatus = !statusFilter || order.payment_status === statusFilter || order.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-    // Sort by date descending
     return [...list].sort((a, b) => new Date(b.sale_date).getTime() - new Date(a.sale_date).getTime());
   }, [salesOrders, customers, inventory, searchTerm, statusFilter]);
+
+  const paginatedOrders = useMemo(() => paginateItems(filteredOrders, page, pageSize), [filteredOrders, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [searchTerm, statusFilter, pageSize]);
 
   // Stats for cards
   const stats = useMemo(() => {
@@ -481,7 +489,7 @@ const SalesOrderPage = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredOrders.length > 0 ? filteredOrders.map((order) => {
+                  {paginatedOrders.items.length > 0 ? paginatedOrders.items.map((order) => {
                     const customer = customers.find(c => (c.entity_id || c._id || c.id) === order.customer_id);
                     const vehicle = inventory.find(v => (v.entity_id || v._id || v.id) === order.vehicle_inventory_id);
                     
@@ -605,6 +613,20 @@ const SalesOrderPage = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+            <div className="border-t border-border/60 bg-muted/20 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-muted-foreground">
+                Showing {paginatedOrders.items.length} of {paginatedOrders.total} orders
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+                  <option value={10}>10 / page</option>
+                  <option value={20}>20 / page</option>
+                </select>
+                <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedOrders.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+                <span className="text-sm font-medium">Page {paginatedOrders.currentPage} / {paginatedOrders.totalPages}</span>
+                <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedOrders.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+              </div>
             </div>
           </motion.div>
         </div>

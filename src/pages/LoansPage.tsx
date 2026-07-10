@@ -33,6 +33,7 @@ import { getSalesOrdersAction } from "@/store/ducks/sales_orders.ducks";
 import { getBanksAction } from "@/store/ducks/bank_master.ducks";
 import { getCompanyBanksAction } from "@/store/ducks/company_bank_master.ducks";
 import { usePermissions } from "@/hooks/usePermissions";
+import { paginateItems } from "@/lib/pagination";
 
 
 const statusColors: Record<string, string> = {
@@ -61,6 +62,8 @@ const LoansPage = () => {
   const [tab, setTab] = useState("All");
   const [search, setSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [dateTo, setDateTo] = useState("");
 
   // Modal States
@@ -126,6 +129,12 @@ const LoansPage = () => {
       return matchesTab && matchesSearch && fromOk && toOk;
     });
   }, [loans, tab, search, dateFrom, dateTo]);
+
+  const paginatedLoans = useMemo(() => paginateItems(filteredLoans, page, pageSize), [filteredLoans, page, pageSize]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [tab, search, dateFrom, dateTo, pageSize]);
 
   // Handlers
   const handleBankChange = (bankId: string) => {
@@ -367,14 +376,14 @@ const LoansPage = () => {
                     <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary opacity-20" />
                   </td>
                 </tr>
-              ) : filteredLoans.length === 0 ? (
+              ) : paginatedLoans.items.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-20 text-center text-muted-foreground font-bold">
                     No loan records found matching criteria.
                   </td>
                 </tr>
               ) : (
-                filteredLoans.map((row) => (
+                paginatedLoans.items.map((row) => (
                   <tr key={row.entity_id || row._id} className="border-t border-border/40 hover:bg-muted/10 transition-colors group">
                     <td className="p-4">
                       <div className="flex flex-col">
@@ -441,6 +450,20 @@ const LoansPage = () => {
           </table>
         </CardContent>
       </Card>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
+        <div className="text-sm text-muted-foreground">
+          Showing {paginatedLoans.items.length} of {paginatedLoans.total} loan records
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} className="h-9 rounded-lg border border-border bg-background px-3 text-sm">
+            <option value={10}>10 / page</option>
+            <option value={20}>20 / page</option>
+          </select>
+          <button onClick={() => setPage(prev => Math.max(1, prev - 1))} disabled={!paginatedLoans.hasPreviousPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Prev</button>
+          <span className="text-sm font-medium">Page {paginatedLoans.currentPage} / {paginatedLoans.totalPages}</span>
+          <button onClick={() => setPage(prev => prev + 1)} disabled={!paginatedLoans.hasNextPage} className="h-9 rounded-lg border border-border px-3 text-sm disabled:opacity-50">Next</button>
+        </div>
+      </div>
 
       {/* Modal: Create/Edit/View */}
       <AnimatePresence>
